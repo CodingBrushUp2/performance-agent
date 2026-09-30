@@ -60,6 +60,28 @@ static async Task<int> RunAsync(string[] args)
         }
     }
 
+    if (args.Length == 3
+        && string.Equals(args[0], "baseline", StringComparison.OrdinalIgnoreCase)
+        && (string.Equals(args[1], "set", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(args[1], "anchor", StringComparison.OrdinalIgnoreCase)))
+    {
+        try
+        {
+            var kind = string.Equals(args[1], "anchor", StringComparison.OrdinalIgnoreCase)
+                ? BaselineKind.Anchor
+                : BaselineKind.Current;
+            var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
+            await new FileBaselineStore(root).SetAsync(kind, args[2]);
+            Console.WriteLine($"{kind} baseline: {args[2]}");
+            return 0;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+    }
+
     if (string.Equals(args.FirstOrDefault(), "check", StringComparison.OrdinalIgnoreCase))
     {
         return RunCheck(args);
@@ -68,7 +90,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
