@@ -27,10 +27,14 @@ public sealed class BenchmarkComparer
             throw new ArgumentOutOfRangeException(nameof(baseline), "Performance measurements cannot be negative.");
         }
 
-        var percentChange = baseline == 0
-            ? candidate == 0 ? 0 : double.PositiveInfinity
-            : ((candidate - baseline) / baseline) * 100;
+        if (baseline == 0)
+        {
+            return candidate == 0
+                ? new MetricChange(0, 0, 0, ComparisonStatus.Comparable)
+                : new MetricChange(0, candidate, null, ComparisonStatus.NoBaseline);
+        }
 
-        return new MetricChange(baseline, candidate, percentChange);
+        var percentChange = ((candidate - baseline) / baseline) * 100;
+        return new MetricChange(baseline, candidate, percentChange, ComparisonStatus.Comparable);
     }
 }
