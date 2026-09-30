@@ -1,6 +1,16 @@
 namespace PerformanceAgent.Core.Comparison;
 
-public sealed record MetricChange(double Baseline, double Candidate, double PercentChange);
+public enum ComparisonStatus
+{
+    Comparable,
+    NoBaseline
+}
+
+public sealed record MetricChange(
+    double Baseline,
+    double Candidate,
+    double? PercentChange,
+    ComparisonStatus Status);
 
 public sealed record ComparisonResult(
     string BenchmarkName,
