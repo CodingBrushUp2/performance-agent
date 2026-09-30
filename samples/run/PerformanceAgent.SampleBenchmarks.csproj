@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/PerformanceAgent.BenchmarkDotNet/PerformanceAgent.BenchmarkDotNet.csproj" />
+    <ProjectReference Include="../../src/PerformanceAgent.Core/PerformanceAgent.Core.csproj" />
   </ItemGroup>
 </Project>
