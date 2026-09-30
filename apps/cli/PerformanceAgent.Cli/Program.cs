@@ -343,25 +343,28 @@ static async Task<int> RunCheckAsync(string[] args)
 
         var candidate = reader.Read(File.ReadAllText(candidatePath));
 
-        if (!options.ContainsKey("--run-id") && !options.ContainsKey("--baseline"))
+        if (!options.ContainsKey("--run-id") && !options.ContainsKey("--baseline") && baselinePath is null)
         {
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
             var baselineStore = new FileBaselineStore(root);
             var currentReference = await baselineStore.GetAsync(BaselineKind.Current);
-            var anchorReference = await baselineStore.GetAsync(BaselineKind.Anchor);
-            if (currentReference is not null)
+            if (currentReference is null)
             {
-                baseline = (await new FileRunArchive(root).ReadAsync(currentReference.RunId)).Evidence;
+                Console.Error.WriteLine("No current baseline is configured. Provide -b|--baseline, -r|--run-id, or set a current baseline.");
+                return 2;
+            }
 
-                if (anchorReference is not null
-                    && !string.Equals(anchorReference.RunId, currentReference.RunId, StringComparison.Ordinal))
-                {
-                    var anchorEvidence = (await new FileRunArchive(root).ReadAsync(anchorReference.RunId)).Evidence;
-                    var currentPassed = CheckEvidence("Current", baseline, candidate, budget);
-                    var anchorPassed = CheckEvidence("Anchor", anchorEvidence, candidate, budget);
-                    Console.WriteLine($"Overall: {(currentPassed && anchorPassed ? "PASS" : "FAIL")}");
-                    return currentPassed && anchorPassed ? 0 : 1;
-                }
+            var archive = new FileRunArchive(root);
+            baseline = (await archive.ReadAsync(currentReference.RunId)).Evidence;
+            var anchorReference = await baselineStore.GetAsync(BaselineKind.Anchor);
+            if (anchorReference is not null
+                && !string.Equals(anchorReference.RunId, currentReference.RunId, StringComparison.Ordinal))
+            {
+                var anchorEvidence = (await archive.ReadAsync(anchorReference.RunId)).Evidence;
+                var currentPassed = CheckEvidence("Current", baseline, candidate, budget);
+                var anchorPassed = CheckEvidence("Anchor", anchorEvidence, candidate, budget);
+                Console.WriteLine($"Overall: {(currentPassed && anchorPassed ? "PASS" : "FAIL")}");
+                return currentPassed && anchorPassed ? 0 : 1;
             }
         }
 
