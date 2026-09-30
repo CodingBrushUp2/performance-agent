@@ -44,4 +44,21 @@ public sealed class PerformanceReportWriterTests
         Assert.Contains("| MapOrder | Mean (ns) | 100 | 80 | -20% | Comparable |", markdown);
         Assert.Contains("| MapOrder | Allocated (B/op) | 0 | 32 | n/a | NoBaseline |", markdown);
     }
+    [Fact]
+    public void MarkdownWriter_RendersUnavailableMetricValuesAsNotAvailable()
+    {
+        var report = new PerformanceReport(
+            "1.0",
+            DateTimeOffset.Parse("2026-09-30T00:00:00Z"),
+            [
+                new ComparisonResult(
+                    "MapOrder",
+                    new MetricChange(100, 80, -20, ComparisonStatus.Comparable),
+                    new MetricChange(null, 0, null, ComparisonStatus.Unavailable))
+            ]);
+
+        var markdown = new MarkdownPerformanceReportWriter().Write(report);
+
+        Assert.Contains("| MapOrder | Allocated (B/op) | n/a | 0 | n/a | Unavailable |", markdown);
+    }
 }
