@@ -72,8 +72,9 @@ static async Task<int> RunAsync(string[] args)
                 : BaselineKind.Current;
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
             var store = new FileBaselineStore(root);
+            // Validate the target run before recording an immutable baseline event.
+            _ = await new FileRunArchive(root).ReadAsync(args[2]);
             var previous = await store.GetAsync(kind);
-            await store.SetAsync(kind, args[2]);
 
             var eventType = previous is null
                 ? BaselineEventType.Created
@@ -89,6 +90,10 @@ static async Task<int> RunAsync(string[] args)
                     args[2],
                     previous?.RunId,
                     "CLI baseline selection"));
+
+            // Pointer files are derived convenience state. Persist them only after
+            // the append-only event history, which remains the source of truth.
+            await store.SetAsync(kind, args[2]);
 
             Console.WriteLine($"{kind} baseline: {args[2]}");
             return 0;
