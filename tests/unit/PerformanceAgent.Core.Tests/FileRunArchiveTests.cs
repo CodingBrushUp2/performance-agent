@@ -56,6 +56,14 @@ public sealed class FileRunArchiveTests
     }
 
     [Fact]
+    public async Task Read_RejectsPathTraversal()
+    {
+        var archive = new FileRunArchive(Path.GetTempPath());
+
+        await Assert.ThrowsAsync<ArgumentException>(() => archive.ReadAsync("../secret"));
+    }
+
+    [Fact]
     public void RunIdGenerator_CreatesDistinctSortableIds()
     {
         var generator = new RunIdGenerator();
