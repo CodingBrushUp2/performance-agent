@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.BenchmarkD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.Cli", "apps\\cli\\PerformanceAgent.Cli\\PerformanceAgent.Cli.csproj", "{8D153CF0-92F0-448C-B845-7C93E1F36E93}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.BenchmarkHost", "apps\\benchmark-host\\PerformanceAgent.BenchmarkHost\\PerformanceAgent.BenchmarkHost.csproj", "{D4C96747-23A5-4D80-91AA-28B7CB63C920}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,5 +41,9 @@ Global
 		{AB61BE39-EF9A-4456-889E-C82175557CF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AB61BE39-EF9A-4456-889E-C82175557CF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AB61BE39-EF9A-4456-889E-C82175557CF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4C96747-23A5-4D80-91AA-28B7CB63C920}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4C96747-23A5-4D80-91AA-28B7CB63C920}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4C96747-23A5-4D80-91AA-28B7CB63C920}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4C96747-23A5-4D80-91AA-28B7CB63C920}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
