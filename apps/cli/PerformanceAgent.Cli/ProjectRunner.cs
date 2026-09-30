@@ -100,10 +100,49 @@ internal sealed class ProjectRunner
 
         using var process = new Process { StartInfo = startInfo };
         process.Start();
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            TryKillProcessTree(process);
+            await WaitForExitAfterKillAsync(process);
+            throw;
+        }
+
         return new ProcessResult(process.ExitCode, await stdoutTask, await stderrTask);
+    }
+
+    private static void TryKillProcessTree(Process process)
+    {
+        if (process.HasExited)
+            return;
+
+        try
+        {
+            process.Kill(entireProcessTree: true);
+        }
+        catch (InvalidOperationException)
+        {
+            // The process exited between the HasExited check and Kill.
+        }
+    }
+
+    private static async Task WaitForExitAfterKillAsync(Process process)
+    {
+        try
+        {
+            await process.WaitForExitAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // Process already exited and its handle is no longer available.
+        }
     }
 
     private sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
