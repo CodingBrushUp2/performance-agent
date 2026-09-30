@@ -8,8 +8,14 @@ grep -F "| MapOrder | Allocated (B/op) | 1000 | 750 | -25% | Comparable |" <<< "
 
 
 run_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- run samples/run/PerformanceAgent.SampleBenchmarks.csproj)"
+printf '%s\n' "$run_output"
 
-grep -F '"schemaVersion":"1.0"' <<< "$run_output"
-grep -F '"name":"Sum"' <<< "$run_output"
+grep -F '"schemaVersion": "1.0"' <<< "$run_output"
+grep -F '"name": "Sum"' <<< "$run_output"
 grep -F '"meanNanoseconds":' <<< "$run_output"
 grep -F '"allocatedBytesPerOperation":' <<< "$run_output"
+
+if grep -Fq '// BenchmarkDotNet' <<< "$run_output"; then
+  echo "BenchmarkDotNet diagnostic output leaked into normalized evidence" >&2
+  exit 1
+fi
