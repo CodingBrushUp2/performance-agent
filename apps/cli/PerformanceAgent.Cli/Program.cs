@@ -24,7 +24,7 @@ static async Task<int> RunAsync(string[] args)
         }
     }
 
-    if (args.Length == 5 && string.Equals(args[0], "check", StringComparison.OrdinalIgnoreCase))
+    if (string.Equals(args.FirstOrDefault(), "check", StringComparison.OrdinalIgnoreCase))
     {
         return RunCheck(args);
     }
@@ -32,7 +32,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> | perfagent check <baseline.json> <candidate.json> <max-mean-regression-%> <max-allocation-regression-%> | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
@@ -85,11 +85,27 @@ static int RunCheck(string[] args)
 {
     try
     {
-        if (!TryParse(args[3], out var maxMeanRegression)
-            || !TryParse(args[4], out var maxAllocationRegression))
+        if (args.Length != 5)
         {
-            Console.Error.WriteLine("Performance budget thresholds must be non-negative percentages.");
+            Console.Error.WriteLine("Usage: perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
             return 2;
+        }
+
+        PerformanceBudget budget;
+        if (string.Equals(args[3], "--budget", StringComparison.OrdinalIgnoreCase))
+        {
+            budget = new JsonPerformanceBudgetReader().Read(File.ReadAllText(args[4]));
+        }
+        else
+        {
+            if (!TryParse(args[3], out var maxMeanRegression)
+                || !TryParse(args[4], out var maxAllocationRegression))
+            {
+                Console.Error.WriteLine("Performance budget thresholds must be non-negative percentages.");
+                return 2;
+            }
+
+            budget = new PerformanceBudget(maxMeanRegression, maxAllocationRegression);
         }
 
         var reader = new JsonBenchmarkEvidenceReader();
@@ -107,7 +123,6 @@ static int RunCheck(string[] args)
         }
 
         var checker = new PerformanceBudgetChecker();
-        var budget = new PerformanceBudget(maxMeanRegression, maxAllocationRegression);
         var passed = true;
 
         foreach (var name in baselineByName.Keys.Order(StringComparer.Ordinal))
@@ -116,8 +131,8 @@ static int RunCheck(string[] args)
             passed &= result.Passed;
 
             Console.WriteLine($"{name}: {(result.Passed ? "PASS" : "FAIL")}");
-            Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)} (budget +{maxMeanRegression:0.##}%) {(result.MeanExceeded ? "FAIL" : "PASS")}");
-            Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)} (budget +{maxAllocationRegression:0.##}%) {(result.AllocationExceeded ? "FAIL" : "PASS")}");
+            Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
+            Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
         }
 
         Console.WriteLine($"Overall: {(passed ? "PASS" : "FAIL")}");
@@ -129,6 +144,11 @@ static int RunCheck(string[] args)
         return 2;
     }
 }
+
+static string FormatBudget(double? threshold, bool exceeded) =>
+    threshold is null
+        ? " (budget not configured)"
+        : $" (budget +{threshold:0.##}%) {(exceeded ? "FAIL" : "PASS")}";
 
 static string FormatChange(MetricChange change) =>
     change.Status == ComparisonStatus.Comparable && change.PercentChange is not null
