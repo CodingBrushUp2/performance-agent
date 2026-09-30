@@ -12,7 +12,9 @@ public sealed class BenchmarkDotNetMeasurementMapper
         var statistics = report.ResultStatistics
             ?? throw new InvalidOperationException("Benchmark report does not contain timing statistics.");
 
-        var name = report.BenchmarkCase.Descriptor.WorkloadMethod.Name;
+        var descriptor = report.BenchmarkCase.Descriptor;
+        var typeName = descriptor.Type.FullName ?? descriptor.Type.Name;
+        var name = $"{typeName}.{descriptor.WorkloadMethod.Name}";
         var allocatedBytes = report.GcStats.GetBytesAllocatedPerOperation(report.BenchmarkCase);
 
         return new BenchmarkMeasurement(name, statistics.Mean, allocatedBytes);
