@@ -93,7 +93,7 @@ grep -F "MapOrder: PASS" <<< "$temporary_output"
 grep -F "Overall: PASS" <<< "$temporary_output"
 
 # Keyed options are intentionally order-independent.
-temporary_reordered_output="$(cd "$temp_root" && dotnet "$OLDPWD/apps/cli/PerformanceAgent.Cli/bin/Release/net10.0/PerformanceAgent.Cli.dll" check --budget "$OLDPWD/samples/ci/performance-budget.json" --candidate "$temp_candidate" --rid run-temp)"
+temporary_reordered_output="$(cd "$temp_root" && dotnet "$repo_root/apps/cli/PerformanceAgent.Cli/bin/Release/net10.0/perfagent.dll" check --budget "$repo_root/samples/ci/performance-budget.json" --candidate "$temp_candidate" --rid run-temp)"
 grep -F "Overall: PASS" <<< "$temporary_reordered_output"
 
 test ! -e "$temp_root/.performance-agent/baselines/current.json"
