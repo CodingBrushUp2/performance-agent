@@ -269,6 +269,12 @@ static async Task<int> RunCheckAsync(string[] args)
 
                 candidatePath = positional[0];
             }
+            else if (options.ContainsKey("--budget") && positional.Count == 1)
+            {
+                // No explicit baseline: resolve persistent Current/Anchor after reading the candidate.
+                candidatePath = positional[0];
+                positional.Clear();
+            }
             else
             {
                 if (positional.Count < 2)
@@ -317,9 +323,13 @@ static async Task<int> RunCheckAsync(string[] args)
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
             baseline = (await new FileRunArchive(root).ReadAsync(runId)).Evidence;
         }
+        else if (options.TryGetValue("--baseline", out var explicitBaseline) || baselinePath is not null)
+        {
+            baseline = reader.Read(File.ReadAllText(explicitBaseline ?? baselinePath!));
+        }
         else
         {
-            baseline = reader.Read(File.ReadAllText(options.TryGetValue("--baseline", out var explicitBaseline) ? explicitBaseline : baselinePath!));
+            baseline = new BenchmarkEvidence("1.0", []);
         }
 
         var candidate = reader.Read(File.ReadAllText(candidatePath));
