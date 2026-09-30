@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using PerformanceAgent.BenchmarkDotNet;
 using PerformanceAgent.Core.Evidence;
@@ -36,7 +37,11 @@ if (benchmarkTypes.Count == 0)
 }
 
 var measurements = benchmarkTypes.SelectMany(runner.Run).ToArray();
-var evidence = new BenchmarkEvidence("1.0", measurements);
+var environment = new BenchmarkEnvironment(
+    RuntimeInformation.FrameworkDescription,
+    RuntimeInformation.OSDescription,
+    RuntimeInformation.ProcessArchitecture.ToString());
+var evidence = new BenchmarkEvidence("1.0", measurements, environment);
 Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 await File.WriteAllTextAsync(outputPath, new JsonBenchmarkEvidenceWriter().Write(evidence));
 return 0;
