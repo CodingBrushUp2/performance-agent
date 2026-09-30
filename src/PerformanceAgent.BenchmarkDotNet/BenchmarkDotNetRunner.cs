@@ -39,7 +39,7 @@ public sealed class BenchmarkDotNetRunner
         return assembly
             .GetTypes()
             .Where(type => !type.IsAbstract && type.GetMethods()
-                .Any(method => method.GetCustomAttributes(typeof(BenchmarkDotNet.Attributes.BenchmarkAttribute), inherit: true).Length > 0))
+                .Any(method => method.GetCustomAttributes(typeof(global::BenchmarkDotNet.Attributes.BenchmarkAttribute), inherit: true).Length > 0))
             .OrderBy(type => type.FullName, StringComparer.Ordinal)
             .ToArray();
     }
