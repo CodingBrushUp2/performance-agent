@@ -98,7 +98,7 @@ static async Task<int> RunAsync(string[] args)
             Console.WriteLine($"{kind} baseline: {args[2]}");
             return 0;
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             Console.Error.WriteLine(exception.Message);
             return 2;
@@ -115,11 +115,12 @@ static async Task<int> RunAsync(string[] args)
             var current = await baselines.GetAsync(BaselineKind.Current);
             var anchor = await baselines.GetAsync(BaselineKind.Anchor);
             var runs = await archive.ListAsync();
+            var events = await new FileBaselineEventStore(root).ReadAllAsync();
+            _ = new BaselineResolver().Resolve(new BenchmarkHistory("1.0", runs, events));
 
             if (runs.Count == 0)
             {
                 Console.WriteLine("No archived benchmark runs.");
-                return 0;
             }
 
             foreach (var run in runs)
@@ -133,9 +134,21 @@ static async Task<int> RunAsync(string[] args)
                 Console.WriteLine($"{run.RunId}  {run.Timestamp:O}  {run.CommitSha ?? "-"}{suffix}");
             }
 
+            Console.WriteLine();
+            Console.WriteLine("Baseline events (append order):");
+            if (events.Count == 0)
+                Console.WriteLine("No baseline events.");
+            foreach (var item in events)
+            {
+                var timestamp = item.Timestamp.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+                Console.WriteLine($"{timestamp}  {item.Kind} {item.Type}  {item.PreviousRunId ?? "-"} -> {item.RunId}  ({item.EventId})");
+            }
+            Console.WriteLine($"Active Current: {current?.RunId ?? "-"}");
+            Console.WriteLine($"Active Anchor: {anchor?.RunId ?? "-"}");
+
             return 0;
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             Console.Error.WriteLine(exception.Message);
             return 2;

@@ -41,6 +41,16 @@ public sealed class FileBaselineStore
         BaselineKind kind,
         CancellationToken cancellationToken = default)
     {
+        // A pointer may be stale or absent if its write failed after the event append.
+        var events = await new FileBaselineEventStore(_rootDirectory).ReadAllAsync(cancellationToken);
+        var latest = events.LastOrDefault(item => item.Kind == kind);
+        if (latest is not null)
+        {
+            _ = await new FileRunArchive(_rootDirectory).ReadAsync(latest.RunId, cancellationToken);
+            return new BaselineReference(latest.RunId);
+        }
+
+        // Preserve baselines created before event history was introduced.
         var path = Path.Combine(
             _rootDirectory,
             "baselines",

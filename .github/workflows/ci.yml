@@ -17,6 +17,7 @@ jobs:
       - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
       - run: dotnet test PerformanceAgent.sln --configuration Release --no-build
       - run: bash tests/e2e/cli-smoke.sh
+      - run: bash tests/e2e/history-smoke.sh
       - name: Pack and smoke-test dotnet tool
         run: |
           dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj --configuration Release --no-build --output artifacts
