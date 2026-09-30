@@ -11,7 +11,7 @@ run_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration
 printf '%s\n' "$run_output"
 
 grep -F '"schemaVersion":"1.0"' <<< "$run_output"
-grep -F '"name":"Sum"' <<< "$run_output"
+grep -F '"name": "Sum"' <<< "$run_output"
 grep -F '"meanNanoseconds":' <<< "$run_output"
 grep -F '"allocatedBytesPerOperation":' <<< "$run_output"
 
