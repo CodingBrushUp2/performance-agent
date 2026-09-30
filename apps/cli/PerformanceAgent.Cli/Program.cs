@@ -145,7 +145,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check --baseline <run-id> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
@@ -198,21 +198,26 @@ static int RunCheck(string[] args)
 {
     try
     {
-        if (args.Length != 5)
+        var usesArchivedBaseline = args.Length == 6
+            && string.Equals(args[1], "--baseline", StringComparison.OrdinalIgnoreCase);
+        if ((!usesArchivedBaseline && args.Length != 5) || (usesArchivedBaseline && args.Length != 6))
         {
-            Console.Error.WriteLine("Usage: perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
+            Console.Error.WriteLine("Usage: perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check --baseline <run-id> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
             return 2;
         }
 
+        var candidateIndex = usesArchivedBaseline ? 3 : 2;
+        var budgetStartIndex = usesArchivedBaseline ? 4 : 3;
+
         PerformanceBudget budget;
-        if (string.Equals(args[3], "--budget", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(args[budgetStartIndex], "--budget", StringComparison.OrdinalIgnoreCase))
         {
-            budget = new JsonPerformanceBudgetReader().Read(File.ReadAllText(args[4]));
+            budget = new JsonPerformanceBudgetReader().Read(File.ReadAllText(args[budgetStartIndex + 1]));
         }
         else
         {
-            if (!TryParse(args[3], out var maxMeanRegression)
-                || !TryParse(args[4], out var maxAllocationRegression))
+            if (!TryParse(args[budgetStartIndex], out var maxMeanRegression)
+                || !TryParse(args[budgetStartIndex + 1], out var maxAllocationRegression))
             {
                 Console.Error.WriteLine("Performance budget thresholds must be non-negative percentages.");
                 return 2;
@@ -222,8 +227,18 @@ static int RunCheck(string[] args)
         }
 
         var reader = new JsonBenchmarkEvidenceReader();
-        var baseline = reader.Read(File.ReadAllText(args[1]));
-        var candidate = reader.Read(File.ReadAllText(args[2]));
+        BenchmarkEvidence baseline;
+        if (usesArchivedBaseline)
+        {
+            var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
+            baseline = new FileRunArchive(root).ReadAsync(args[2]).GetAwaiter().GetResult().Evidence;
+        }
+        else
+        {
+            baseline = reader.Read(File.ReadAllText(args[1]));
+        }
+
+        var candidate = reader.Read(File.ReadAllText(args[candidateIndex]));
 
         var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
             baseline.Environment,
