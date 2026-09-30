@@ -47,3 +47,18 @@ set -e
 test "$failure_code" -eq 1
 grep -F "MapOrder: FAIL" <<< "$failure_output"
 grep -F "Overall: FAIL" <<< "$failure_output"
+
+
+budget_file="$(mktemp)"
+cat > "$budget_file" <<'JSON'
+{"maxMeanRegressionPercent":5,"maxAllocationRegressionPercent":10}
+JSON
+trap 'rm -f "$baseline_file" "$candidate_file" "$budget_file"' EXIT
+
+cat > "$candidate_file" <<'JSON'
+{"schemaVersion":"1.0","measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
+JSON
+
+budget_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" --budget "$budget_file")"
+grep -F "MapOrder: PASS" <<< "$budget_output"
+grep -F "Overall: PASS" <<< "$budget_output"
