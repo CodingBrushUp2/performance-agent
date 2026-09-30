@@ -32,7 +32,22 @@ public sealed class FileRunArchive
             throw new InvalidOperationException($"Archived benchmark run '{run.RunId}' already exists.");
 
         var json = JsonSerializer.Serialize(run, Options);
-        await File.WriteAllTextAsync(path, json, cancellationToken);
+        var temporaryPath = Path.Combine(_archiveDirectory, $".{run.RunId}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            await File.WriteAllTextAsync(temporaryPath, json, cancellationToken);
+            File.Move(temporaryPath, path, overwrite: false);
+        }
+        catch (IOException) when (File.Exists(path))
+        {
+            throw new InvalidOperationException($"Archived benchmark run '{run.RunId}' already exists.");
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+                File.Delete(temporaryPath);
+        }
+
         return path;
     }
 
