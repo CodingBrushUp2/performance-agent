@@ -1,0 +1,51 @@
+using System.Text.Json;
+
+namespace PerformanceAgent.Core.Evidence;
+
+public sealed class JsonBenchmarkEvidenceReader
+{
+    private static readonly JsonSerializerOptions Options = new()
+    {
+        PropertyNameCaseInsensitive = false,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    public BenchmarkEvidence Read(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            throw new ArgumentException("Benchmark evidence JSON cannot be empty.", nameof(json));
+
+        BenchmarkEvidence evidence;
+        try
+        {
+            evidence = JsonSerializer.Deserialize<BenchmarkEvidence>(json, Options)
+                ?? throw new InvalidOperationException("Benchmark evidence JSON did not contain an evidence document.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException("Benchmark evidence is not valid JSON.", exception);
+        }
+
+        Validate(evidence);
+        return evidence;
+    }
+
+    private static void Validate(BenchmarkEvidence evidence)
+    {
+        if (!string.Equals(evidence.SchemaVersion, "1.0", StringComparison.Ordinal))
+            throw new InvalidOperationException($"Unsupported benchmark evidence schema version: {evidence.SchemaVersion ?? "<missing>"}.");
+
+        if (evidence.Measurements is null || evidence.Measurements.Count == 0)
+            throw new InvalidOperationException("Benchmark evidence must contain at least one measurement.");
+
+        foreach (var measurement in evidence.Measurements)
+        {
+            if (measurement is null || string.IsNullOrWhiteSpace(measurement.Name))
+                throw new InvalidOperationException("Benchmark evidence contains a measurement without a name.");
+            if (!double.IsFinite(measurement.MeanNanoseconds) || measurement.MeanNanoseconds < 0)
+                throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid mean duration.");
+            if (measurement.AllocatedBytesPerOperation is < 0)
+                throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid allocation measurement.");
+        }
+    }
+}
