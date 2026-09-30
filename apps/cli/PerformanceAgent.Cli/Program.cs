@@ -210,7 +210,7 @@ static async Task<int> RunCheckAsync(string[] args)
             }
 
             var option = args[index];
-            if (option is not ("--rid" or "--baseline" or "--candidate" or "--budget"))
+            if (option is not ("--run-id" or "--run-id" or "-r" or "--baseline" or "-b" or "--candidate" or "-c" or "--budget" or "-p"))
             {
                 Console.Error.WriteLine($"Unknown option '{option}'.");
                 return 2;
@@ -222,14 +222,23 @@ static async Task<int> RunCheckAsync(string[] args)
                 return 2;
             }
 
-            if (!options.TryAdd(option, args[++index]))
+            var canonicalOption = option switch
+            {
+                "--run-id" or "--run-id" or "-r" => "--run-id",
+                "--baseline" or "-b" => "--baseline",
+                "--candidate" or "-c" => "--candidate",
+                "--budget" or "-p" => "--budget",
+                _ => option
+            };
+
+            if (!options.TryAdd(canonicalOption, args[++index]))
             {
                 Console.Error.WriteLine($"Option '{option}' may only be specified once.");
                 return 2;
             }
         }
 
-        if (options.ContainsKey("--rid") && options.ContainsKey("--baseline"))
+        if (options.ContainsKey("--run-id") && options.ContainsKey("--baseline"))
         {
             Console.Error.WriteLine("Use either --rid or --baseline, not both.");
             return 2;
@@ -246,7 +255,7 @@ static async Task<int> RunCheckAsync(string[] args)
                 return 2;
             }
         }
-        else if (options.ContainsKey("--rid"))
+        else if (options.ContainsKey("--run-id"))
         {
             if (positional.Count != 1)
             {
@@ -302,7 +311,7 @@ static async Task<int> RunCheckAsync(string[] args)
         }
         else
         {
-            var thresholds = options.ContainsKey("--rid") || options.ContainsKey("--baseline")
+            var thresholds = options.ContainsKey("--run-id") || options.ContainsKey("--baseline")
                 ? positional
                 : positional;
             if (thresholds.Count != 2
@@ -318,7 +327,7 @@ static async Task<int> RunCheckAsync(string[] args)
 
         var reader = new JsonBenchmarkEvidenceReader();
         BenchmarkEvidence baseline;
-        if (options.TryGetValue("--rid", out var runId))
+        if (options.TryGetValue("--run-id", out var runId))
         {
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
             baseline = (await new FileRunArchive(root).ReadAsync(runId)).Evidence;
@@ -334,7 +343,7 @@ static async Task<int> RunCheckAsync(string[] args)
 
         var candidate = reader.Read(File.ReadAllText(candidatePath));
 
-        if (!options.ContainsKey("--rid") && !options.ContainsKey("--baseline"))
+        if (!options.ContainsKey("--run-id") && !options.ContainsKey("--baseline"))
         {
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
             var baselineStore = new FileBaselineStore(root);
