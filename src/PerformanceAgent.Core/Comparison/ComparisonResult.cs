@@ -3,12 +3,13 @@ namespace PerformanceAgent.Core.Comparison;
 public enum ComparisonStatus
 {
     Comparable,
-    NoBaseline
+    NoBaseline,
+    Unavailable
 }
 
 public sealed record MetricChange(
-    double Baseline,
-    double Candidate,
+    double? Baseline,
+    double? Candidate,
     double? PercentChange,
     ComparisonStatus Status);
 
