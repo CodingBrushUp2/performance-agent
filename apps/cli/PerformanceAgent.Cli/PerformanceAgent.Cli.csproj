@@ -2,6 +2,13 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>perfagent</AssemblyName>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>perfagent</ToolCommandName>
+    <PackageId>PerformanceAgent.Cli</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Performance Agent contributors</Authors>
+    <Description>Evidence-driven performance regression checks for .NET.</Description>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../../src/PerformanceAgent.Core/PerformanceAgent.Core.csproj" />
