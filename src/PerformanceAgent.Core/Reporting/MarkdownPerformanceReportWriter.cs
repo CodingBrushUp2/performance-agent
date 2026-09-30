@@ -25,11 +25,7 @@ public sealed class MarkdownPerformanceReportWriter
         return builder.ToString();
     }
 
-    private static void AppendMetric(
-        StringBuilder builder,
-        string benchmark,
-        string metric,
-        MetricChange change)
+    private static void AppendMetric(StringBuilder builder, string benchmark, string metric, MetricChange change)
     {
         var percent = change.PercentChange is null
             ? "n/a"
@@ -40,13 +36,16 @@ public sealed class MarkdownPerformanceReportWriter
             .Append(" | ")
             .Append(metric)
             .Append(" | ")
-            .Append(change.Baseline.ToString("0.##", CultureInfo.InvariantCulture))
+            .Append(FormatValue(change.Baseline))
             .Append(" | ")
-            .Append(change.Candidate.ToString("0.##", CultureInfo.InvariantCulture))
+            .Append(FormatValue(change.Candidate))
             .Append(" | ")
             .Append(percent)
             .Append(" | ")
             .Append(change.Status)
             .AppendLine(" |");
     }
+
+    private static string FormatValue(double? value) =>
+        value?.ToString("0.##", CultureInfo.InvariantCulture) ?? "n/a";
 }
