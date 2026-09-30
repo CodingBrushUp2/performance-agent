@@ -7,11 +7,11 @@ namespace PerformanceAgent.BenchmarkDotNet.IntegrationTests;
 public sealed class RunnerIntegrationTests
 {
     [Fact]
-    public void Run_ExecutesRealBenchmarkAndReturnsNormalizedEvidence()
+    public void RunDry_ExecutesRealBenchmarkAndReturnsNormalizedEvidence()
     {
         var runner = new BenchmarkDotNetRunner();
 
-        var measurements = runner.Run<SampleBenchmark>();
+        var measurements = runner.RunDry<SampleBenchmark>();
 
         var measurement = Assert.Single(measurements);
         Assert.Equal(nameof(SampleBenchmark.Sum), measurement.Name);
@@ -28,7 +28,6 @@ public sealed class RunnerIntegrationTests
         public int Sum()
         {
             var sum = 0;
-
             foreach (var value in _values)
             {
                 sum += value;
