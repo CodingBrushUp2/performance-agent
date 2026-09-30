@@ -1,4 +1,6 @@
+using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Comparison;
+using PerformanceAgent.Core.Evidence;
 using PerformanceAgent.Core.Measurements;
 using PerformanceAgent.Core.Reporting;
 
@@ -22,10 +24,15 @@ static async Task<int> RunAsync(string[] args)
         }
     }
 
+    if (args.Length == 5 && string.Equals(args[0], "check", StringComparison.OrdinalIgnoreCase))
+    {
+        return RunCheck(args);
+    }
+
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> | perfagent check <baseline.json> <candidate.json> <max-mean-regression-%> <max-allocation-regression-%> | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
@@ -72,3 +79,58 @@ static bool TryParse(string value, out double result)
         && double.IsFinite(result)
         && result >= 0;
 }
+
+
+static int RunCheck(string[] args)
+{
+    try
+    {
+        if (!TryParse(args[3], out var maxMeanRegression)
+            || !TryParse(args[4], out var maxAllocationRegression))
+        {
+            Console.Error.WriteLine("Performance budget thresholds must be non-negative percentages.");
+            return 2;
+        }
+
+        var reader = new JsonBenchmarkEvidenceReader();
+        var baseline = reader.Read(File.ReadAllText(args[1]));
+        var candidate = reader.Read(File.ReadAllText(args[2]));
+        var baselineByName = baseline.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
+        var candidateByName = candidate.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
+
+        var missingCandidates = baselineByName.Keys.Except(candidateByName.Keys, StringComparer.Ordinal).ToArray();
+        var newCandidates = candidateByName.Keys.Except(baselineByName.Keys, StringComparer.Ordinal).ToArray();
+        if (missingCandidates.Length > 0 || newCandidates.Length > 0)
+        {
+            Console.Error.WriteLine("Baseline and candidate benchmark identities do not match.");
+            return 2;
+        }
+
+        var checker = new PerformanceBudgetChecker();
+        var budget = new PerformanceBudget(maxMeanRegression, maxAllocationRegression);
+        var passed = true;
+
+        foreach (var name in baselineByName.Keys.Order(StringComparer.Ordinal))
+        {
+            var result = checker.Check(baselineByName[name], candidateByName[name], budget);
+            passed &= result.Passed;
+
+            Console.WriteLine($"{name}: {(result.Passed ? "PASS" : "FAIL")}");
+            Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)} (budget +{maxMeanRegression:0.##}%) {(result.MeanExceeded ? "FAIL" : "PASS")}");
+            Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)} (budget +{maxAllocationRegression:0.##}%) {(result.AllocationExceeded ? "FAIL" : "PASS")}");
+        }
+
+        Console.WriteLine($"Overall: {(passed ? "PASS" : "FAIL")}");
+        return passed ? 0 : 1;
+    }
+    catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
+    {
+        Console.Error.WriteLine(exception.Message);
+        return 2;
+    }
+}
+
+static string FormatChange(MetricChange change) =>
+    change.Status == ComparisonStatus.Comparable && change.PercentChange is not null
+        ? $"{change.Baseline:0.##} -> {change.Candidate:0.##} ({change.PercentChange:+0.##;-0.##;0}%)"
+        : $"{change.Baseline?.ToString() ?? "n/a"} -> {change.Candidate?.ToString() ?? "n/a"} ({change.Status})";
