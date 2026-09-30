@@ -87,7 +87,7 @@ cat > "$temp_candidate" <<'JSON'
 {"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
 JSON
 
-temporary_output="$(cd "$temp_root" && dotnet "$OLDPWD/apps/cli/PerformanceAgent.Cli/bin/Release/net10.0/PerformanceAgent.Cli.dll" check --rid run-temp --candidate "$temp_candidate" --budget "$OLDPWD/samples/ci/performance-budget.json")"
+temporary_output="$(cd "$temp_root" && dotnet "$OLDPWD/apps/cli/PerformanceAgent.Cli/bin/Release/net10.0/perfagent.dll" check --rid run-temp --candidate "$temp_candidate" --budget "$OLDPWD/samples/ci/performance-budget.json")"
 grep -F "MapOrder: PASS" <<< "$temporary_output"
 grep -F "Overall: PASS" <<< "$temporary_output"
 
