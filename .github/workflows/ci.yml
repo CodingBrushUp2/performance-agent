@@ -23,3 +23,6 @@ jobs:
           dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj --configuration Release --no-build --output artifacts
           dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.1.0 --add-source ./artifacts
           ./.tools/perfagent compare ToolSmoke 100 90 1000 900 markdown | grep -F "| ToolSmoke | Mean (ns) | 100 | 90 | -10% | Comparable |"
+      - name: Run installed tool outside the source tree
+        timeout-minutes: 10
+        run: bash tests/e2e/installed-tool-smoke.sh
