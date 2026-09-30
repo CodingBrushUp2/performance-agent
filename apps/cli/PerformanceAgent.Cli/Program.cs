@@ -111,6 +111,18 @@ static int RunCheck(string[] args)
         var reader = new JsonBenchmarkEvidenceReader();
         var baseline = reader.Read(File.ReadAllText(args[1]));
         var candidate = reader.Read(File.ReadAllText(args[2]));
+
+        var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
+            baseline.Environment,
+            candidate.Environment);
+        if (!environmentComparison.IsComparable)
+        {
+            Console.Error.WriteLine("Baseline and candidate benchmark environments are not comparable:");
+            foreach (var difference in environmentComparison.Differences)
+                Console.Error.WriteLine($"  - {difference}");
+            return 2;
+        }
+
         var baselineByName = baseline.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
         var candidateByName = candidate.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
 
