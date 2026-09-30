@@ -13,3 +13,8 @@ grep -F '"schemaVersion":"1.0"' <<< "$run_output"
 grep -F '"name":"Sum"' <<< "$run_output"
 grep -F '"meanNanoseconds":' <<< "$run_output"
 grep -F '"allocatedBytesPerOperation":' <<< "$run_output"
+
+if grep -Fq '// BenchmarkDotNet' <<< "$run_output"; then
+  echo "BenchmarkDotNet diagnostic output leaked into normalized evidence" >&2
+  exit 1
+fi
