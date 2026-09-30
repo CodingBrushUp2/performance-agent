@@ -2,4 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/PerformanceAgent.BenchmarkDotNet/PerformanceAgent.BenchmarkDotNet.csproj" />
+  </ItemGroup>
 </Project>
