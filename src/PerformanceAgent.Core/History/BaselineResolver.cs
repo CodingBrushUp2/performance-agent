@@ -13,7 +13,7 @@ public sealed class BaselineResolver
         string? anchor = null;
         string? current = null;
 
-        foreach (var baselineEvent in history.BaselineEvents.OrderBy(item => item.Timestamp))
+        foreach (var baselineEvent in history.BaselineEvents)
         {
             if (!history.Runs.Any(run => string.Equals(run.RunId, baselineEvent.RunId, StringComparison.Ordinal)))
                 throw new InvalidOperationException($"Baseline event '{baselineEvent.EventId}' references unknown run '{baselineEvent.RunId}'.");

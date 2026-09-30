@@ -40,8 +40,19 @@ public sealed class FileBaselineEventStore
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
-            events.Add(JsonSerializer.Deserialize<BaselineEvent>(line, Options)
-                ?? throw new InvalidOperationException("Baseline event history contains invalid JSON."));
+            try
+            {
+                var item = JsonSerializer.Deserialize<BaselineEvent>(line, Options)
+                    ?? throw new InvalidOperationException("Baseline event history contains invalid JSON.");
+                if (string.IsNullOrWhiteSpace(item.EventId) || string.IsNullOrWhiteSpace(item.RunId)
+                    || !Enum.IsDefined(item.Kind) || !Enum.IsDefined(item.Type))
+                    throw new InvalidOperationException("Baseline event history contains an invalid event.");
+                events.Add(item);
+            }
+            catch (JsonException exception)
+            {
+                throw new InvalidOperationException("Baseline event history contains invalid JSON.", exception);
+            }
         }
 
         return events;

@@ -51,6 +51,21 @@ Example budget:
 }
 ```
 
+## Baseline history
+
+`perfagent history` lists archived runs with current/anchor labels, followed by baseline
+Created, Reset, and Promoted events, their timestamps, previous and selected RunIds,
+and the active Current and Anchor. Events are displayed and replayed in append order,
+including when timestamps are equal or the system clock moves backwards.
+
+The append-only `baseline-events.jsonl` is authoritative. Readers ignore stale or
+missing derived pointers when events exist for that baseline kind. Older pointer-only
+baselines remain readable until their first event is recorded. Invalid event history
+fails explicitly rather than silently falling back to a pointer.
+
+`baseline set` and `baseline anchor` record Created or Reset events. History also
+shows Promoted events recorded by other callers; it does not automatically promote runs.
+
 ## CI performance gate
 
 A deterministic GitHub Actions example is included in `.github/workflows/performance-gate-demo.yml`. It demonstrates a version-controlled baseline, candidate evidence, and performance budget without depending on benchmark timing noise. See [GitHub performance regression gate](docs/github-performance-gate.md).
