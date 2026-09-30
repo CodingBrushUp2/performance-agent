@@ -134,3 +134,8 @@ grep -F "Anchor baseline:" <<< "$drift_output"
 grep -F "100 -> 112 (+12%)" <<< "$drift_output"
 grep -F "Overall: FAIL" <<< "$drift_output"
 rm -rf "$drift_root"
+
+
+# Short aliases map to the same canonical check options.
+alias_output="$(cd "$temp_root" && dotnet "$repo_root/apps/cli/PerformanceAgent.Cli/bin/Release/net10.0/perfagent.dll" check -r run-temp -c "$temp_candidate" -p "$repo_root/samples/ci/performance-budget.json")"
+grep -F "Overall: PASS" <<< "$alias_output"
