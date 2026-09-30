@@ -7,7 +7,12 @@ internal sealed record ProjectRunResult(int ExitCode, string Evidence, string St
 
 internal sealed class ProjectRunner
 {
-    public async Task<ProjectRunResult> RunAsync(string projectPath, CancellationToken cancellationToken = default)
+    internal static readonly TimeSpan DefaultBenchmarkTimeout = TimeSpan.FromMinutes(30);
+
+    public async Task<ProjectRunResult> RunAsync(
+        string projectPath,
+        CancellationToken cancellationToken = default,
+        TimeSpan? benchmarkTimeout = null)
     {
         var fullPath = Path.GetFullPath(projectPath);
         if (!File.Exists(fullPath) || !string.Equals(Path.GetExtension(fullPath), ".csproj", StringComparison.OrdinalIgnoreCase))
@@ -43,10 +48,25 @@ internal sealed class ProjectRunner
                 return new ProjectRunResult(build.ExitCode, "", build.StandardOutput, build.StandardError);
 
             var hostProject = FindBenchmarkHostProject();
-            var host = await RunProcessAsync(
-                "dotnet",
-                ["run", "--project", hostProject, "--configuration", "Release", "--no-build", "--", assemblyPath, evidencePath],
-                cancellationToken);
+            var timeout = benchmarkTimeout ?? DefaultBenchmarkTimeout;
+            if (timeout <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(benchmarkTimeout), "Benchmark timeout must be greater than zero.");
+
+            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutSource.CancelAfter(timeout);
+
+            ProcessResult host;
+            try
+            {
+                host = await RunProcessAsync(
+                    "dotnet",
+                    ["run", "--project", hostProject, "--configuration", "Release", "--no-build", "--", assemblyPath, evidencePath],
+                    timeoutSource.Token);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException($"Benchmark execution exceeded the timeout of {timeout}.");
+            }
 
             var evidence = File.Exists(evidencePath)
                 ? await File.ReadAllTextAsync(evidencePath, cancellationToken)
@@ -100,10 +120,49 @@ internal sealed class ProjectRunner
 
         using var process = new Process { StartInfo = startInfo };
         process.Start();
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            TryKillProcessTree(process);
+            await WaitForExitAfterKillAsync(process);
+            throw;
+        }
+
         return new ProcessResult(process.ExitCode, await stdoutTask, await stderrTask);
+    }
+
+    private static void TryKillProcessTree(Process process)
+    {
+        if (process.HasExited)
+            return;
+
+        try
+        {
+            process.Kill(entireProcessTree: true);
+        }
+        catch (InvalidOperationException)
+        {
+            // The process exited between the HasExited check and Kill.
+        }
+    }
+
+    private static async Task WaitForExitAfterKillAsync(Process process)
+    {
+        try
+        {
+            await process.WaitForExitAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // Process already exited and its handle is no longer available.
+        }
     }
 
     private sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);

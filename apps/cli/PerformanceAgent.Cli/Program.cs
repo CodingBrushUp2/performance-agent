@@ -15,7 +15,7 @@ static async Task<int> RunAsync(string[] args)
             Console.Error.Write(result.StandardError);
             return result.ExitCode;
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or TimeoutException)
         {
             Console.Error.WriteLine(exception.Message);
             return 2;
