@@ -23,7 +23,12 @@ public sealed class FileRunArchiveTests
             await archive.AppendAsync(run);
             var loaded = await archive.ReadAsync("run-test");
 
-            Assert.Equal(run, loaded);
+            Assert.Equal(run.RunId, loaded.RunId);
+            Assert.Equal(run.Timestamp, loaded.Timestamp);
+            Assert.Equal(run.CommitSha, loaded.CommitSha);
+            Assert.Equal(run.Evidence.SchemaVersion, loaded.Evidence.SchemaVersion);
+            Assert.Equal(run.Evidence.Environment, loaded.Evidence.Environment);
+            Assert.Equal(run.Evidence.Measurements.ToArray(), loaded.Evidence.Measurements.ToArray());
         }
         finally
         {
