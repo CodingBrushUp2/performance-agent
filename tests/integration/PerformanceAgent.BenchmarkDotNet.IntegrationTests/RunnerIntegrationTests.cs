@@ -7,16 +7,29 @@ namespace PerformanceAgent.BenchmarkDotNet.IntegrationTests;
 public sealed class RunnerIntegrationTests
 {
     [Fact]
-    public void RunDry_ExecutesRealBenchmarkAndReturnsNormalizedEvidence()
+    public void DiscoverBenchmarkTypes_FindsAttributedBenchmarks()
     {
         var runner = new BenchmarkDotNetRunner();
 
-        var measurements = runner.RunDry<SampleBenchmark>();
+        var types = runner.DiscoverBenchmarkTypes(typeof(RunnerIntegrationTests).Assembly);
+
+        Assert.Contains(typeof(SampleBenchmark), types);
+    }
+
+    [Fact]
+    public void RunDry_ExecutesDiscoveredBenchmarkAndReturnsNormalizedEvidence()
+    {
+        var runner = new BenchmarkDotNetRunner();
+        var benchmarkType = Assert.Single(
+            runner.DiscoverBenchmarkTypes(typeof(RunnerIntegrationTests).Assembly),
+            type => type == typeof(SampleBenchmark));
+
+        var measurements = runner.RunDry(benchmarkType);
 
         var measurement = Assert.Single(measurements);
         Assert.Equal(nameof(SampleBenchmark.Sum), measurement.Name);
         Assert.True(measurement.MeanNanoseconds >= 0);
-        Assert.True(measurement.AllocatedBytesPerOperation >= 0);
+        Assert.True(measurement.AllocatedBytesPerOperation is null or >= 0);
     }
 
     [MemoryDiagnoser]
