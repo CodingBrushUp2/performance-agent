@@ -14,7 +14,10 @@ public sealed class BenchmarkDotNetMeasurementMapper
 
         var descriptor = report.BenchmarkCase.Descriptor;
         var typeName = descriptor.Type.FullName ?? descriptor.Type.Name;
-        var name = $"{typeName}.{descriptor.WorkloadMethod.Name}";
+        var workloadName = $"{typeName}.{descriptor.WorkloadMethod.Name}";
+        var name = report.BenchmarkCase.HasParameters
+            ? $"{workloadName}{report.BenchmarkCase.Parameters.DisplayInfo}"
+            : workloadName;
         var allocatedBytes = report.GcStats.GetBytesAllocatedPerOperation(report.BenchmarkCase);
 
         return new BenchmarkMeasurement(name, statistics.Mean, allocatedBytes);
