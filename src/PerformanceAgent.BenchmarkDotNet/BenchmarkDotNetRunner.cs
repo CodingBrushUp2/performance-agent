@@ -11,14 +11,20 @@ public sealed class BenchmarkDotNetRunner
 
     public IReadOnlyList<BenchmarkMeasurement> Run<TBenchmark>()
     {
+        var summary = BenchmarkRunner.Run<TBenchmark>(DefaultConfig.Instance);
+        return Map(summary);
+    }
+
+    public IReadOnlyList<BenchmarkMeasurement> RunDry<TBenchmark>()
+    {
         var config = ManualConfig
             .Create(DefaultConfig.Instance)
             .AddJob(Job.Dry.WithId("PerformanceAgent-Dry"));
 
         var summary = BenchmarkRunner.Run<TBenchmark>(config);
-
-        return summary.Reports
-            .Select(_mapper.Map)
-            .ToArray();
+        return Map(summary);
     }
+
+    private IReadOnlyList<BenchmarkMeasurement> Map(global::BenchmarkDotNet.Reports.Summary summary) =>
+        summary.Reports.Select(_mapper.Map).ToArray();
 }
