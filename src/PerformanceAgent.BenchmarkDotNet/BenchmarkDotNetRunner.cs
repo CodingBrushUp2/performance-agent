@@ -25,6 +25,6 @@ public sealed class BenchmarkDotNetRunner
         return Map(summary);
     }
 
-    private IReadOnlyList<BenchmarkMeasurement> Map(BenchmarkDotNet.Reports.Summary summary) =>
+    private IReadOnlyList<BenchmarkMeasurement> Map(global::BenchmarkDotNet.Reports.Summary summary) =>
         summary.Reports.Select(_mapper.Map).ToArray();
 }
