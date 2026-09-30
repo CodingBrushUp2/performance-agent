@@ -210,7 +210,7 @@ static async Task<int> RunCheckAsync(string[] args)
             }
 
             var option = args[index];
-            if (option is not ("--run-id" or "--run-id" or "-r" or "--baseline" or "-b" or "--candidate" or "-c" or "--budget" or "-p"))
+            if (option is not ("--rid" or "--run-id" or "-r" or "--baseline" or "-b" or "--candidate" or "-c" or "--budget" or "-p"))
             {
                 Console.Error.WriteLine($"Unknown option '{option}'.");
                 return 2;
