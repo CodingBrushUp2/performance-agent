@@ -1,17 +1,33 @@
 using System.Text.Json;
+using BenchmarkDotNet.Attributes;
+using PerformanceAgent.BenchmarkDotNet;
 
-var evidence = new
+var runner = new BenchmarkDotNetRunner();
+var measurements = runner.RunDry<SampleBenchmark>();
+
+Console.WriteLine(JsonSerializer.Serialize(new
 {
     schemaVersion = "1.0",
-    measurements = new[]
-    {
-        new
-        {
-            name = "Sample.Sum",
-            meanNanoseconds = 42.5,
-            allocatedBytesPerOperation = 0L
-        }
-    }
-};
+    measurements
+}, new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+}));
 
-Console.WriteLine(JsonSerializer.Serialize(evidence));
+[MemoryDiagnoser]
+public class SampleBenchmark
+{
+    private readonly int[] _values = Enumerable.Range(1, 100).ToArray();
+
+    [Benchmark]
+    public int Sum()
+    {
+        var sum = 0;
+        foreach (var value in _values)
+        {
+            sum += value;
+        }
+
+        return sum;
+    }
+}
