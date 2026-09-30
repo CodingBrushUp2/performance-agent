@@ -2,6 +2,7 @@ using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Comparison;
 using PerformanceAgent.Core.Evidence;
 using PerformanceAgent.Core.Measurements;
+using PerformanceAgent.Core.History;
 using PerformanceAgent.Core.Reporting;
 
 return await RunAsync(args);
@@ -25,17 +26,28 @@ static async Task<int> RunAsync(string[] args)
             }
 
             var result = await new PerformanceAgent.Cli.ProjectRunner().RunAsync(args[1]);
-            if (result.ExitCode == 0 && outputPath is not null)
+            if (result.ExitCode == 0)
             {
-                var fullOutputPath = Path.GetFullPath(outputPath);
-                var directory = Path.GetDirectoryName(fullOutputPath);
-                if (!string.IsNullOrEmpty(directory))
-                    Directory.CreateDirectory(directory);
-                await File.WriteAllTextAsync(fullOutputPath, result.Evidence);
-            }
-            else
-            {
-                Console.Write(result.Evidence);
+                var evidence = new JsonBenchmarkEvidenceReader().Read(result.Evidence);
+                var timestamp = DateTimeOffset.UtcNow;
+                var runId = new RunIdGenerator().Create(timestamp);
+                var archive = new FileRunArchive(Path.Combine(Environment.CurrentDirectory, ".performance-agent"));
+                await archive.AppendAsync(new ArchivedBenchmarkRun(runId, timestamp, null, evidence));
+
+                if (outputPath is not null)
+                {
+                    var fullOutputPath = Path.GetFullPath(outputPath);
+                    var directory = Path.GetDirectoryName(fullOutputPath);
+                    if (!string.IsNullOrEmpty(directory))
+                        Directory.CreateDirectory(directory);
+                    await File.WriteAllTextAsync(fullOutputPath, result.Evidence);
+                }
+                else
+                {
+                    Console.Write(result.Evidence);
+                }
+
+                Console.Error.WriteLine($"Archived run: {runId}");
             }
 
             Console.Error.Write(result.StandardError);
