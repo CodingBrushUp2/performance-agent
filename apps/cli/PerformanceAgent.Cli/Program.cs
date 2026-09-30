@@ -11,11 +11,11 @@ static async Task<int> RunAsync(string[] args)
         try
         {
             var result = await new PerformanceAgent.Cli.ProjectRunner().RunAsync(args[1]);
-            Console.Write(result.StandardOutput);
+            Console.Write(result.Evidence);
             Console.Error.Write(result.StandardError);
             return result.ExitCode;
         }
-        catch (ArgumentException exception)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
         {
             Console.Error.WriteLine(exception.Message);
             return 2;
@@ -25,7 +25,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
