@@ -5,3 +5,10 @@ output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Rel
 
 grep -F "| MapOrder | Mean (ns) | 100 | 80 | -20% | Comparable |" <<< "$output"
 grep -F "| MapOrder | Allocated (B/op) | 1000 | 750 | -25% | Comparable |" <<< "$output"
+
+
+run_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- run samples/run/PerformanceAgent.SampleBenchmarks.csproj)"
+
+grep -F '"schemaVersion":"1.0"' <<< "$run_output"
+grep -F '"name":"Sample.Sum"' <<< "$run_output"
+grep -F '"meanNanoseconds":42.5' <<< "$run_output"
