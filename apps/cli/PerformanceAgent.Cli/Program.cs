@@ -8,12 +8,36 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
-    if (args.Length == 2 && string.Equals(args[0], "run", StringComparison.OrdinalIgnoreCase))
+    if ((args.Length == 2 || args.Length == 4) && string.Equals(args[0], "run", StringComparison.OrdinalIgnoreCase))
     {
         try
         {
+            string? outputPath = null;
+            if (args.Length == 4)
+            {
+                if (!string.Equals(args[2], "--output", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.Error.WriteLine("Usage: perfagent run <benchmark.csproj> [--output <evidence.json>]");
+                    return 2;
+                }
+
+                outputPath = args[3];
+            }
+
             var result = await new PerformanceAgent.Cli.ProjectRunner().RunAsync(args[1]);
-            Console.Write(result.Evidence);
+            if (result.ExitCode == 0 && outputPath is not null)
+            {
+                var fullOutputPath = Path.GetFullPath(outputPath);
+                var directory = Path.GetDirectoryName(fullOutputPath);
+                if (!string.IsNullOrEmpty(directory))
+                    Directory.CreateDirectory(directory);
+                await File.WriteAllTextAsync(fullOutputPath, result.Evidence);
+            }
+            else
+            {
+                Console.Write(result.Evidence);
+            }
+
             Console.Error.Write(result.StandardError);
             return result.ExitCode;
         }
@@ -32,7 +56,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
