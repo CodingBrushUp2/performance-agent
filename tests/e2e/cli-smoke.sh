@@ -66,3 +66,11 @@ JSON
 budget_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" --budget "$budget_file")"
 grep -F "MapOrder: PASS" <<< "$budget_output"
 grep -F "Overall: PASS" <<< "$budget_output"
+
+
+evidence_file="$(mktemp)"
+dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- run samples/run/PerformanceAgent.SampleBenchmarks.csproj --output "$evidence_file"
+test -s "$evidence_file"
+grep -F '"schemaVersion": "1.0"' "$evidence_file"
+grep -F '"environment":' "$evidence_file"
+rm -f "$evidence_file"
