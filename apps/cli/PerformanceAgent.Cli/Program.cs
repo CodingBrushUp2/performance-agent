@@ -71,7 +71,25 @@ static async Task<int> RunAsync(string[] args)
                 ? BaselineKind.Anchor
                 : BaselineKind.Current;
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
-            await new FileBaselineStore(root).SetAsync(kind, args[2]);
+            var store = new FileBaselineStore(root);
+            var previous = await store.GetAsync(kind);
+            await store.SetAsync(kind, args[2]);
+
+            var eventType = previous is null
+                ? BaselineEventType.Created
+                : BaselineEventType.Reset;
+            var timestamp = DateTimeOffset.UtcNow;
+            var eventId = $"event-{Guid.NewGuid():N}";
+            await new FileBaselineEventStore(root).AppendAsync(
+                new BaselineEvent(
+                    eventId,
+                    timestamp,
+                    kind,
+                    eventType,
+                    args[2],
+                    previous?.RunId,
+                    "CLI baseline selection"));
+
             Console.WriteLine($"{kind} baseline: {args[2]}");
             return 0;
         }
