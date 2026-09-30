@@ -235,7 +235,7 @@ static int RunCheck(string[] args)
             return 2;
         }
 
-        string baselinePath;
+        string? baselinePath = null;
         string candidatePath;
         if (options.TryGetValue("--candidate", out var candidateOption))
         {
@@ -319,7 +319,7 @@ static int RunCheck(string[] args)
         }
         else
         {
-            baseline = reader.Read(File.ReadAllText(options.TryGetValue("--baseline", out var explicitBaseline) ? explicitBaseline : baselinePath));
+            baseline = reader.Read(File.ReadAllText(options.TryGetValue("--baseline", out var explicitBaseline) ? explicitBaseline : baselinePath!));
         }
 
         var candidate = reader.Read(File.ReadAllText(candidatePath));
