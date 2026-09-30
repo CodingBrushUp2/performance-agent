@@ -15,8 +15,9 @@ public sealed class BenchmarkComparerTests
         var result = new BenchmarkComparer().Compare(baseline, candidate);
 
         Assert.Equal("MapOrder", result.BenchmarkName);
-        Assert.Equal(-20, result.Mean.PercentChange, 6);
-        Assert.Equal(-25, result.AllocatedBytes.PercentChange, 6);
+        Assert.Equal(-20, result.Mean.PercentChange!.Value, 6);
+        Assert.Equal(-25, result.AllocatedBytes.PercentChange!.Value, 6);
+        Assert.Equal(ComparisonStatus.Comparable, result.Mean.Status);
     }
 
     [Fact]
@@ -29,14 +30,28 @@ public sealed class BenchmarkComparerTests
     }
 
     [Fact]
-    public void Compare_RepresentsIncreaseFromZeroAsInfinity()
+    public void Compare_MarksIncreaseFromZeroAsNoBaseline()
     {
         var baseline = new BenchmarkMeasurement("A", 0, 0);
         var candidate = new BenchmarkMeasurement("A", 1, 1);
 
         var result = new BenchmarkComparer().Compare(baseline, candidate);
 
-        Assert.True(double.IsPositiveInfinity(result.Mean.PercentChange));
-        Assert.True(double.IsPositiveInfinity(result.AllocatedBytes.PercentChange));
+        Assert.Null(result.Mean.PercentChange);
+        Assert.Null(result.AllocatedBytes.PercentChange);
+        Assert.Equal(ComparisonStatus.NoBaseline, result.Mean.Status);
+        Assert.Equal(ComparisonStatus.NoBaseline, result.AllocatedBytes.Status);
+    }
+
+    [Fact]
+    public void Compare_TreatsZeroToZeroAsComparableWithoutChange()
+    {
+        var baseline = new BenchmarkMeasurement("A", 0, 0);
+        var candidate = new BenchmarkMeasurement("A", 0, 0);
+
+        var result = new BenchmarkComparer().Compare(baseline, candidate);
+
+        Assert.Equal(0, result.Mean.PercentChange);
+        Assert.Equal(ComparisonStatus.Comparable, result.Mean.Status);
     }
 }
