@@ -1,0 +1,22 @@
+name: Performance Gate Demo
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  performance-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build perfagent
+        run: dotnet build PerformanceAgent.sln --configuration Release
+      - name: Check candidate against baseline
+        run: >
+          dotnet run --project apps/cli/PerformanceAgent.Cli
+          --configuration Release --no-build --
+          check samples/ci/baseline.json samples/ci/candidate.json
+          --budget samples/ci/performance-budget.json

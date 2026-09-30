@@ -51,6 +51,10 @@ Example budget:
 }
 ```
 
+## CI performance gate
+
+A deterministic GitHub Actions example is included in `.github/workflows/performance-gate-demo.yml`. It demonstrates a version-controlled baseline, candidate evidence, and performance budget without depending on benchmark timing noise. See [GitHub performance regression gate](docs/github-performance-gate.md).
+
 ## Non-goals for V1
 
 No hosted dashboard, accounts, database, IDE extension, distributed runners, or mandatory cloud service.

@@ -1,0 +1,4 @@
+{
+  "maxMeanRegressionPercent": 5,
+  "maxAllocationRegressionPercent": 10
+}
