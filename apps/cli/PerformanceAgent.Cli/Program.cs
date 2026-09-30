@@ -145,7 +145,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check --baseline <run-id> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [--baseline <baseline.json> | --rid <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
@@ -198,28 +198,112 @@ static int RunCheck(string[] args)
 {
     try
     {
-        var usesArchivedBaseline = args.Length == 6
-            && string.Equals(args[1], "--baseline", StringComparison.OrdinalIgnoreCase);
-        if ((!usesArchivedBaseline && args.Length != 5) || (usesArchivedBaseline && args.Length != 6))
+        var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var positional = new List<string>();
+
+        for (var index = 1; index < args.Length; index++)
         {
-            Console.Error.WriteLine("Usage: perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check --baseline <run-id> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
+            if (!args[index].StartsWith("--", StringComparison.Ordinal))
+            {
+                positional.Add(args[index]);
+                continue;
+            }
+
+            var option = args[index];
+            if (option is not ("--rid" or "--baseline" or "--candidate" or "--budget"))
+            {
+                Console.Error.WriteLine($"Unknown option '{option}'.");
+                return 2;
+            }
+
+            if (index + 1 >= args.Length || args[index + 1].StartsWith("--", StringComparison.Ordinal))
+            {
+                Console.Error.WriteLine($"Option '{option}' requires a value.");
+                return 2;
+            }
+
+            if (!options.TryAdd(option, args[++index]))
+            {
+                Console.Error.WriteLine($"Option '{option}' may only be specified once.");
+                return 2;
+            }
+        }
+
+        if (options.ContainsKey("--rid") && options.ContainsKey("--baseline"))
+        {
+            Console.Error.WriteLine("Use either --rid or --baseline, not both.");
             return 2;
         }
 
-        var candidateIndex = usesArchivedBaseline ? 3 : 2;
-        var budgetStartIndex = usesArchivedBaseline ? 4 : 3;
-
-        PerformanceBudget budget;
-        if (string.Equals(args[budgetStartIndex], "--budget", StringComparison.OrdinalIgnoreCase))
+        string baselinePath;
+        string candidatePath;
+        if (options.TryGetValue("--candidate", out var candidateOption))
         {
-            budget = new JsonPerformanceBudgetReader().Read(File.ReadAllText(args[budgetStartIndex + 1]));
+            candidatePath = candidateOption;
+            if (positional.Count != 0)
+            {
+                Console.Error.WriteLine("Positional arguments cannot be combined with --candidate.");
+                return 2;
+            }
+        }
+        else if (options.ContainsKey("--rid"))
+        {
+            if (positional.Count != 1)
+            {
+                Console.Error.WriteLine("A candidate evidence file is required.");
+                return 2;
+            }
+
+            candidatePath = positional[0];
         }
         else
         {
-            if (!TryParse(args[budgetStartIndex], out var maxMeanRegression)
-                || !TryParse(args[budgetStartIndex + 1], out var maxAllocationRegression))
+            if (options.TryGetValue("--baseline", out var baselineOption))
             {
-                Console.Error.WriteLine("Performance budget thresholds must be non-negative percentages.");
+                baselinePath = baselineOption;
+                if (positional.Count != 1)
+                {
+                    Console.Error.WriteLine("A candidate evidence file is required.");
+                    return 2;
+                }
+
+                candidatePath = positional[0];
+            }
+            else
+            {
+                if (positional.Count < 2)
+                {
+                    PrintCheckUsage();
+                    return 2;
+                }
+
+                baselinePath = positional[0];
+                candidatePath = positional[1];
+                positional.RemoveRange(0, 2);
+            }
+        }
+
+        PerformanceBudget budget;
+        if (options.TryGetValue("--budget", out var budgetPath))
+        {
+            if (positional.Count != 0)
+            {
+                Console.Error.WriteLine("Unexpected positional arguments.");
+                return 2;
+            }
+
+            budget = new JsonPerformanceBudgetReader().Read(File.ReadAllText(budgetPath));
+        }
+        else
+        {
+            var thresholds = options.ContainsKey("--rid") || options.ContainsKey("--baseline")
+                ? positional
+                : positional;
+            if (thresholds.Count != 2
+                || !TryParse(thresholds[0], out var maxMeanRegression)
+                || !TryParse(thresholds[1], out var maxAllocationRegression))
+            {
+                Console.Error.WriteLine("Provide --budget <budget.json> or two non-negative performance budget percentages.");
                 return 2;
             }
 
@@ -228,17 +312,17 @@ static int RunCheck(string[] args)
 
         var reader = new JsonBenchmarkEvidenceReader();
         BenchmarkEvidence baseline;
-        if (usesArchivedBaseline)
+        if (options.TryGetValue("--rid", out var runId))
         {
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
-            baseline = new FileRunArchive(root).ReadAsync(args[2]).GetAwaiter().GetResult().Evidence;
+            baseline = new FileRunArchive(root).ReadAsync(runId).GetAwaiter().GetResult().Evidence;
         }
         else
         {
-            baseline = reader.Read(File.ReadAllText(args[1]));
+            baseline = reader.Read(File.ReadAllText(options.TryGetValue("--baseline", out var explicitBaseline) ? explicitBaseline : baselinePath));
         }
 
-        var candidate = reader.Read(File.ReadAllText(args[candidateIndex]));
+        var candidate = reader.Read(File.ReadAllText(candidatePath));
 
         var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
             baseline.Environment,
@@ -284,6 +368,11 @@ static int RunCheck(string[] args)
         return 2;
     }
 }
+
+static void PrintCheckUsage() =>
+    Console.Error.WriteLine(
+        "Usage: perfagent check [--baseline <baseline.json> | --rid <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
+
 
 static string FormatBudget(double? threshold, bool exceeded) =>
     threshold is null
