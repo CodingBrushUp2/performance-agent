@@ -104,3 +104,26 @@ Integrations own protocol-specific translation only. MCP, Codex skills, GitHub, 
 ## Split criteria
 
 A component should move to a separate repository only if there is a concrete operational reason, such as an independent ownership model, incompatible release lifecycle, security boundary, or technology/tooling constraint. Repository splitting is not part of V1.
+
+
+## Run history and baseline provenance
+
+Benchmark evidence is immutable once archived. A baseline is a reference to an archived run, not a mutable copy of benchmark measurements.
+
+Baseline changes are append-only events. The history distinguishes an **anchor baseline** from the **current baseline** so resetting or promoting the current baseline does not erase the original performance reference.
+
+A future storage adapter may persist the same model in files, object storage, SQLite, or PostgreSQL. Core history types remain storage-agnostic.
+
+The initial file-backed layout is expected to follow this shape:
+
+```text
+.performance-agent/
+├── archive/
+│   └── <run-id>.json
+├── baselines/
+│   ├── anchor.json
+│   └── current.json
+└── baseline-events.jsonl
+```
+
+The archive is the source of truth. Baseline reference files are derived pointers for convenient lookup. A reset must create an auditable event containing the target run and previous run rather than overwriting history.
