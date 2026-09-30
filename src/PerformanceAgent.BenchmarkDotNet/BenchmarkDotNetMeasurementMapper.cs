@@ -18,6 +18,6 @@ public sealed class BenchmarkDotNetMeasurementMapper
         return new BenchmarkMeasurement(
             name,
             statistics.Mean,
-            allocatedBytes);
+            allocatedBytes ?? 0);
     }
 }
