@@ -27,9 +27,26 @@ public sealed class RunnerIntegrationTests
         var measurements = runner.RunDry(benchmarkType);
 
         var measurement = Assert.Single(measurements);
-        Assert.Equal(nameof(SampleBenchmark.Sum), measurement.Name);
+        Assert.Equal($"{typeof(SampleBenchmark).FullName}.{nameof(SampleBenchmark.Sum)}", measurement.Name);
         Assert.True(measurement.MeanNanoseconds >= 0);
         Assert.True(measurement.AllocatedBytesPerOperation is null or >= 0);
+    }
+
+    [Fact]
+    public void RunDry_DistinguishesParameterizedBenchmarkCases()
+    {
+        var runner = new BenchmarkDotNetRunner();
+
+        var measurements = runner.RunDry(typeof(ParameterizedBenchmark));
+
+        Assert.Equal(2, measurements.Count);
+        Assert.Equal(2, measurements.Select(measurement => measurement.Name).Distinct(StringComparer.Ordinal).Count());
+        Assert.All(
+            measurements,
+            measurement => Assert.StartsWith(
+                $"{typeof(ParameterizedBenchmark).FullName}.{nameof(ParameterizedBenchmark.Work)}[Size=",
+                measurement.Name,
+                StringComparison.Ordinal));
     }
 
     [MemoryDiagnoser]
@@ -48,5 +65,14 @@ public sealed class RunnerIntegrationTests
 
             return sum;
         }
+    }
+
+    public class ParameterizedBenchmark
+    {
+        [Params(10, 100)]
+        public int Size { get; set; }
+
+        [Benchmark]
+        public int Work() => Enumerable.Range(0, Size).Sum();
     }
 }
