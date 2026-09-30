@@ -17,3 +17,8 @@ jobs:
       - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
       - run: dotnet test PerformanceAgent.sln --configuration Release --no-build
       - run: bash tests/e2e/cli-smoke.sh
+      - name: Pack and smoke-test dotnet tool
+        run: |
+          dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj --configuration Release --no-build --output artifacts
+          dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.1.0 --add-source ./artifacts
+          ./.tools/perfagent compare ToolSmoke 100 90 1000 900 markdown | grep -F "| ToolSmoke | Mean (ns) | 100 | 90 | -10% | Comparable |"

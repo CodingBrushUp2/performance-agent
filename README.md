@@ -26,6 +26,31 @@ Current baseline:
 
 See [Product Specification](docs/product-spec.md), [Architecture](docs/architecture.md), and [Security model](SECURITY.md).
 
+## Local tool install
+
+Until a public package is published, build and install the CLI from a local package:
+
+```bash
+dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release -o artifacts
+dotnet tool install --global PerformanceAgent.Cli --version 0.1.0 --add-source ./artifacts
+```
+
+Then run:
+
+```bash
+perfagent run path/to/Benchmarks.csproj
+perfagent check baseline.json candidate.json --budget performance-budget.json
+```
+
+Example budget:
+
+```json
+{
+  "maxMeanRegressionPercent": 5,
+  "maxAllocationRegressionPercent": 10
+}
+```
+
 ## Non-goals for V1
 
 No hosted dashboard, accounts, database, IDE extension, distributed runners, or mandatory cloud service.
