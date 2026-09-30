@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-  </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/PerformanceAgent.BenchmarkDotNet/PerformanceAgent.BenchmarkDotNet.csproj" />
-    <ProjectReference Include="../../src/PerformanceAgent.Core/PerformanceAgent.Core.csproj" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>
 </Project>
