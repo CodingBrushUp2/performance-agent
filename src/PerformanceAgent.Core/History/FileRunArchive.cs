@@ -36,6 +36,26 @@ public sealed class FileRunArchive
         return path;
     }
 
+    public async Task<IReadOnlyList<ArchivedBenchmarkRun>> ListAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!Directory.Exists(_archiveDirectory))
+            return [];
+
+        var runs = new List<ArchivedBenchmarkRun>();
+        foreach (var path in Directory.EnumerateFiles(_archiveDirectory, "run-*.json"))
+        {
+            var json = await File.ReadAllTextAsync(path, cancellationToken);
+            runs.Add(JsonSerializer.Deserialize<ArchivedBenchmarkRun>(json, Options)
+                ?? throw new InvalidOperationException($"Archived benchmark run '{path}' is invalid."));
+        }
+
+        return runs
+            .OrderByDescending(run => run.Timestamp)
+            .ThenBy(run => run.RunId, StringComparer.Ordinal)
+            .ToArray();
+    }
+
     public async Task<ArchivedBenchmarkRun> ReadAsync(
         string runId,
         CancellationToken cancellationToken = default)
