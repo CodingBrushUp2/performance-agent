@@ -1,5 +1,6 @@
 using PerformanceAgent.Core.Comparison;
 using PerformanceAgent.Core.Measurements;
+using Xunit;
 
 namespace PerformanceAgent.Core.Tests;
 
