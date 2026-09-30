@@ -1,4 +1,10 @@
-# Architecture v0.1
+# Architecture v0.2
+
+## Repository strategy
+
+Performance Agent is a monorepo. The core libraries and all delivery surfaces live together while remaining independently buildable and deployable.
+
+A separate repository is not created merely because something has a different output format. JSON, Markdown, and future HTML are reporters over the same application model.
 
 ## Dependency rule
 
@@ -25,23 +31,35 @@ Optional AI Adapter
 Analysis Provider
 ```
 
-## Proposed projects
+## Monorepo layout
 
 ```text
 src/
   PerformanceAgent.Core/
   PerformanceAgent.BenchmarkDotNet/
-  PerformanceAgent.Cli/
   PerformanceAgent.AI/
 
+apps/
+  cli/
+
+integrations/
+  mcp/                 # future
+  codex/               # future
+  github/              # future
+  vscode/              # future
+
 tests/
-  PerformanceAgent.Core.Tests/
-  PerformanceAgent.IntegrationTests/
+  unit/
+  integration/
+  e2e/
 
 samples/
 docs/
-integrations/
+
+PerformanceAgent.sln
 ```
+
+Only directories needed by the current milestone should be materialized. Future directories in this document describe boundaries, not an instruction to create empty scaffolding.
 
 ## Core boundaries
 
@@ -52,7 +70,7 @@ Core owns:
 - validation findings;
 - comparisons;
 - performance budgets;
-- report model.
+- report model and reporter contracts.
 
 BenchmarkDotNet adapter owns:
 - BenchmarkDotNet-specific configuration;
@@ -70,6 +88,8 @@ CLI owns:
 - exit codes;
 - presentation.
 
+Integrations own protocol-specific translation only. MCP, Codex skills, GitHub, and IDE integrations must not duplicate performance-analysis business logic.
+
 ## Hard constraints
 
 - Core must not reference an LLM SDK.
@@ -78,3 +98,9 @@ CLI owns:
 - Secrets must not be stored in repository configuration.
 - A failed AI request must not invalidate a successful benchmark result.
 - Reports must label measured facts separately from generated interpretation.
+- Delivery surfaces may depend on Core; Core must never depend on a delivery surface.
+- Output formats must not become separate repositories solely because they are separate formats.
+
+## Split criteria
+
+A component should move to a separate repository only if there is a concrete operational reason, such as an independent ownership model, incompatible release lifecycle, security boundary, or technology/tooling constraint. Repository splitting is not part of V1.
