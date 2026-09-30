@@ -15,4 +15,4 @@ jobs:
           dotnet-version: 8.0.x
       - run: dotnet restore PerformanceAgent.sln
       - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
-      - run: dotnet test PerformanceAgent.sln --configuration Release --no-build
+      - run: dotnet test PerformanceAgent.sln --configuration Release --no-build\n      - run: bash tests/e2e/cli-smoke.sh
