@@ -54,4 +54,17 @@ public sealed class BenchmarkComparerTests
         Assert.Equal(0, result.Mean.PercentChange);
         Assert.Equal(ComparisonStatus.Comparable, result.Mean.Status);
     }
+    [Fact]
+    public void Compare_MarksMissingAllocationAsUnavailable()
+    {
+        var baseline = new BenchmarkMeasurement("A", 100, null);
+        var candidate = new BenchmarkMeasurement("A", 90, 0);
+
+        var result = new BenchmarkComparer().Compare(baseline, candidate);
+
+        Assert.Equal(ComparisonStatus.Unavailable, result.AllocatedBytes.Status);
+        Assert.Null(result.AllocatedBytes.Baseline);
+        Assert.Equal(0, result.AllocatedBytes.Candidate);
+        Assert.Null(result.AllocatedBytes.PercentChange);
+    }
 }
