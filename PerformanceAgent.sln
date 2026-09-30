@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.BenchmarkD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.Core.Tests", "tests\unit\PerformanceAgent.Core.Tests\PerformanceAgent.Core.Tests.csproj", "{AB61BE39-EF9A-4456-889E-C82175557CF5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.BenchmarkDotNet.IntegrationTests", "tests\\integration\\PerformanceAgent.BenchmarkDotNet.IntegrationTests\\PerformanceAgent.BenchmarkDotNet.IntegrationTests.csproj", "{F3A39E71-98E0-49E8-A6AA-7B498AEB76CF}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.Cli", "apps\\cli\\PerformanceAgent.Cli\\PerformanceAgent.Cli.csproj", "{8D153CF0-92F0-448C-B845-7C93E1F36E93}"
 EndProject
 Global

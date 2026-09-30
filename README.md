@@ -6,6 +6,15 @@ Performance Agent measures first and explains second. Its core workflow works wi
 
 > Project status: early design / V1 bootstrap. The repository name is temporary and is not the final product brand.
 
+## Runtime compatibility
+
+Performance Agent 1.x starts on .NET 10 LTS and follows stable GA .NET releases. Preview and RC runtimes are not production baselines. Product versions are independent from .NET versions; supported runtime changes are tracked explicitly rather than encoded into the product major version.
+
+Current baseline:
+- Target framework: `net10.0`
+- SDK line: .NET 10 stable, pinned by `global.json`
+- BenchmarkDotNet: 0.15.8 stable
+
 ## V1 direction
 
 - Local-first CLI
