@@ -68,6 +68,54 @@ public sealed class FileRunArchiveTests
         await Assert.ThrowsAsync<ArgumentException>(() => archive.ReadAsync("../secret"));
     }
 
+
+    [Fact]
+    public async Task List_ReturnsNewestRunFirst()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"perfagent-test-{Guid.NewGuid():N}");
+        try
+        {
+            var evidence = new BenchmarkEvidence("1.0", [new BenchmarkMeasurement("A", 100, 0)]);
+            var archive = new FileRunArchive(root);
+            await archive.AppendAsync(new ArchivedBenchmarkRun(
+                "run-old",
+                DateTimeOffset.Parse("2026-09-30T12:00:00Z"),
+                null,
+                evidence));
+            await archive.AppendAsync(new ArchivedBenchmarkRun(
+                "run-new",
+                DateTimeOffset.Parse("2026-09-30T13:00:00Z"),
+                null,
+                evidence));
+
+            var runs = await archive.ListAsync();
+
+            Assert.Equal(["run-new", "run-old"], runs.Select(run => run.RunId).ToArray());
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task List_EmptyArchive_ReturnsEmptyCollection()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"perfagent-test-{Guid.NewGuid():N}");
+        try
+        {
+            var runs = await new FileRunArchive(root).ListAsync();
+
+            Assert.Empty(runs);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
     [Fact]
     public void RunIdGenerator_CreatesDistinctSortableIds()
     {

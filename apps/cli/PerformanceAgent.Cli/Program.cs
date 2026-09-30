@@ -100,6 +100,43 @@ static async Task<int> RunAsync(string[] args)
         }
     }
 
+    if (args.Length == 1 && string.Equals(args[0], "history", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
+            var archive = new FileRunArchive(root);
+            var baselines = new FileBaselineStore(root);
+            var current = await baselines.GetAsync(BaselineKind.Current);
+            var anchor = await baselines.GetAsync(BaselineKind.Anchor);
+            var runs = await archive.ListAsync();
+
+            if (runs.Count == 0)
+            {
+                Console.WriteLine("No archived benchmark runs.");
+                return 0;
+            }
+
+            foreach (var run in runs)
+            {
+                var labels = new List<string>();
+                if (string.Equals(run.RunId, current?.RunId, StringComparison.Ordinal))
+                    labels.Add("current");
+                if (string.Equals(run.RunId, anchor?.RunId, StringComparison.Ordinal))
+                    labels.Add("anchor");
+                var suffix = labels.Count == 0 ? string.Empty : $" [{string.Join(", ", labels)}]";
+                Console.WriteLine($"{run.RunId}  {run.Timestamp:O}  {run.CommitSha ?? "-"}{suffix}");
+            }
+
+            return 0;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+    }
+
     if (string.Equals(args.FirstOrDefault(), "check", StringComparison.OrdinalIgnoreCase))
     {
         return RunCheck(args);
@@ -108,7 +145,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
