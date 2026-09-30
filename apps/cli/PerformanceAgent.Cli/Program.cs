@@ -139,7 +139,7 @@ static async Task<int> RunAsync(string[] args)
 
     if (string.Equals(args.FirstOrDefault(), "check", StringComparison.OrdinalIgnoreCase))
     {
-        return RunCheck(args);
+        return await RunCheckAsync(args);
     }
 
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
@@ -194,7 +194,7 @@ static bool TryParse(string value, out double result)
 }
 
 
-static int RunCheck(string[] args)
+static async Task<int> RunCheckAsync(string[] args)
 {
     try
     {
@@ -315,7 +315,7 @@ static int RunCheck(string[] args)
         if (options.TryGetValue("--rid", out var runId))
         {
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
-            baseline = new FileRunArchive(root).ReadAsync(runId).GetAwaiter().GetResult().Evidence;
+            baseline = (await new FileRunArchive(root).ReadAsync(runId)).Evidence;
         }
         else
         {
@@ -323,6 +323,28 @@ static int RunCheck(string[] args)
         }
 
         var candidate = reader.Read(File.ReadAllText(candidatePath));
+
+        if (!options.ContainsKey("--rid") && !options.ContainsKey("--baseline"))
+        {
+            var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
+            var baselineStore = new FileBaselineStore(root);
+            var currentReference = await baselineStore.GetAsync(BaselineKind.Current);
+            var anchorReference = await baselineStore.GetAsync(BaselineKind.Anchor);
+            if (currentReference is not null)
+            {
+                baseline = (await new FileRunArchive(root).ReadAsync(currentReference.RunId)).Evidence;
+
+                if (anchorReference is not null
+                    && !string.Equals(anchorReference.RunId, currentReference.RunId, StringComparison.Ordinal))
+                {
+                    var anchorEvidence = (await new FileRunArchive(root).ReadAsync(anchorReference.RunId)).Evidence;
+                    var currentPassed = CheckEvidence("Current", baseline, candidate, budget);
+                    var anchorPassed = CheckEvidence("Anchor", anchorEvidence, candidate, budget);
+                    Console.WriteLine($"Overall: {(currentPassed && anchorPassed ? "PASS" : "FAIL")}");
+                    return currentPassed && anchorPassed ? 0 : 1;
+                }
+            }
+        }
 
         var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
             baseline.Environment,
@@ -367,6 +389,39 @@ static int RunCheck(string[] args)
         Console.Error.WriteLine(exception.Message);
         return 2;
     }
+}
+
+static bool CheckEvidence(
+    string label,
+    BenchmarkEvidence baseline,
+    BenchmarkEvidence candidate,
+    PerformanceBudget budget)
+{
+    var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
+        baseline.Environment,
+        candidate.Environment);
+    if (!environmentComparison.IsComparable)
+        throw new InvalidOperationException($"{label} baseline and candidate benchmark environments are not comparable: {string.Join("; ", environmentComparison.Differences)}");
+
+    var baselineByName = baseline.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
+    var candidateByName = candidate.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
+    if (baselineByName.Keys.Except(candidateByName.Keys, StringComparer.Ordinal).Any()
+        || candidateByName.Keys.Except(baselineByName.Keys, StringComparer.Ordinal).Any())
+        throw new InvalidOperationException($"{label} baseline and candidate benchmark identities do not match.");
+
+    var checker = new PerformanceBudgetChecker();
+    var passed = true;
+    Console.WriteLine($"{label} baseline:");
+    foreach (var name in baselineByName.Keys.Order(StringComparer.Ordinal))
+    {
+        var result = checker.Check(baselineByName[name], candidateByName[name], budget);
+        passed &= result.Passed;
+        Console.WriteLine($"{name}: {(result.Passed ? "PASS" : "FAIL")}");
+        Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
+        Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
+    }
+
+    return passed;
 }
 
 static void PrintCheckUsage() =>
