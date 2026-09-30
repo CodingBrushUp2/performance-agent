@@ -14,6 +14,10 @@ grep -F '"schemaVersion": "1.0"' <<< "$run_output"
 grep -F '"name": "SampleBenchmark.Sum"' <<< "$run_output"
 grep -F '"meanNanoseconds":' <<< "$run_output"
 grep -F '"allocatedBytesPerOperation":' <<< "$run_output"
+grep -F '"environment":' <<< "$run_output"
+grep -F '"runtime":' <<< "$run_output"
+grep -F '"operatingSystem":' <<< "$run_output"
+grep -F '"architecture":' <<< "$run_output"
 
 if grep -Fq '// BenchmarkDotNet' <<< "$run_output"; then
   echo "BenchmarkDotNet diagnostic output leaked into normalized evidence" >&2
@@ -26,10 +30,10 @@ candidate_file="$(mktemp)"
 trap 'rm -f "$baseline_file" "$candidate_file"' EXIT
 
 cat > "$baseline_file" <<'JSON'
-{"schemaVersion":"1.0","measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000}]}
 JSON
 cat > "$candidate_file" <<'JSON'
-{"schemaVersion":"1.0","measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
 JSON
 
 check_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10)"
@@ -37,7 +41,7 @@ grep -F "MapOrder: PASS" <<< "$check_output"
 grep -F "Overall: PASS" <<< "$check_output"
 
 cat > "$candidate_file" <<'JSON'
-{"schemaVersion":"1.0","measurements":[{"name":"MapOrder","meanNanoseconds":106,"allocatedBytesPerOperation":1070}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":106,"allocatedBytesPerOperation":1070}]}
 JSON
 
 set +e
@@ -56,7 +60,7 @@ JSON
 trap 'rm -f "$baseline_file" "$candidate_file" "$budget_file"' EXIT
 
 cat > "$candidate_file" <<'JSON'
-{"schemaVersion":"1.0","measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
 JSON
 
 budget_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" --budget "$budget_file")"
