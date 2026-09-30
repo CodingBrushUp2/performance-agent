@@ -145,7 +145,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [--baseline <baseline.json> | --rid <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
@@ -224,7 +224,7 @@ static async Task<int> RunCheckAsync(string[] args)
 
             var canonicalOption = option switch
             {
-                "--run-id" or "--run-id" or "-r" => "--run-id",
+                "--rid" or "--run-id" or "-r" => "--run-id",
                 "--baseline" or "-b" => "--baseline",
                 "--candidate" or "-c" => "--candidate",
                 "--budget" or "-p" => "--budget",
@@ -240,7 +240,7 @@ static async Task<int> RunCheckAsync(string[] args)
 
         if (options.ContainsKey("--run-id") && options.ContainsKey("--baseline"))
         {
-            Console.Error.WriteLine("Use either --rid or --baseline, not both.");
+            Console.Error.WriteLine("Use either --run-id or --baseline, not both.");
             return 2;
         }
 
@@ -448,7 +448,7 @@ static bool CheckEvidence(
 
 static void PrintCheckUsage() =>
     Console.Error.WriteLine(
-        "Usage: perfagent check [--baseline <baseline.json> | --rid <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
+        "Usage: perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
 
 
 static string FormatBudget(double? threshold, bool exceeded) =>
