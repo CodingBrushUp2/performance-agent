@@ -27,7 +27,7 @@ public sealed class RunnerIntegrationTests
         var measurements = runner.RunDry(benchmarkType);
 
         var measurement = Assert.Single(measurements);
-        Assert.Equal(nameof(SampleBenchmark.Sum), measurement.Name);
+        Assert.Equal($"{typeof(SampleBenchmark).FullName}.{nameof(SampleBenchmark.Sum)}", measurement.Name);
         Assert.True(measurement.MeanNanoseconds >= 0);
         Assert.True(measurement.AllocatedBytesPerOperation is null or >= 0);
     }
