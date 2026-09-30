@@ -47,3 +47,37 @@ public sealed class BenchmarkEvidenceTests
             () => new JsonBenchmarkEvidenceReader().Read("""{"schemaVersion":"1.0","measurements":[{"name":"","meanNanoseconds":-1,"allocatedBytesPerOperation":-1}]}"""));
     }
 }
+
+
+public sealed class BenchmarkEvidenceEnvironmentValidationTests
+{
+    [Fact]
+    public void Reader_RejectsEmptyEnvironmentFields()
+    {
+        const string json = """
+        {
+          "schemaVersion": "1.0",
+          "measurements": [{ "name": "A", "meanNanoseconds": 1, "allocatedBytesPerOperation": 0 }],
+          "environment": { "runtime": "", "operatingSystem": "Linux", "architecture": "X64" }
+        }
+        """;
+
+        Assert.Throws<InvalidOperationException>(() => new JsonBenchmarkEvidenceReader().Read(json));
+    }
+
+    [Fact]
+    public void Reader_RejectsDuplicateMeasurementIdentities()
+    {
+        const string json = """
+        {
+          "schemaVersion": "1.0",
+          "measurements": [
+            { "name": "A", "meanNanoseconds": 1, "allocatedBytesPerOperation": 0 },
+            { "name": "A", "meanNanoseconds": 2, "allocatedBytesPerOperation": 0 }
+          ]
+        }
+        """;
+
+        Assert.Throws<InvalidOperationException>(() => new JsonBenchmarkEvidenceReader().Read(json));
+    }
+}

@@ -4,4 +4,5 @@ namespace PerformanceAgent.Core.Evidence;
 
 public sealed record BenchmarkEvidence(
     string SchemaVersion,
-    IReadOnlyList<BenchmarkMeasurement> Measurements);
+    IReadOnlyList<BenchmarkMeasurement> Measurements,
+    BenchmarkEnvironment? Environment = null);

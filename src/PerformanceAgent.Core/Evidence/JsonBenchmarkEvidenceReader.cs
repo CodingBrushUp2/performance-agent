@@ -38,6 +38,22 @@ public sealed class JsonBenchmarkEvidenceReader
         if (evidence.Measurements is null || evidence.Measurements.Count == 0)
             throw new InvalidOperationException("Benchmark evidence must contain at least one measurement.");
 
+        if (evidence.Environment is not null)
+        {
+            if (string.IsNullOrWhiteSpace(evidence.Environment.Runtime))
+                throw new InvalidOperationException("Benchmark environment runtime cannot be empty.");
+            if (string.IsNullOrWhiteSpace(evidence.Environment.OperatingSystem))
+                throw new InvalidOperationException("Benchmark environment operating system cannot be empty.");
+            if (string.IsNullOrWhiteSpace(evidence.Environment.Architecture))
+                throw new InvalidOperationException("Benchmark environment architecture cannot be empty.");
+        }
+
+        var duplicateName = evidence.Measurements
+            .GroupBy(measurement => measurement?.Name, StringComparer.Ordinal)
+            .FirstOrDefault(group => !string.IsNullOrWhiteSpace(group.Key) && group.Count() > 1)?.Key;
+        if (duplicateName is not null)
+            throw new InvalidOperationException($"Benchmark evidence contains duplicate measurement identity '{duplicateName}'.");
+
         foreach (var measurement in evidence.Measurements)
         {
             if (measurement is null || string.IsNullOrWhiteSpace(measurement.Name))
