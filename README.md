@@ -24,7 +24,7 @@ Current baseline:
 - JSON and Markdown evidence reports
 - Optional AI analysis through a provider abstraction
 
-See [Product Specification](docs/product-spec.md) and [Architecture](docs/architecture.md).
+See [Product Specification](docs/product-spec.md), [Architecture](docs/architecture.md), and [Security model](SECURITY.md).
 
 ## Non-goals for V1
 
