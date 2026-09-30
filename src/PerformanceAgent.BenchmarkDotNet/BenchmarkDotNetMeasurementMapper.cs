@@ -15,9 +15,6 @@ public sealed class BenchmarkDotNetMeasurementMapper
         var name = report.BenchmarkCase.Descriptor.WorkloadMethod.Name;
         var allocatedBytes = report.GcStats.GetBytesAllocatedPerOperation(report.BenchmarkCase);
 
-        return new BenchmarkMeasurement(
-            name,
-            statistics.Mean,
-            allocatedBytes ?? 0);
+        return new BenchmarkMeasurement(name, statistics.Mean, allocatedBytes);
     }
 }
