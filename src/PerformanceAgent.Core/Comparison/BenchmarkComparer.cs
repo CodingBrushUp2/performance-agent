@@ -20,21 +20,28 @@ public sealed class BenchmarkComparer
             CreateChange(baseline.AllocatedBytesPerOperation, candidate.AllocatedBytesPerOperation));
     }
 
-    private static MetricChange CreateChange(double baseline, double candidate)
+    private static MetricChange CreateChange(double? baseline, double? candidate)
     {
-        if (baseline < 0 || candidate < 0)
+        if (baseline is null || candidate is null)
+        {
+            return new MetricChange(baseline, candidate, null, ComparisonStatus.Unavailable);
+        }
+
+        var baselineValue = baseline.Value;
+        var candidateValue = candidate.Value;
+        if (baselineValue < 0 || candidateValue < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(baseline), "Performance measurements cannot be negative.");
         }
 
-        if (baseline == 0)
+        if (baselineValue == 0)
         {
-            return candidate == 0
+            return candidateValue == 0
                 ? new MetricChange(0, 0, 0, ComparisonStatus.Comparable)
-                : new MetricChange(0, candidate, null, ComparisonStatus.NoBaseline);
+                : new MetricChange(0, candidateValue, null, ComparisonStatus.NoBaseline);
         }
 
-        var percentChange = ((candidate - baseline) / baseline) * 100;
-        return new MetricChange(baseline, candidate, percentChange, ComparisonStatus.Comparable);
+        var percentChange = ((candidateValue - baselineValue) / baselineValue) * 100;
+        return new MetricChange(baselineValue, candidateValue, percentChange, ComparisonStatus.Comparable);
     }
 }
