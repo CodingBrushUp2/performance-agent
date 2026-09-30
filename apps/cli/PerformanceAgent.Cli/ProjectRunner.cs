@@ -47,7 +47,7 @@ internal sealed class ProjectRunner
             if (build.ExitCode != 0)
                 return new ProjectRunResult(build.ExitCode, "", build.StandardOutput, build.StandardError);
 
-            var hostProject = FindBenchmarkHostProject();
+            var hostAssembly = FindBenchmarkHostAssembly();
             var timeout = benchmarkTimeout ?? DefaultBenchmarkTimeout;
             if (timeout <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(benchmarkTimeout), "Benchmark timeout must be greater than zero.");
@@ -60,7 +60,7 @@ internal sealed class ProjectRunner
             {
                 host = await RunProcessAsync(
                     "dotnet",
-                    ["run", "--project", hostProject, "--configuration", "Release", "--no-build", "--", assemblyPath, evidencePath],
+                    [hostAssembly, assemblyPath, evidencePath],
                     timeoutSource.Token);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -89,18 +89,13 @@ internal sealed class ProjectRunner
         }
     }
 
-    private static string FindBenchmarkHostProject()
+    private static string FindBenchmarkHostAssembly()
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            var candidate = Path.Combine(directory.FullName, "apps", "benchmark-host", "PerformanceAgent.BenchmarkHost", "PerformanceAgent.BenchmarkHost.csproj");
-            if (File.Exists(candidate))
-                return candidate;
-            directory = directory.Parent;
-        }
+        var path = Path.Combine(AppContext.BaseDirectory, "benchmark-host", "PerformanceAgent.BenchmarkHost.dll");
+        if (!File.Exists(path))
+            throw new InvalidOperationException("The bundled Performance Agent benchmark host is missing. Reinstall or rebuild the tool.");
 
-        throw new InvalidOperationException("Performance Agent benchmark host could not be located.");
+        return path;
     }
 
     private static async Task<ProcessResult> RunProcessAsync(

@@ -35,6 +35,11 @@ dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release
 dotnet tool install --global PerformanceAgent.Cli --version 0.1.0 --add-source ./artifacts
 ```
 
+The package includes BenchmarkHost and its runtime dependencies. A stable .NET 10 SDK
+is required to build and execute your BenchmarkDotNet project; the Performance Agent
+source tree is not required after installation. Benchmark projects are executable code,
+so run only projects you trust.
+
 Then run:
 
 ```bash
@@ -50,6 +55,16 @@ Example budget:
   "maxAllocationRegressionPercent": 10
 }
 ```
+
+To verify the installed execution path locally after building the solution:
+
+```bash
+bash tests/e2e/installed-tool-smoke.sh
+```
+
+This packs a local package, installs it with an isolated tool manifest, and measures a
+standalone BenchmarkDotNet project outside the repository. Only the smoke benchmark
+uses a dry job; production runs retain the benchmark's normal BenchmarkDotNet configuration.
 
 ## Baseline history
 

@@ -12,5 +12,26 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../../src/PerformanceAgent.Core/PerformanceAgent.Core.csproj" />
+    <ProjectReference Include="../../benchmark-host/PerformanceAgent.BenchmarkHost/PerformanceAgent.BenchmarkHost.csproj"
+                      ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
+
+  <!-- Keep the host isolated, including its deps/runtimeconfig and transitive assets. -->
+  <Target Name="BundleBenchmarkHost" AfterTargets="Build">
+    <RemoveDir Directories="$(TargetDir)benchmark-host" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../../benchmark-host/PerformanceAgent.BenchmarkHost/PerformanceAgent.BenchmarkHost.csproj"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);NoBuild=true;UseAppHost=false;PublishDir=$(TargetDir)benchmark-host/" />
+  </Target>
+
+  <Target Name="PublishBundledBenchmarkHost" AfterTargets="ComputeFilesToPublish"
+          DependsOnTargets="BundleBenchmarkHost">
+    <ItemGroup>
+      <_BundledBenchmarkHost Include="$(TargetDir)benchmark-host/**/*" />
+      <ResolvedFileToPublish Include="@(_BundledBenchmarkHost)">
+        <RelativePath>benchmark-host/%(_BundledBenchmarkHost.RecursiveDir)%(_BundledBenchmarkHost.Filename)%(_BundledBenchmarkHost.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>
