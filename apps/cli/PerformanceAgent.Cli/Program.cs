@@ -139,13 +139,13 @@ static async Task<int> RunAsync(string[] args)
 
     if (string.Equals(args.FirstOrDefault(), "check", StringComparison.OrdinalIgnoreCase))
     {
-        return RunCheck(args);
+        return await RunCheckAsync(args);
     }
 
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [--baseline <baseline.json> | --rid <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
@@ -194,7 +194,7 @@ static bool TryParse(string value, out double result)
 }
 
 
-static int RunCheck(string[] args)
+static async Task<int> RunCheckAsync(string[] args)
 {
     try
     {
@@ -210,7 +210,7 @@ static int RunCheck(string[] args)
             }
 
             var option = args[index];
-            if (option is not ("--rid" or "--baseline" or "--candidate" or "--budget"))
+            if (option is not ("--rid" or "--run-id" or "-r" or "--baseline" or "-b" or "--candidate" or "-c" or "--budget" or "-p"))
             {
                 Console.Error.WriteLine($"Unknown option '{option}'.");
                 return 2;
@@ -222,16 +222,25 @@ static int RunCheck(string[] args)
                 return 2;
             }
 
-            if (!options.TryAdd(option, args[++index]))
+            var canonicalOption = option switch
+            {
+                "--rid" or "--run-id" or "-r" => "--run-id",
+                "--baseline" or "-b" => "--baseline",
+                "--candidate" or "-c" => "--candidate",
+                "--budget" or "-p" => "--budget",
+                _ => option
+            };
+
+            if (!options.TryAdd(canonicalOption, args[++index]))
             {
                 Console.Error.WriteLine($"Option '{option}' may only be specified once.");
                 return 2;
             }
         }
 
-        if (options.ContainsKey("--rid") && options.ContainsKey("--baseline"))
+        if (options.ContainsKey("--run-id") && options.ContainsKey("--baseline"))
         {
-            Console.Error.WriteLine("Use either --rid or --baseline, not both.");
+            Console.Error.WriteLine("Use either --run-id or --baseline, not both.");
             return 2;
         }
 
@@ -246,7 +255,7 @@ static int RunCheck(string[] args)
                 return 2;
             }
         }
-        else if (options.ContainsKey("--rid"))
+        else if (options.ContainsKey("--run-id"))
         {
             if (positional.Count != 1)
             {
@@ -268,6 +277,12 @@ static int RunCheck(string[] args)
                 }
 
                 candidatePath = positional[0];
+            }
+            else if (options.ContainsKey("--budget") && positional.Count == 1)
+            {
+                // No explicit baseline: resolve persistent Current/Anchor after reading the candidate.
+                candidatePath = positional[0];
+                positional.Clear();
             }
             else
             {
@@ -296,7 +311,7 @@ static int RunCheck(string[] args)
         }
         else
         {
-            var thresholds = options.ContainsKey("--rid") || options.ContainsKey("--baseline")
+            var thresholds = options.ContainsKey("--run-id") || options.ContainsKey("--baseline")
                 ? positional
                 : positional;
             if (thresholds.Count != 2
@@ -312,17 +327,46 @@ static int RunCheck(string[] args)
 
         var reader = new JsonBenchmarkEvidenceReader();
         BenchmarkEvidence baseline;
-        if (options.TryGetValue("--rid", out var runId))
+        if (options.TryGetValue("--run-id", out var runId))
         {
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
-            baseline = new FileRunArchive(root).ReadAsync(runId).GetAwaiter().GetResult().Evidence;
+            baseline = (await new FileRunArchive(root).ReadAsync(runId)).Evidence;
+        }
+        else if (options.TryGetValue("--baseline", out var explicitBaseline) || baselinePath is not null)
+        {
+            baseline = reader.Read(File.ReadAllText(explicitBaseline ?? baselinePath!));
         }
         else
         {
-            baseline = reader.Read(File.ReadAllText(options.TryGetValue("--baseline", out var explicitBaseline) ? explicitBaseline : baselinePath!));
+            baseline = new BenchmarkEvidence("1.0", []);
         }
 
         var candidate = reader.Read(File.ReadAllText(candidatePath));
+
+        if (!options.ContainsKey("--run-id") && !options.ContainsKey("--baseline") && baselinePath is null)
+        {
+            var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
+            var baselineStore = new FileBaselineStore(root);
+            var currentReference = await baselineStore.GetAsync(BaselineKind.Current);
+            if (currentReference is null)
+            {
+                Console.Error.WriteLine("No current baseline is configured. Provide -b|--baseline, -r|--run-id, or set a current baseline.");
+                return 2;
+            }
+
+            var archive = new FileRunArchive(root);
+            baseline = (await archive.ReadAsync(currentReference.RunId)).Evidence;
+            var anchorReference = await baselineStore.GetAsync(BaselineKind.Anchor);
+            if (anchorReference is not null
+                && !string.Equals(anchorReference.RunId, currentReference.RunId, StringComparison.Ordinal))
+            {
+                var anchorEvidence = (await archive.ReadAsync(anchorReference.RunId)).Evidence;
+                var currentPassed = CheckEvidence("Current", baseline, candidate, budget);
+                var anchorPassed = CheckEvidence("Anchor", anchorEvidence, candidate, budget);
+                Console.WriteLine($"Overall: {(currentPassed && anchorPassed ? "PASS" : "FAIL")}");
+                return currentPassed && anchorPassed ? 0 : 1;
+            }
+        }
 
         var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
             baseline.Environment,
@@ -369,9 +413,42 @@ static int RunCheck(string[] args)
     }
 }
 
+static bool CheckEvidence(
+    string label,
+    BenchmarkEvidence baseline,
+    BenchmarkEvidence candidate,
+    PerformanceBudget budget)
+{
+    var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
+        baseline.Environment,
+        candidate.Environment);
+    if (!environmentComparison.IsComparable)
+        throw new InvalidOperationException($"{label} baseline and candidate benchmark environments are not comparable: {string.Join("; ", environmentComparison.Differences)}");
+
+    var baselineByName = baseline.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
+    var candidateByName = candidate.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
+    if (baselineByName.Keys.Except(candidateByName.Keys, StringComparer.Ordinal).Any()
+        || candidateByName.Keys.Except(baselineByName.Keys, StringComparer.Ordinal).Any())
+        throw new InvalidOperationException($"{label} baseline and candidate benchmark identities do not match.");
+
+    var checker = new PerformanceBudgetChecker();
+    var passed = true;
+    Console.WriteLine($"{label} baseline:");
+    foreach (var name in baselineByName.Keys.Order(StringComparer.Ordinal))
+    {
+        var result = checker.Check(baselineByName[name], candidateByName[name], budget);
+        passed &= result.Passed;
+        Console.WriteLine($"{name}: {(result.Passed ? "PASS" : "FAIL")}");
+        Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
+        Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
+    }
+
+    return passed;
+}
+
 static void PrintCheckUsage() =>
     Console.Error.WriteLine(
-        "Usage: perfagent check [--baseline <baseline.json> | --rid <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
+        "Usage: perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
 
 
 static string FormatBudget(double? threshold, bool exceeded) =>
