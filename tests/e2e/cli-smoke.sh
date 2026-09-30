@@ -74,3 +74,29 @@ test -s "$evidence_file"
 grep -F '"schemaVersion": "1.0"' "$evidence_file"
 grep -F '"environment":' "$evidence_file"
 rm -f "$evidence_file"
+
+
+# Temporary archived baseline must be command-local and must not mutate baseline state/history.
+temp_root="$(mktemp -d)"
+temp_candidate="$temp_root/candidate.json"
+mkdir -p "$temp_root/.performance-agent/archive"
+cat > "$temp_root/.performance-agent/archive/run-temp.json" <<'JSON'
+{"runId":"run-temp","timestamp":"2026-09-30T12:00:00+00:00","commitSha":"abc123","evidence":{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000}]}}
+JSON
+cat > "$temp_candidate" <<'JSON'
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
+JSON
+
+repo_root="$PWD"
+temporary_output="$(cd "$temp_root" && dotnet "$repo_root/apps/cli/PerformanceAgent.Cli/bin/Release/net10.0/perfagent.dll" check --rid run-temp --candidate "$temp_candidate" --budget "$repo_root/samples/ci/performance-budget.json")"
+grep -F "MapOrder: PASS" <<< "$temporary_output"
+grep -F "Overall: PASS" <<< "$temporary_output"
+
+# Keyed options are intentionally order-independent.
+temporary_reordered_output="$(cd "$temp_root" && dotnet "$repo_root/apps/cli/PerformanceAgent.Cli/bin/Release/net10.0/perfagent.dll" check --budget "$repo_root/samples/ci/performance-budget.json" --candidate "$temp_candidate" --rid run-temp)"
+grep -F "Overall: PASS" <<< "$temporary_reordered_output"
+
+test ! -e "$temp_root/.performance-agent/baselines/current.json"
+test ! -e "$temp_root/.performance-agent/baselines/anchor.json"
+test ! -e "$temp_root/.performance-agent/baseline-events.jsonl"
+rm -rf "$temp_root"
