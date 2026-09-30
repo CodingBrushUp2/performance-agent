@@ -2,10 +2,26 @@ using PerformanceAgent.Core.Comparison;
 using PerformanceAgent.Core.Measurements;
 using PerformanceAgent.Core.Reporting;
 
-return Run(args);
+return await RunAsync(args);
 
-static int Run(string[] args)
+static async Task<int> RunAsync(string[] args)
 {
+    if (args.Length == 2 && string.Equals(args[0], "run", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            var result = await new PerformanceAgent.Cli.ProjectRunner().RunAsync(args[1]);
+            Console.Write(result.StandardOutput);
+            Console.Error.Write(result.StandardError);
+            return result.ExitCode;
+        }
+        catch (ArgumentException exception)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+    }
+
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
