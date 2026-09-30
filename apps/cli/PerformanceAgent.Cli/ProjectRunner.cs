@@ -1,3 +1,4 @@
+using PerformanceAgent.Core.Evidence;
 using System.Diagnostics;
 
 namespace PerformanceAgent.Cli;
@@ -51,8 +52,13 @@ internal sealed class ProjectRunner
                 ? await File.ReadAllTextAsync(evidencePath, cancellationToken)
                 : string.Empty;
 
-            if (host.ExitCode == 0 && string.IsNullOrWhiteSpace(evidence))
-                throw new InvalidOperationException("Benchmark host completed successfully but did not produce Performance Agent evidence.");
+            if (host.ExitCode == 0)
+            {
+                if (string.IsNullOrWhiteSpace(evidence))
+                    throw new InvalidOperationException("Benchmark host completed successfully but did not produce Performance Agent evidence.");
+
+                _ = new JsonBenchmarkEvidenceReader().Read(evidence);
+            }
 
             return new ProjectRunResult(host.ExitCode, evidence, build.StandardOutput + host.StandardOutput, build.StandardError + host.StandardError);
         }
