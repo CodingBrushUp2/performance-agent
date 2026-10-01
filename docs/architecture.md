@@ -127,3 +127,36 @@ The initial file-backed layout is expected to follow this shape:
 ```
 
 The archive is the source of truth. Baseline reference files are derived pointers for convenient lookup. A reset must create an auditable event containing the target run and previous run rather than overwriting history.
+
+
+## Provider-oriented evolution
+
+The benchmark adapter is the first evidence provider, not the boundary of the product. Future providers may normalize runtime diagnostics, metrics, logs, traces, or cloud/APM evidence into explicit contracts without introducing vendor types into Core.
+
+The intended direction is:
+
+```text
+Evidence Providers                 Performance Agent                 Result Publishers
+-----------------                 -----------------                 -----------------
+BenchmarkDotNet ----\              normalize/correlate              /--> Teams
+ dotnet-monitor -----+-----------> analyze/experiment/verify ------+---> Jira
+OpenTelemetry -------+                                                +--> Confluence
+Metrics / logs ------+                                                \--> Email
+Cloud/APM tools -----/
+```
+
+This is a complementary performance-engineering layer. Providers remain responsible for collecting their native telemetry; Performance Agent should not duplicate mature APM, diagnostics, metrics, or logging platforms.
+
+Provider contracts should stay capability-oriented rather than vendor-oriented. Concrete adapters may later implement concepts such as evidence acquisition and experiment execution. Do not force all sources into one lowest-common-denominator interface when their capabilities differ.
+
+## Execution surfaces
+
+Native CLI execution remains the V1 surface. Container and sidecar modes are future deployment options, particularly for runtime diagnostics where process/container isolation and diagnostic access matter. A sidecar may consume evidence from tools such as `dotnet-monitor`; Performance Agent does not need to replace those tools.
+
+Execution surfaces must feed the same normalized evidence and analysis pipeline. Core must not depend on Docker, Kubernetes, or a specific cloud runtime.
+
+## Result publishing
+
+Future result publishing is outbound adapter behavior. Defaults may come from project configuration and commands may override destinations or notification conditions. Publisher failures must not rewrite benchmark evidence, baseline history, or measured outcomes. Credentials belong in secret providers/environment-specific configuration, never committed repository configuration.
+
+Calibration and analysis may recommend candidate run IDs, but publishers and AI adapters must never implicitly promote Current or Anchor. Baseline mutation remains an explicit command/domain action.
