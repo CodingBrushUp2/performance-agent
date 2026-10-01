@@ -126,6 +126,9 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             assert status == 200 and "<h1>PASS</h1>" in regression
             assert "Candidate <code>run-second</code> vs Current <code>run-second</code>" in regression
             assert "Budget: mean +5%, allocation +5%" in regression
+            assert "Mean baseline (ns)" in regression and "Mean candidate (ns)" in regression
+            assert "Allocation baseline (B/op)" in regression and "Allocation candidate (B/op)" in regression
+            assert regression.count(">100.125</td>") >= 2 and regression.count(">0</td>") >= 2
             # Current-vs-Current has a 0% allocation change; formatting of unavailable values is covered by run details.
             assert "Unavailable%" not in regression
             for run_id in ["run-first", "run-second", "run-'&é"]:

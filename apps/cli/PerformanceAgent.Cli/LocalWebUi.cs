@@ -181,9 +181,12 @@ internal static class LocalWebUi
 
     private static string RenderCheck(string baselineRunId, string candidateRunId, EvidenceCheckResult check, PerformanceBudget budget)
     {
-        var rows = string.Join("", check.Benchmarks.Select(item => $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "REGRESSION")}</td><td>{FormatPercent(item.Result.Comparison.Mean.PercentChange)}</td><td>{FormatPercent(item.Result.Comparison.AllocatedBytes.PercentChange)}</td></tr>"));
-        return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{(check.Passed ? "PASS" : "REGRESSION")}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">Budget: mean +{budget.MaxMeanRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}%, allocation +{budget.MaxAllocationRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}% (perfagent.json or defaults).</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean change</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
+        var rows = string.Join("", check.Benchmarks.Select(item => $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "REGRESSION")}</td><td>{FormatMetric(item.Result.Comparison.Mean.Baseline)}</td><td>{FormatMetric(item.Result.Comparison.Mean.Candidate)}</td><td>{FormatPercent(item.Result.Comparison.Mean.PercentChange)}</td><td>{FormatMetric(item.Result.Comparison.AllocatedBytes.Baseline)}</td><td>{FormatMetric(item.Result.Comparison.AllocatedBytes.Candidate)}</td><td>{FormatPercent(item.Result.Comparison.AllocatedBytes.PercentChange)}</td></tr>"));
+        return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{(check.Passed ? "PASS" : "REGRESSION")}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">Budget: mean +{budget.MaxMeanRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}%, allocation +{budget.MaxAllocationRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}% (perfagent.json or defaults).</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean baseline (ns)</th><th>Mean candidate (ns)</th><th>Mean change</th><th>Allocation baseline (B/op)</th><th>Allocation candidate (B/op)</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
     }
+
+    private static string FormatMetric(double? value) =>
+        value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "Unavailable";
 
     private static string FormatPercent(double? value)
     {
