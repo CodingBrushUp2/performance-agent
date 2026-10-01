@@ -164,6 +164,27 @@ unique temporary write probe; it does not alter evidence or baseline history. A
 successful probe is not a guarantee that every existing child file is writable.
 No automatic elevation or storage relocation is performed.
 
+## Portable HTML reports
+
+```bash
+perfagent report <candidate-run-id> > report.html
+perfagent report <candidate-run-id> --baseline <baseline-run-id> --budget performance-budget.json > report.html
+perfagent compare Example 100 110 1000 1200 html > comparison.html
+```
+
+The archived-run report compares against **Current only** unless `--baseline` supplies
+an archived RunId. It uses the same regression checker as `check` and the local UI;
+it does not replace `check`'s combined Current/Anchor gate. Workspace budgets apply
+unless `--budget` overrides them. Exit codes are 0 for PASS, 1 for REGRESSION (HTML is
+still emitted), and 2 for invalid input or incompatible evidence (no HTML emitted).
+
+Run Details also offers **Download HTML report vs Current**. The exported file includes
+run identities, timestamps, commits, environments, measured values, derived changes,
+budget source and interpretation. It has no scripts or external assets and can be
+opened offline. Numeric `compare ... html` has no environment or budget verdict.
+Unavailable and zero-baseline percentage changes remain explicit; a PASS is not proof
+that unavailable metrics are equivalent. Exporting does not change history or baselines.
+
 ## Workspace configuration
 
 `perfagent config show` and the UI's **Effective configuration** link display the
