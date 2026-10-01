@@ -79,8 +79,25 @@ public sealed class FileRunArchive
         if (!File.Exists(path))
             throw new FileNotFoundException($"Archived benchmark run '{runId}' was not found.", path);
 
-        var json = await File.ReadAllTextAsync(path, cancellationToken);
-        return JsonSerializer.Deserialize<ArchivedBenchmarkRun>(json, Options)
-            ?? throw new InvalidOperationException($"Archived benchmark run '{runId}' is invalid.");
+        return await ReadFileAsync(path, runId, cancellationToken);
+    }
+
+    private static async Task<ArchivedBenchmarkRun> ReadFileAsync(
+        string path, string expectedRunId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var json = await File.ReadAllTextAsync(path, cancellationToken);
+            var run = JsonSerializer.Deserialize<ArchivedBenchmarkRun>(json, Options)
+                ?? throw new InvalidOperationException($"Archived benchmark run '{path}' is invalid.");
+            RunIdValidation.Validate(run.RunId);
+            if (!string.Equals(run.RunId, expectedRunId, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Archived benchmark run '{path}' has RunId '{run.RunId}', expected '{expectedRunId}'.");
+            return run;
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException)
+        {
+            throw new InvalidOperationException($"Archived benchmark run '{path}' contains invalid JSON or an invalid RunId.", exception);
+        }
     }
 }
