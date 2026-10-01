@@ -76,7 +76,7 @@ archived before cancellation remain valid; an interrupted benchmark is not archi
 
 ## Try the first usable workflow
 
-A small benchmark project is included so the current product can be exercised immediately:
+A small benchmark project is included so the current product can be exercised immediately. On macOS/Linux, the shortest path is:\n\n```bash\nbash scripts/try-local.sh\n```\n\nThe equivalent manual steps are:
 
 ```bash
 dotnet build PerformanceAgent.sln -c Release
