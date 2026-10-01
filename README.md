@@ -74,6 +74,29 @@ execution. The CLI terminates the active child process tree, removes temporary h
 evidence, reports cancellation, and exits with code 130. Measurements completed and
 archived before cancellation remain valid; an interrupted benchmark is not archived.
 
+## Try the first usable workflow
+
+A small benchmark project is included so the current product can be exercised immediately:
+
+```bash
+dotnet build PerformanceAgent.sln -c Release
+dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release --no-build -o artifacts
+dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.1.0 --add-source ./artifacts
+
+./.tools/perfagent calibrate samples/QuickStartBenchmarks/QuickStartBenchmarks.csproj
+./.tools/perfagent history
+```
+
+Calibration archives each measured run but intentionally leaves Current and Anchor unset. Inspect the reported RunIds, then explicitly select the run you trust:
+
+```bash
+./.tools/perfagent baseline set <run-id>
+./.tools/perfagent baseline anchor <run-id>
+./.tools/perfagent history
+```
+
+This is the first operational local workflow: measure a real BenchmarkDotNet project, evaluate cross-run stability, retain immutable evidence, and explicitly establish baseline provenance. No AI, cloud account, database, or monitoring platform is required.
+
 ## Archive identities
 
 Generated RunIds use an invariant UTC timestamp and random suffix. Safe custom IDs
