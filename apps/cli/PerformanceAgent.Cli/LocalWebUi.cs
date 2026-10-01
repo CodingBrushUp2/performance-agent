@@ -20,6 +20,7 @@ internal static class LocalWebUi
         var archive = new FileRunArchive(storage.StateDirectory);
         var baselines = new FileBaselineStore(storage.StateDirectory);
         var selection = new BaselineSelectionService(storage);
+        var configuration = new WorkspaceConfiguration(storage);
 
         var builder = WebApplication.CreateSlimBuilder();
         // The local UI must not inherit endpoint settings from a benchmark project's
@@ -89,8 +90,9 @@ internal static class LocalWebUi
             if (current is null) return Results.Text("No current baseline is configured.", statusCode: 409);
             var baseline = await archive.ReadAsync(current.RunId, context.RequestAborted);
             var candidate = await archive.ReadAsync(runId, context.RequestAborted);
-            var check = new RegressionCheckService().Check(baseline.Evidence, candidate.Evidence, new PerformanceBudget(5, 5));
-            return Results.Content(RenderCheck(current.RunId, candidate.RunId, check), "text/html; charset=utf-8");
+            var budget = configuration.Load().Budget!;
+            var check = new RegressionCheckService().Check(baseline.Evidence, candidate.Evidence, budget);
+            return Results.Content(RenderCheck(current.RunId, candidate.RunId, check, budget), "text/html; charset=utf-8");
         });
         app.MapPost("/baselines/current", (Delegate)((HttpContext context) => SelectAsync(context, BaselineKind.Current)));
         app.MapPost("/baselines/anchor", (Delegate)((HttpContext context) => SelectAsync(context, BaselineKind.Anchor)));
@@ -172,10 +174,10 @@ internal static class LocalWebUi
 """);
     }
 
-    private static string RenderCheck(string baselineRunId, string candidateRunId, EvidenceCheckResult check)
+    private static string RenderCheck(string baselineRunId, string candidateRunId, EvidenceCheckResult check, PerformanceBudget budget)
     {
         var rows = string.Join("", check.Benchmarks.Select(item => $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "REGRESSION")}</td><td>{item.Result.Comparison.Mean.PercentChange?.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) ?? "Unavailable"}%</td><td>{item.Result.Comparison.AllocatedBytes.PercentChange?.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) ?? "Unavailable"}%</td></tr>"));
-        return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{(check.Passed ? "PASS" : "REGRESSION")}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">V0.1 UI budget: +5% mean and +5% allocation.</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean change</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
+        return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{(check.Passed ? "PASS" : "REGRESSION")}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">Budget: mean +{budget.MaxMeanRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}%, allocation +{budget.MaxAllocationRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}% (perfagent.json or defaults).</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean change</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
     }
 
     private static string Page(string title, string content) => $$"""
