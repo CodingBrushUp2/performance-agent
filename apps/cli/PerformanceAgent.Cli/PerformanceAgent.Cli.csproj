@@ -11,6 +11,7 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../../../src/PerformanceAgent.Core/PerformanceAgent.Core.csproj" />
     <ProjectReference Include="../../benchmark-host/PerformanceAgent.BenchmarkHost/PerformanceAgent.BenchmarkHost.csproj"
                       ReferenceOutputAssembly="false" Private="false" />
