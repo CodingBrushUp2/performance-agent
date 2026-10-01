@@ -480,20 +480,21 @@ static async Task<int> RunCheckAsync(string[] args)
 
             budget = new JsonPerformanceBudgetReader().Read(File.ReadAllText(budgetPath));
         }
+        else if (positional.Count == 2
+                 && TryParse(positional[0], out var maxMeanRegression)
+                 && TryParse(positional[1], out var maxAllocationRegression))
+        {
+            budget = new PerformanceBudget(maxMeanRegression, maxAllocationRegression);
+        }
+        else if (positional.Count == 0)
+        {
+            budget = new PerformanceAgent.Cli.WorkspaceConfiguration(
+                PerformanceAgent.Cli.WorkspaceStorage.Resolve()).Load().Budget!;
+        }
         else
         {
-            var thresholds = options.ContainsKey("--run-id") || options.ContainsKey("--baseline")
-                ? positional
-                : positional;
-            if (thresholds.Count != 2
-                || !TryParse(thresholds[0], out var maxMeanRegression)
-                || !TryParse(thresholds[1], out var maxAllocationRegression))
-            {
-                Console.Error.WriteLine("Provide --budget <budget.json> or two non-negative performance budget percentages.");
-                return 2;
-            }
-
-            budget = new PerformanceBudget(maxMeanRegression, maxAllocationRegression);
+            Console.Error.WriteLine("Provide --budget <budget.json>, two non-negative performance budget percentages, or configure budget in perfagent.json.");
+            return 2;
         }
 
         var reader = new JsonBenchmarkEvidenceReader();
