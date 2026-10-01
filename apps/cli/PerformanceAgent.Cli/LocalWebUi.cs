@@ -9,6 +9,7 @@ using System.Net;
 using System.Globalization;
 using PerformanceAgent.Core.History;
 using PerformanceAgent.Core.Budgets;
+using PerformanceAgent.Core.Analysis;
 
 namespace PerformanceAgent.Cli;
 
@@ -16,7 +17,24 @@ internal static class LocalWebUi
 {
     public static async Task<int> RunAsync(bool openBrowser, CancellationToken cancellationToken)
     {
-        var storage = WorkspaceStorage.Resolve();
+        await using var app = await StartAsync(WorkspaceStorage.Resolve(), createProvider: null, cancellationToken);
+        var address = app.Urls.First();
+        Console.WriteLine($"Performance Agent UI: {address}");
+        if (openBrowser)
+            TryOpenBrowser(address);
+        await app.WaitForShutdownAsync(cancellationToken);
+        return 0;
+    }
+
+    /// <summary>
+    /// Builds and starts the loopback UI. <paramref name="createProvider"/> is passed unchanged to the shared
+    /// <see cref="AnalyzeService"/>; null uses the production provider factory, exactly like the CLI.
+    /// </summary>
+    internal static async Task<WebApplication> StartAsync(
+        WorkspaceStorage storage,
+        Func<string, string?, IPerformanceAnalysisProvider>? createProvider,
+        CancellationToken cancellationToken)
+    {
         var archive = new FileRunArchive(storage.StateDirectory);
         var baselines = new FileBaselineStore(storage.StateDirectory);
         var selection = new BaselineSelectionService(storage);
@@ -34,7 +52,7 @@ internal static class LocalWebUi
         // Tokens are scoped to this server lifetime; no key files or accounts are needed.
         builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
         builder.Services.AddAntiforgery(options => options.Cookie.SameSite = SameSiteMode.Strict);
-        await using var app = builder.Build();
+        var app = builder.Build();
         var antiforgery = app.Services.GetRequiredService<IAntiforgery>();
         app.Use(async (context, next) =>
         {
@@ -63,7 +81,7 @@ internal static class LocalWebUi
         app.MapGet("/configuration", () =>
         {
             var effective = configuration.Inspect();
-            var content = $"<p><a href=\"/\">Back to history</a></p><h1>Effective configuration</h1><dl><dt>Configuration file</dt><dd>{WebUtility.HtmlEncode(effective.Path)}</dd><dt>Budget source</dt><dd>{WebUtility.HtmlEncode(effective.BudgetSource)}</dd><dt>Max mean regression (%)</dt><dd>{effective.Budget.MaxMeanRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd><dt>Max allocation regression (%)</dt><dd>{effective.Budget.MaxAllocationRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd></dl><p>Explicit CLI check thresholds or --budget override workspace settings. Do not store secrets in perfagent.json.</p>";
+            var content = $"<p><a href=\"/\">Back to history</a></p><h1>Effective configuration</h1><dl><dt>Configuration file</dt><dd>{WebUtility.HtmlEncode(effective.Path)}</dd><dt>Budget source</dt><dd>{WebUtility.HtmlEncode(effective.BudgetSource)}</dd><dt>Max mean regression (%)</dt><dd>{effective.Budget.MaxMeanRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd><dt>Max allocation regression (%)</dt><dd>{effective.Budget.MaxAllocationRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd><dt>AI provider</dt><dd>{WebUtility.HtmlEncode(effective.AiProvider)}</dd><dt>AI model</dt><dd>{WebUtility.HtmlEncode(effective.AiModel ?? "Not configured")}</dd></dl><p>Explicit CLI check thresholds or --budget override workspace settings. Do not store secrets in perfagent.json.</p><p class=\"muted\">AI credentials are read only from the environment (OpenAI: OPENAI_API_KEY) and are never displayed here.</p>";
             return Results.Content(Page("Effective configuration — Performance Agent", content), "text/html; charset=utf-8");
         });
         app.MapGet("/", async (HttpContext context) =>
@@ -80,7 +98,20 @@ internal static class LocalWebUi
             try
             {
                 var details = await new RunDetailsService(storage).ReadAsync(runId, context.RequestAborted);
-                return Results.Content(RenderDetails(details), "text/html; charset=utf-8");
+                var current = await baselines.GetAsync(BaselineKind.Current, context.RequestAborted);
+                DeterministicAnalysisResult? measured = null;
+                string? measuredError = null;
+                if (current is not null)
+                {
+                    // Deterministic phase only: no provider is created and nothing is sent anywhere.
+                    try { measured = await new AnalyzeService(storage, createProvider).CheckAsync(runId, context.RequestAborted); }
+                    catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
+                    {
+                        measuredError = exception.Message;
+                    }
+                }
+                var token = antiforgery.GetAndStoreTokens(context);
+                return Results.Content(RenderDetails(details, current?.RunId, measured, measuredError, token), "text/html; charset=utf-8");
             }
             catch (FileNotFoundException exception)
             {
@@ -105,6 +136,34 @@ internal static class LocalWebUi
             var budget = configuration.Load().Budget!;
             var check = new RegressionCheckService().Check(baseline.Evidence, candidate.Evidence, budget);
             return Results.Content(RenderCheck(current.RunId, candidate.RunId, check, budget), "text/html; charset=utf-8");
+        });
+        // POST only: analysis may call a paid external provider, so it needs an explicit, CSRF-protected click.
+        app.MapPost("/runs/{runId}/analyze", async (string runId, HttpContext context) =>
+        {
+            try { await antiforgery.ValidateRequestAsync(context); }
+            catch (AntiforgeryValidationException)
+            {
+                return Results.Text("Invalid form token. Reload the page and try again.", statusCode: StatusCodes.Status400BadRequest);
+            }
+            AnalyzeResult result;
+            try
+            {
+                result = await new AnalyzeService(storage, createProvider).AnalyzeAsync(runId, context.RequestAborted);
+            }
+            catch (FileNotFoundException exception)
+            {
+                return Results.Text(exception.Message, statusCode: StatusCodes.Status404NotFound);
+            }
+            catch (ArgumentException exception)
+            {
+                return Results.Text(exception.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or IOException)
+            {
+                // Failed before a measured result existed (e.g. no Current baseline); no provider was created.
+                return Results.Content(RenderAnalysisNotStarted(runId, exception.Message), "text/html; charset=utf-8", statusCode: StatusCodes.Status409Conflict);
+            }
+            return Results.Content(RenderAnalysis(result), "text/html; charset=utf-8");
         });
         app.MapPost("/baselines/current", (Delegate)((HttpContext context) => SelectAsync(context, BaselineKind.Current)));
         app.MapPost("/baselines/anchor", (Delegate)((HttpContext context) => SelectAsync(context, BaselineKind.Anchor)));
@@ -136,14 +195,17 @@ internal static class LocalWebUi
             context.Response.Headers.Location = "/";
             return Results.Empty;
         }
-        await app.StartAsync(cancellationToken);
+        try
+        {
+            await app.StartAsync(cancellationToken);
+        }
+        catch
+        {
+            await app.DisposeAsync();
+            throw;
+        }
 
-        var address = app.Urls.First();
-        Console.WriteLine($"Performance Agent UI: {address}");
-        if (openBrowser)
-            TryOpenBrowser(address);
-        await app.WaitForShutdownAsync(cancellationToken);
-        return 0;
+        return app;
     }
 
     private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, IReadOnlyList<BaselineEvent> events, AntiforgeryTokenSet token, WorkspaceStorageStatus storage)
@@ -170,8 +232,13 @@ internal static class LocalWebUi
 """);
     }
 
-    private static string RenderDetails(RunDetails details)
+    private static string RenderDetails(RunDetails details, string? currentRunId, DeterministicAnalysisResult? measured, string? measuredError, AntiforgeryTokenSet token)
     {
+        var measuredResult = measured is not null
+            ? $"<strong>{AnalysisConsoleWriter.Verdict(measured)}</strong>"
+            : currentRunId is null
+                ? "Not available: set a Current baseline first. Anchor is not used as a fallback."
+                : $"Not available: {WebUtility.HtmlEncode(measuredError ?? "")}";
         var run = details.Run;
         var environment = run.Evidence.Environment;
         var measurements = string.Join("", run.Evidence.Measurements.OrderBy(x => x.Name, StringComparer.Ordinal).Select(measurement =>
@@ -189,8 +256,69 @@ internal static class LocalWebUi
 <dt>Active baselines</dt><dd>{{Label(run.RunId, details.IsCurrent ? run.RunId : null, details.IsAnchor ? run.RunId : null)}}</dd></dl>
 <h2>Measurements</h2><table><thead><tr><th>Benchmark</th><th>Mean (ns)</th><th>Allocation (B/op)</th></tr></thead><tbody>{{measurements}}</tbody></table>
 <p class="muted">Archived evidence is immutable. Unavailable values were not recorded.</p>
+<section class="card"><h2>Measured result vs Current</h2><dl>
+<dt>Current baseline</dt><dd>{{(currentRunId is null ? "Not set" : $"<code>{WebUtility.HtmlEncode(currentRunId)}</code>")}}</dd>
+<dt>Deterministic result</dt><dd>{{measuredResult}}</dd></dl>
+<form method="post" action="/runs/{{Uri.EscapeDataString(run.RunId)}}/analyze"><input type="hidden" name="{{WebUtility.HtmlEncode(token.FormFieldName)}}" value="{{WebUtility.HtmlEncode(token.RequestToken)}}"><button type="submit">Analyze with AI</button></form>
+<p class="muted">Sends this run's and the Current baseline's normalized measurements, the budget and the measured verdicts to the configured AI provider (<a href="/configuration">ai.provider / ai.model</a>). Provider charges may apply. The result is advisory, not saved, and never changes the measured result.</p></section>
 """);
     }
+
+    private static string RenderAnalysisNotStarted(string runId, string message) =>
+        Page("Analysis — Performance Agent", $"<p><a href=\"/\">Back to history</a> · <a href=\"/runs/{Uri.EscapeDataString(runId)}\">Run details</a></p><h1>Analysis could not start</h1><p role=\"alert\">{WebUtility.HtmlEncode(message)}</p><p class=\"muted\">No measured result was produced and no AI provider was contacted. Archive, baselines and history were not changed.</p>");
+
+    // Every value from evidence, configuration, or the model is HTML-encoded, and model text is also stripped of
+    // control characters. Nothing is rendered as HTML or Markdown, and the CSP forbids scripts regardless.
+    private static string RenderAnalysis(AnalyzeResult result)
+    {
+        var deterministic = result.Deterministic;
+        var budget = deterministic.Budget;
+        var verdict = AnalysisConsoleWriter.Verdict(deterministic);
+        var ai = result.Analysis is { } analysis
+            ? $$"""
+<section class="card ai"><h2>AI analysis</h2><p class="muted">Advisory · generated by a model, not measured. It cannot change the measured result above.</p>
+<h3>Summary</h3><p class="ai-text">{{Text(analysis.Summary)}}</p>
+<h3>Evidence (as cited by the model; measured values are listed above)</h3>{{List(analysis.EvidenceReferences.Select(x => $"<code>{Text(x.BenchmarkName)}</code>: {Text(x.Observation)}"))}}
+<h3>Hypotheses (unverified; not measured facts)</h3>{{List(analysis.Hypotheses.Select(x => x.Rationale is null ? Text(x.Statement) : $"{Text(x.Statement)}<br><span class=\"muted\">Rationale: {Text(x.Rationale)}</span>"))}}
+<h3>Suggested experiments (verify by benchmarking)</h3>{{List(analysis.SuggestedExperiments.Select(x => x.ExpectedSignal is null ? Text(x.Description) : $"{Text(x.Description)}<br><span class=\"muted\">Expected signal: {Text(x.ExpectedSignal)}</span>"))}}
+<h3>Uncertainty</h3><p class="ai-text">{{(analysis.Uncertainty is { } uncertainty && !string.IsNullOrWhiteSpace(uncertainty) ? Text(uncertainty) : "None stated.")}}</p></section>
+"""
+            : $"<section class=\"card ai\" role=\"alert\"><h2>AI analysis failed</h2><p class=\"ai-text\">{Text(result.AnalysisError ?? "Unknown error.")}</p><p class=\"muted\">Only the AI analysis failed. The measured result above was computed successfully and is unaffected.</p></section>";
+
+        return Page("Analysis — Performance Agent", $$"""
+<p><a href="/">Back to history</a> · <a href="/runs/{{Uri.EscapeDataString(deterministic.CandidateRunId)}}">Run details</a></p><h1>Performance analysis</h1>
+<dl><dt>Candidate</dt><dd><code>{{WebUtility.HtmlEncode(deterministic.CandidateRunId)}}</code></dd>
+<dt>Current baseline</dt><dd><code>{{WebUtility.HtmlEncode(deterministic.BaselineRunId)}}</code></dd>
+<dt>Budget</dt><dd>mean {{Threshold(budget.MaxMeanRegressionPercent)}}, allocation {{Threshold(budget.MaxAllocationRegressionPercent)}} ({{WebUtility.HtmlEncode(deterministic.BudgetSource)}})</dd></dl>
+<section class="card measured"><h2>Measured result</h2><p class="verdict">{{verdict}}</p><p class="muted">Deterministic and authoritative: computed from archived measurements before any AI analysis.</p>
+<h3>Measured regressions</h3>{{MeasuredTable(deterministic.Check.Benchmarks.Where(x => !x.Result.Passed), budget)}}
+<h3>Measured within budget</h3>{{MeasuredTable(deterministic.Check.Benchmarks.Where(x => x.Result.Passed), budget)}}</section>
+{{ai}}
+<p class="muted">Analysis is not saved. Archive, baselines and history were not changed.</p>
+""");
+
+        static string Text(string value) => WebUtility.HtmlEncode(AnalysisConsoleWriter.Sanitize(value));
+
+        static string List(IEnumerable<string> encodedItems)
+        {
+            var entries = string.Join("", encodedItems.Select(item => $"<li>{item}</li>"));
+            return entries.Length == 0 ? "<p class=\"muted\">None.</p>" : $"<ul class=\"ai-text\">{entries}</ul>";
+        }
+    }
+
+    private static string MeasuredTable(IEnumerable<BenchmarkCheckResult> items, PerformanceBudget budget)
+    {
+        var rows = string.Join("", items.Select(item =>
+            $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "FAIL")}</td>" +
+            $"<td>{WebUtility.HtmlEncode(CheckFormatting.FormatChange(item.Result.Comparison.Mean) + CheckFormatting.FormatBudget(budget.MaxMeanRegressionPercent, item.Result.MeanExceeded))}</td>" +
+            $"<td>{WebUtility.HtmlEncode(CheckFormatting.FormatChange(item.Result.Comparison.AllocatedBytes) + CheckFormatting.FormatBudget(budget.MaxAllocationRegressionPercent, item.Result.AllocationExceeded))}</td></tr>"));
+        return rows.Length == 0
+            ? "<p>None.</p>"
+            : $"<table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean</th><th>Allocation</th></tr></thead><tbody>{rows}</tbody></table>";
+    }
+
+    private static string Threshold(double? percent) =>
+        percent is null ? "not configured" : $"+{percent.Value.ToString("0.##", CultureInfo.InvariantCulture)}%";
 
     private static string RenderCheck(string baselineRunId, string candidateRunId, EvidenceCheckResult check, PerformanceBudget budget)
     {
@@ -219,6 +347,8 @@ table{width:100%;border-collapse:collapse;overflow:hidden}th,td{text-align:left;
 .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;margin-right:5px}code{font-size:13px}
 form{display:inline-block;margin:3px}button{cursor:pointer;padding:6px 10px}
 dt{font-weight:600;margin-top:10px}dd{margin:4px 0;overflow-wrap:anywhere}p[role=alert]{color:#991b1b}
+.measured{border-left:5px solid #1f2937;margin:20px 0}.verdict{font-size:26px;font-weight:700;margin:6px 0}
+.ai{border:1px dashed #9ca3af;background:#fbfbfc;margin:20px 0}.ai-text{white-space:pre-wrap;overflow-wrap:anywhere}section[role=alert] h2{color:#991b1b}
 </style></head><body><main>__CONTENT__</main></body></html>
 """;
         return template.Replace("__TITLE__", WebUtility.HtmlEncode(title), StringComparison.Ordinal)

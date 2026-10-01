@@ -29,7 +29,7 @@ internal sealed record AnalyzeResult(
 /// <summary>
 /// Use case behind <c>perfagent analyze &lt;candidate-run-id&gt;</c>: archived candidate + Current baseline +
 /// workspace budget -> <see cref="RegressionCheckService"/> -> <see cref="PerformanceAnalysisService"/>.
-/// It only reads workspace state.
+/// Shared by the CLI and the local Web UI. It only reads workspace state.
 /// </summary>
 internal sealed class AnalyzeService(
     WorkspaceStorage storage,
@@ -38,7 +38,37 @@ internal sealed class AnalyzeService(
     private readonly Func<string, string?, IPerformanceAnalysisProvider> _createProvider =
         createProvider ?? AnalysisProviderFactory.Create;
 
+    /// <summary>The deterministic phase only (no provider is created). Shared by Run Details in the local UI.</summary>
+    public async Task<DeterministicAnalysisResult> CheckAsync(string candidateRunId, CancellationToken cancellationToken) =>
+        (await PrepareAsync(candidateRunId, cancellationToken)).Deterministic;
+
     public async Task<AnalyzeResult> AnalyzeAsync(string candidateRunId, CancellationToken cancellationToken)
+    {
+        var (deterministic, request, configuration) = await PrepareAsync(candidateRunId, cancellationToken);
+
+        try
+        {
+            var provider = _createProvider(configuration.AiProvider, configuration.AiModel);
+            try
+            {
+                var analysis = await new PerformanceAnalysisService(provider).AnalyzeAsync(request, cancellationToken);
+                return new(deterministic, analysis, null);
+            }
+            finally
+            {
+                (provider as IDisposable)?.Dispose();
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or TimeoutException)
+        {
+            // Provider configuration, credential, rate-limit, outage, timeout, or malformed output.
+            return new(deterministic, null, exception.Message);
+        }
+    }
+
+    private async Task<(DeterministicAnalysisResult Deterministic, PerformanceAnalysisRequest Request, EffectiveWorkspaceConfiguration Configuration)> PrepareAsync(
+        string candidateRunId,
+        CancellationToken cancellationToken)
     {
         var configuration = new WorkspaceConfiguration(storage).Inspect();
         var archive = new FileRunArchive(storage.StateDirectory);
@@ -70,23 +100,6 @@ internal sealed class AnalyzeService(
                 .Select(x => new PerformanceRegressionResult(x.Name, x.Result.Passed, x.Result.MeanExceeded, x.Result.AllocationExceeded))
                 .ToArray());
 
-        try
-        {
-            var provider = _createProvider(configuration.AiProvider, configuration.AiModel);
-            try
-            {
-                var analysis = await new PerformanceAnalysisService(provider).AnalyzeAsync(request, cancellationToken);
-                return new(deterministic, analysis, null);
-            }
-            finally
-            {
-                (provider as IDisposable)?.Dispose();
-            }
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or TimeoutException)
-        {
-            // Provider configuration, credential, rate-limit, outage, timeout, or malformed output.
-            return new(deterministic, null, exception.Message);
-        }
+        return (deterministic, request, configuration);
     }
 }

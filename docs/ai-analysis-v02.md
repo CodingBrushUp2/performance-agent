@@ -98,7 +98,27 @@ Exit codes follow `check`/`report`. AI prose never decides them.
 
 Provider failures fail only the analysis. Benchmark evidence, baselines, history, and the deterministic verdict are unaffected. The CLI adds no retries beyond what the provider SDK does.
 
-Not yet implemented: analysis in the local Web UI, Anchor or explicit-baseline analysis, and a configurable timeout.
+### Implemented: Local Web UI analysis
+
+**Run Details** offers the same analysis as a thin surface over the same `AnalyzeService`. The UI duplicates none of these: archive loading, Current selection, budget resolution, regression checking, provider resolution, or request construction.
+
+```text
+GET  /runs/{runId}          Run Details: Current baseline + measured verdict (deterministic phase only) + [Analyze with AI]
+POST /runs/{runId}/analyze  AnalyzeService.AnalyzeAsync -> measured result + advisory AI section (not saved)
+```
+
+- **Explicit POST only.** Opening Run Details never calls a provider; it runs only the deterministic phase (`AnalyzeService.CheckAsync`). Analysis needs a click that submits a POST form. That request passes the existing antiforgery token check and the Host/Origin/`Sec-Fetch-Site` checks, and stays within the request-size limit. `GET /runs/{runId}/analyze` returns 405.
+- **Same behavior as the CLI.** The UI uses the archived candidate, the Current baseline (Anchor is never a fallback), the workspace budget, `ai.provider` / `ai.model`, and `OPENAI_API_KEY` from the environment.
+- **Measured result first.** It appears in its own solid-bordered *Measured result* section, labelled deterministic and authoritative. The *AI analysis* section is visually separate (dashed) and labelled advisory and not measured. Hypotheses are labelled unverified, and experiments must be verified by benchmarking.
+- **AI failures.** Missing model or key, unsupported provider, authentication, rate limit, timeout, or malformed output keep the candidate, Current baseline, measured verdict and measured regressions on the page. An *AI analysis failed* panel says only AI failed (HTTP 200). Failures before a measured result exists, such as no Current baseline, show *Analysis could not start* (HTTP 409); no provider is contacted. A missing run returns 404.
+- **Untrusted model output.**
+  - Every model string is stripped of control characters and HTML-encoded. Nothing is rendered as HTML or Markdown.
+  - Model text therefore cannot add markup, scripts, links or forms, or spoof the measured section.
+  - The existing CSP (`default-src 'none'`) blocks scripts regardless.
+- **Ephemeral.** Results are not stored. Archive, Current/Anchor and baseline events are never written. Refreshing the result page re-submits the POST and runs a new analysis.
+- **Configuration.** The *Effective configuration* page now shows `ai.provider` and `ai.model`, like `perfagent config show`. It never shows whether `OPENAI_API_KEY` is set, or its value. There is no API-key field.
+
+Not yet implemented: Anchor or explicit-baseline analysis, persisted analysis results, and a configurable timeout.
 
 ## Provider boundary
 
