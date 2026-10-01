@@ -25,6 +25,8 @@ public sealed class FileBaselineStore
         string runId,
         CancellationToken cancellationToken = default)
     {
+        if (!Enum.IsDefined(kind))
+            throw new ArgumentOutOfRangeException(nameof(kind));
         ArgumentException.ThrowIfNullOrWhiteSpace(runId);
 
         var archive = new FileRunArchive(_rootDirectory);
@@ -41,13 +43,22 @@ public sealed class FileBaselineStore
         BaselineKind kind,
         CancellationToken cancellationToken = default)
     {
-        // A pointer may be stale or absent if its write failed after the event append.
+        if (!Enum.IsDefined(kind))
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        // Validate the entire referenced history, including superseded and previous runs.
         var events = await new FileBaselineEventStore(_rootDirectory).ReadAllAsync(cancellationToken);
-        var latest = events.LastOrDefault(item => item.Kind == kind);
-        if (latest is not null)
+        if (events.Count != 0)
         {
-            _ = await new FileRunArchive(_rootDirectory).ReadAsync(latest.RunId, cancellationToken);
-            return new BaselineReference(latest.RunId);
+            var archive = new FileRunArchive(_rootDirectory);
+            var runs = new List<ArchivedBenchmarkRun>();
+            var runIds = events.SelectMany(item => item.PreviousRunId is null
+                ? new[] { item.RunId } : new[] { item.RunId, item.PreviousRunId });
+            foreach (var runId in runIds.Distinct(StringComparer.Ordinal))
+                runs.Add(await archive.ReadAsync(runId, cancellationToken));
+            var resolved = new BaselineResolver().Resolve(new BenchmarkHistory("1.0", runs, events));
+            var selected = kind == BaselineKind.Anchor ? resolved.AnchorRunId : resolved.CurrentRunId;
+            if (selected is not null)
+                return new BaselineReference(selected);
         }
 
         // Preserve baselines created before event history was introduced.
@@ -59,8 +70,17 @@ public sealed class FileBaselineStore
         if (!File.Exists(path))
             return null;
 
-        var json = await File.ReadAllTextAsync(path, cancellationToken);
-        return JsonSerializer.Deserialize<BaselineReference>(json, Options)
-            ?? throw new InvalidOperationException($"Baseline reference '{path}' is invalid.");
+        try
+        {
+            var json = await File.ReadAllTextAsync(path, cancellationToken);
+            var reference = JsonSerializer.Deserialize<BaselineReference>(json, Options)
+                ?? throw new InvalidOperationException($"Baseline reference '{path}' is invalid.");
+            _ = await new FileRunArchive(_rootDirectory).ReadAsync(reference.RunId, cancellationToken);
+            return reference;
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException)
+        {
+            throw new InvalidOperationException($"Baseline reference '{path}' is invalid.", exception);
+        }
     }
 }

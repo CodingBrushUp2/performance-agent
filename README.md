@@ -92,6 +92,13 @@ missing derived pointers when events exist for that baseline kind. Older pointer
 baselines remain readable until their first event is recorded. Invalid event history
 fails explicitly rather than silently falling back to a pointer.
 
+Event appends validate unique event IDs, transition chains, and both target/previous
+archive references before writing. Cooperating writers use an exclusive file handle;
+a busy history fails explicitly and can be retried. Cancelled or failed writes roll back
+only their new bytes. Corrupt history is reported with a line number and is never
+silently repaired. Baseline reads validate all referenced runs, including superseded
+selections. A first Reset/Promoted event may retain a legacy baseline's previous RunId.
+
 `baseline set` and `baseline anchor` record Created or Reset events. History also
 shows Promoted events recorded by other callers; it does not automatically promote runs.
 

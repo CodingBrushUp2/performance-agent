@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 namespace PerformanceAgent.Core.History;
@@ -22,39 +23,77 @@ public sealed class FileBaselineEventStore
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(baselineEvent);
-        var directory = Path.GetDirectoryName(_path)!;
-        Directory.CreateDirectory(directory);
-        var line = JsonSerializer.Serialize(baselineEvent, Options) + Environment.NewLine;
-        await File.AppendAllTextAsync(_path, line, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        BaselineEventValidation.Validate([baselineEvent]);
+        await ValidateReferencesAsync([baselineEvent], cancellationToken);
+        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+
+        // Serialize cooperating writers and keep readers away from an incomplete append.
+        await using var stream = new FileStream(_path, FileMode.OpenOrCreate, FileAccess.ReadWrite,
+            FileShare.None, 4096, FileOptions.Asynchronous);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+        var text = await reader.ReadToEndAsync(cancellationToken);
+        var events = Parse(text);
+        BaselineEventValidation.Validate([.. events, baselineEvent]);
+        await ValidateReferencesAsync(events, cancellationToken);
+        var separator = text.Length != 0 && !text.EndsWith('\n') ? "\n" : string.Empty;
+        var bytes = Encoding.UTF8.GetBytes(separator + JsonSerializer.Serialize(baselineEvent, Options) + "\n");
+        var originalLength = stream.Length;
+        stream.Position = originalLength;
+        try
+        {
+            await stream.WriteAsync(bytes, cancellationToken);
+            await stream.FlushAsync(cancellationToken);
+        }
+        catch
+        {
+            // Roll back only this failed append; existing records remain byte-for-byte intact.
+            stream.SetLength(originalLength);
+            stream.Flush();
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<BaselineEvent>> ReadAllAsync(
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!File.Exists(_path))
             return [];
 
+        return Parse(await File.ReadAllTextAsync(_path, cancellationToken));
+    }
+
+    private async Task ValidateReferencesAsync(IReadOnlyList<BaselineEvent> events, CancellationToken cancellationToken)
+    {
+        var archive = new FileRunArchive(Path.GetDirectoryName(_path)!);
+        var runIds = events.SelectMany(item => item.PreviousRunId is null
+            ? new[] { item.RunId } : new[] { item.RunId, item.PreviousRunId });
+        foreach (var runId in runIds.Distinct(StringComparer.Ordinal))
+            _ = await archive.ReadAsync(runId, cancellationToken);
+    }
+
+    private static IReadOnlyList<BaselineEvent> Parse(string text)
+    {
         var events = new List<BaselineEvent>();
-        foreach (var line in await File.ReadAllLinesAsync(_path, cancellationToken))
+        using var reader = new StringReader(text);
+        var lineNumber = 0;
+        while (reader.ReadLine() is { } line)
         {
+            lineNumber++;
             if (string.IsNullOrWhiteSpace(line))
                 continue;
-
             try
             {
-                var item = JsonSerializer.Deserialize<BaselineEvent>(line, Options)
-                    ?? throw new InvalidOperationException("Baseline event history contains invalid JSON.");
-                if (string.IsNullOrWhiteSpace(item.EventId) || string.IsNullOrWhiteSpace(item.RunId)
-                    || !Enum.IsDefined(item.Kind) || !Enum.IsDefined(item.Type))
-                    throw new InvalidOperationException("Baseline event history contains an invalid event.");
-                events.Add(item);
+                events.Add(JsonSerializer.Deserialize<BaselineEvent>(line, Options)
+                    ?? throw new InvalidOperationException($"Baseline event history contains invalid JSON at line {lineNumber}."));
             }
             catch (JsonException exception)
             {
-                throw new InvalidOperationException("Baseline event history contains invalid JSON.", exception);
+                throw new InvalidOperationException($"Baseline event history contains invalid JSON. Line {lineNumber}: {exception.Message}", exception);
             }
         }
-
+        BaselineEventValidation.Validate(events);
         return events;
     }
 }
