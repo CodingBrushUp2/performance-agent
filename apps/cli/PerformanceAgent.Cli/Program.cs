@@ -203,30 +203,11 @@ static async Task<int> RunAsync(string[] args)
             var kind = string.Equals(args[1], "anchor", StringComparison.OrdinalIgnoreCase)
                 ? BaselineKind.Anchor
                 : BaselineKind.Current;
-            var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
-            var store = new FileBaselineStore(root);
-            // Validate the target run before recording an immutable baseline event.
-            _ = await new FileRunArchive(root).ReadAsync(args[2]);
-            var previous = await store.GetAsync(kind);
-
-            var eventType = previous is null
-                ? BaselineEventType.Created
-                : BaselineEventType.Reset;
-            var timestamp = DateTimeOffset.UtcNow;
-            var eventId = $"event-{Guid.NewGuid():N}";
-            await new FileBaselineEventStore(root).AppendAsync(
-                new BaselineEvent(
-                    eventId,
-                    timestamp,
-                    kind,
-                    eventType,
-                    args[2],
-                    previous?.RunId,
-                    "CLI baseline selection"));
-
-            // Pointer files are derived convenience state. Persist them only after
-            // the append-only event history, which remains the source of truth.
-            await store.SetAsync(kind, args[2]);
+            var storage = PerformanceAgent.Cli.WorkspaceStorage.Resolve();
+            await new PerformanceAgent.Cli.BaselineSelectionService(storage).SetAsync(
+                kind,
+                args[2],
+                "CLI baseline selection");
 
             Console.WriteLine($"{kind} baseline: {args[2]}");
             return 0;
