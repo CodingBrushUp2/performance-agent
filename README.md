@@ -137,6 +137,19 @@ selections. A first Reset/Promoted event may retain a legacy baseline's previous
 `baseline set` and `baseline anchor` record Created or Reset events. History also
 shows Promoted events recorded by other callers; it does not automatically promote runs.
 
+## Local Web UI
+
+Run `perfagent` (or `perfagent ui --no-open`) from your workspace. The bundled UI
+listens only on an ephemeral `127.0.0.1` port. **Make Current** and **Make Anchor**
+use the same baseline selection service as `perfagent baseline set <run-id>` and
+`perfagent baseline anchor <run-id>`. Reloading the page reads the latest history,
+including changes made through the CLI. Evidence remains immutable.
+
+Selections use POST forms with server-lifetime antiforgery tokens, same-origin/Host
+checks, and SameSite cookies. There are no accounts, persistent authentication keys,
+or administrator/root requirements. Errors after a committed baseline event can leave
+a stale derived pointer; reload history to see the authoritative selection before retrying.
+
 ## CI performance gate
 
 A deterministic GitHub Actions example is included in `.github/workflows/performance-gate-demo.yml`. It demonstrates a version-controlled baseline, candidate evidence, and performance budget without depending on benchmark timing noise. See [GitHub performance regression gate](docs/github-performance-gate.md).
