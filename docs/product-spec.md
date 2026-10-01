@@ -21,6 +21,8 @@ The measurement system, not the LLM, is the source of truth.
 4. Every conclusion must be traceable to collected evidence.
 5. Local-first for V1. No account, server, database, or cloud dependency.
 6. Keep integrations as adapters around the core engine.
+7. Complement existing observability/APM platforms rather than replacing them.
+8. Prefer evidence correlation, experimentation, and verification over rebuilding telemetry collection already provided by mature tools.
 
 ## V1 use cases
 
@@ -89,6 +91,16 @@ Exact arguments remain implementation details until the first vertical slice pro
 - custom benchmarking runtime;
 - API/load testing;
 - mandatory LLM dependency.
+
+## Complementary observability role
+
+Performance Agent is not intended to become another full monitoring or APM platform. Existing systems such as cloud monitoring, OpenTelemetry collectors, metrics/log platforms, and .NET diagnostics remain authoritative collectors for the signals they own.
+
+The product's differentiated layer is performance engineering over normalized evidence: correlate signals from multiple providers, form testable hypotheses, run controlled experiments when possible, and verify whether a proposed change measurably improves the result.
+
+Future runtime diagnostics may use `dotnet-monitor` as a provider rather than reimplementing its diagnostics capabilities. Container/sidecar deployment is a future execution surface for observing applications with appropriate isolation and access; it is not required by the V1 benchmark CLI.
+
+Result publishing is also an adapter concern. Future publishers may send configured outcomes to systems such as Teams, Jira, Confluence, or email. Publishing must not alter measured evidence or baseline state, and baseline selection remains an explicit action.
 
 ## Future surfaces
 
