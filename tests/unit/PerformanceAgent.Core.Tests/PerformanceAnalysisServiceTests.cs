@@ -264,8 +264,8 @@ internal static class AnalysisTestData
         var checker = new PerformanceBudgetChecker();
         var results = new[]
         {
-            checker.Check(baseline[1], candidate[1], budget),
-            checker.Check(baseline[0], candidate[0], budget),
+            ToAnalysisResult(checker.Check(baseline[1], candidate[1], budget)),
+            ToAnalysisResult(checker.Check(baseline[0], candidate[0], budget)),
         };
 
         return new PerformanceAnalysisRequest(
@@ -274,6 +274,12 @@ internal static class AnalysisTestData
             budget,
             results);
     }
+
+    private static PerformanceRegressionResult ToAnalysisResult(BudgetCheckResult result) => new(
+        result.BenchmarkName,
+        result.Passed,
+        result.MeanExceeded,
+        result.AllocationExceeded);
 
     public static PerformanceAnalysis ValidAnalysis() => new(
         "Allocation increased.",
