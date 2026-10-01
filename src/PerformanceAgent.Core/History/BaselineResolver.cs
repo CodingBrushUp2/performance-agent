@@ -10,13 +10,24 @@ public sealed class BaselineResolver
     {
         ArgumentNullException.ThrowIfNull(history);
 
+        BaselineEventValidation.Validate(history.BaselineEvents);
+        var runIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var run in history.Runs)
+        {
+            if (!runIds.Add(run.RunId))
+                throw new InvalidOperationException($"Duplicate archived RunId '{run.RunId}'.");
+        }
+
         string? anchor = null;
         string? current = null;
 
         foreach (var baselineEvent in history.BaselineEvents)
         {
-            if (!history.Runs.Any(run => string.Equals(run.RunId, baselineEvent.RunId, StringComparison.Ordinal)))
+            if (!runIds.Contains(baselineEvent.RunId))
                 throw new InvalidOperationException($"Baseline event '{baselineEvent.EventId}' references unknown run '{baselineEvent.RunId}'.");
+
+            if (baselineEvent.PreviousRunId is not null && !runIds.Contains(baselineEvent.PreviousRunId))
+                throw new InvalidOperationException($"Baseline event '{baselineEvent.EventId}' references unknown previous run '{baselineEvent.PreviousRunId}'.");
 
             switch (baselineEvent.Kind)
             {

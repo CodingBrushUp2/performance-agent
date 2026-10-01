@@ -1,4 +1,5 @@
 using PerformanceAgent.Core.History;
+using PerformanceAgent.Core.Evidence;
 using Xunit;
 
 namespace PerformanceAgent.Core.Tests;
@@ -12,6 +13,9 @@ public sealed class FileBaselineEventStoreTests
         try
         {
             var store = new FileBaselineEventStore(root);
+            var archive = new FileRunArchive(root);
+            foreach (var id in new[] { "run-1", "run-2" })
+                await archive.AppendAsync(new ArchivedBenchmarkRun(id, DateTimeOffset.UtcNow, null, new BenchmarkEvidence("1.0", [])));
             var first = new BaselineEvent(
                 "event-1",
                 DateTimeOffset.Parse("2026-09-30T12:00:00Z"),

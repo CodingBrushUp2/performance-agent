@@ -59,7 +59,9 @@ public sealed class BaselineHistoryIntegrityTests : IDisposable
         await Archive("run-old");
         var store = new FileBaselineStore(_root);
         await store.SetAsync(BaselineKind.Current, "run-old");
+        await Archive("run-missing");
         await Events().AppendAsync(new("event-1", Timestamp, BaselineKind.Current, BaselineEventType.Reset, "run-missing", "run-old", null));
+        File.Delete(Path.Combine(_root, "archive", "run-missing.json"));
         await Assert.ThrowsAsync<FileNotFoundException>(() => store.GetAsync(BaselineKind.Current));
     }
 
