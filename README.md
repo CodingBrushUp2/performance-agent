@@ -140,7 +140,9 @@ shows Promoted events recorded by other callers; it does not automatically promo
 ## Local Web UI
 
 Run `perfagent` (or `perfagent ui --no-open`) from your workspace. The bundled UI
-listens only on an ephemeral `127.0.0.1` port. **Make Current** and **Make Anchor**
+listens only on an ephemeral `127.0.0.1` port. Workspace `appsettings.json` and
+inherited ASP.NET/Kestrel endpoint settings do not configure this private server.
+**Make Current** and **Make Anchor**
 use the same baseline selection service as `perfagent baseline set <run-id>` and
 `perfagent baseline anchor <run-id>`. Reloading the page reads the latest history,
 including changes made through the CLI. Evidence remains immutable.
