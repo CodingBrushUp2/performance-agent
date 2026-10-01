@@ -32,7 +32,12 @@ public sealed class PerformanceAnalysisTests
     {
         var baseline = new BenchmarkMeasurement("Other.Work", 100, 64);
         var candidate = new BenchmarkMeasurement("Other.Work", 125, 128);
-        var unrelated = new PerformanceBudgetChecker().Check(baseline, candidate, new PerformanceBudget(10, 10));
+        var checkedResult = new PerformanceBudgetChecker().Check(baseline, candidate, new PerformanceBudget(10, 10));
+        var unrelated = new PerformanceRegressionResult(
+            checkedResult.BenchmarkName,
+            checkedResult.Passed,
+            checkedResult.MeanExceeded,
+            checkedResult.AllocationExceeded);
         var request = AnalysisTestData.Request() with { RegressionResults = [unrelated] };
 
         var exception = Assert.Throws<ArgumentException>(() => request.Validate());
