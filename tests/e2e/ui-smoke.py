@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
     state = work / ".performance-agent"
     archive = state / "archive"
     archive.mkdir(parents=True)
-    for run_id in ["run-first", "run-second", "run-'&é"]:
+    for run_id in ["run-first", "run-second", "run-'&é", "run-regression"]:
         (archive / (run_id + ".json")).write_text(json.dumps({
             "runId": run_id, "timestamp": "2026-10-01T10:00:00+00:00",
             "commitSha": None if run_id == "run-first" else "abc<script>sha</script>",
@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
                 "environment": None if run_id == "run-first" else {
                     "runtime": "Runtime <script>runtime</script>", "operatingSystem": "OS & test", "architecture": "X64"},
                 "measurements": [
-                    {"name": "Smoke <script>name</script>", "meanNanoseconds": 100.125,
+                    {"name": "Smoke <script>name</script>", "meanNanoseconds": 250.25 if run_id == "run-regression" else 100.125,
                      "allocatedBytesPerOperation": None if run_id == "run-first" else 0}]}
         }))
     original_archive = {p.name: p.read_bytes() for p in archive.iterdir()}
@@ -133,6 +133,8 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             for bad_id, expected in [("../outside", 400), ("", 400), ("run-missing", 404)]:
                 assert request("/baselines/current", dict(form, runId=bad_id))[0] == expected
             assert not (state / "baseline-events.jsonl").exists()
+            status, no_baseline, _ = request("/runs/run-second/report")
+            assert status == 409 and "perfagent baseline set" in no_baseline
 
             status, _, headers = request("/baselines/current", form, {"Origin": address})
             assert status == 303 and headers["Location"] == "/"
@@ -152,6 +154,33 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             assert "<strong>run-second</strong>" in page and "<strong>run-first</strong>" in page
             assert "Baseline timeline" in page and "run-first</code> → <code>run-second" in page
             assert events_path.read_bytes() == before  # Refresh is read-only.
+            status, report_page, report_headers = request("/runs/run-second/report")
+            assert status == 200 and "<h2>PASS</h2>" in report_page
+            assert "attachment;" in report_headers["Content-Disposition"]
+            cli_report = run_cli(work, "report", "run-second")
+            normalize = lambda text: re.sub(r"Generated: [^<]+", "Generated: timestamp", text)
+            assert normalize(report_page) == normalize(cli_report)
+            assert "<script>" not in report_page and "&lt;script&gt;name&lt;/script&gt;" in report_page
+            assert "Environment validation: compatible" in report_page
+            assert "Measured baseline" in report_page and "Derived change (%)" in report_page
+            assert " href=" not in report_page and " src=" not in report_page
+            failed_report = subprocess.run(["dotnet", str(cli), "report", "run-regression"], cwd=work,
+                                           text=True, capture_output=True, timeout=30)
+            assert failed_report.returncode == 1 and "<h2>REGRESSION</h2>" in failed_report.stdout
+            assert "<h2>REGRESSION</h2>" in request("/runs/run-regression/report")[1]
+            override_budget = work / "report-budget.json"
+            override_budget.write_text('{"maxMeanRegressionPercent":200}')
+            overridden = run_cli(work, "report", "run-regression", "--baseline", "run-second", "--budget", str(override_budget))
+            assert "<h2>PASS</h2>" in overridden and str(override_budget) in overridden
+            for run_id in ["run-first", "run-missing"]:
+                invalid_report = subprocess.run(["dotnet", str(cli), "report", run_id], cwd=work,
+                                                text=True, capture_output=True, timeout=30)
+                assert invalid_report.returncode == 2 and not invalid_report.stdout
+                assert request("/runs/" + run_id + "/report")[0] == 409
+            numeric_report = run_cli(work, "compare", "Numeric", "100", "90", "0", "64", "html")
+            assert "No budget check or environment validation was requested" in numeric_report
+            assert "<td>NoBaseline</td>" in numeric_report
+            assert events_path.read_bytes() == before
             status, regression, _ = request("/runs/run-second/check-current")
             assert status == 200 and "<h1>PASS</h1>" in regression
             assert "Candidate <code>run-second</code> vs Current <code>run-second</code>" in regression

@@ -10,6 +10,30 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
+    if (args.Length > 0 && string.Equals(args[0], "report", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            if (args.Length < 2 || args.Length % 2 != 0)
+                throw new ArgumentException("Usage: perfagent report <candidate-run-id> [--baseline <run-id>] [--budget <budget.json>] > report.html");
+            var options = new Dictionary<string, string>(StringComparer.Ordinal);
+            for (var index = 2; index < args.Length; index += 2)
+            {
+                if (args[index] is not ("--baseline" or "--budget") || !options.TryAdd(args[index], args[index + 1]))
+                    throw new ArgumentException($"Unknown or repeated report option '{args[index]}'.");
+            }
+            var result = await new PerformanceAgent.Cli.HtmlReportService(PerformanceAgent.Cli.WorkspaceStorage.Resolve())
+                .CreateAsync(args[1], options.GetValueOrDefault("--baseline"), options.GetValueOrDefault("--budget"));
+            Console.Write(result.Html);
+            return result.Passed ? 0 : 1;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+    }
+
     if (args.Length == 2 && args[0] == "config" && args[1] == "show")
     {
         try
@@ -335,7 +359,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent ui [--no-open] | perfagent storage | perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history [<run-id>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent config show | perfagent report <candidate-run-id> [--baseline <run-id>] [--budget <budget.json>] | perfagent ui [--no-open] | perfagent storage | perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history [<run-id>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown|html>");
         return 2;
     }
 
@@ -359,7 +383,8 @@ static async Task<int> RunAsync(string[] args)
         {
             "json" => new JsonPerformanceReportWriter().Write(report),
             "markdown" => new MarkdownPerformanceReportWriter().Write(report),
-            _ => throw new ArgumentException("Format must be 'json' or 'markdown'.")
+            "html" => new HtmlPerformanceReportWriter().Write(report),
+            _ => throw new ArgumentException("Format must be 'json', 'markdown' or 'html'.")
         };
 
         Console.WriteLine(output);

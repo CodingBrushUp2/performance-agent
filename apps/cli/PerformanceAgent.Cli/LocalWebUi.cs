@@ -91,6 +91,11 @@ internal static class LocalWebUi
                 return Results.Text(exception.Message, statusCode: StatusCodes.Status400BadRequest);
             }
         });
+        app.MapGet("/runs/{runId}/report", async (string runId, HttpContext context) =>
+        {
+            var report = await new HtmlReportService(storage).CreateAsync(runId, cancellationToken: context.RequestAborted);
+            return Results.File(System.Text.Encoding.UTF8.GetBytes(report.Html), "text/html; charset=utf-8", "performance-report.html");
+        });
         app.MapGet("/runs/{runId}/check-current", async (string runId, HttpContext context) =>
         {
             var current = await baselines.GetAsync(BaselineKind.Current, context.RequestAborted);
@@ -174,6 +179,7 @@ internal static class LocalWebUi
         if (measurements.Length == 0) measurements = "<tr><td colspan=\"3\">No measurements recorded.</td></tr>";
         return Page("Run details — Performance Agent", $$"""
 <p><a href="/">Back to history</a></p><h1>Run details</h1>
+<p><a href="/runs/{{Uri.EscapeDataString(run.RunId)}}/report">Download HTML report vs Current</a></p>
 <dl><dt>RunId</dt><dd>{{WebUtility.HtmlEncode(run.RunId)}}</dd>
 <dt>Timestamp</dt><dd>{{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}}</dd>
 <dt>Commit SHA</dt><dd>{{WebUtility.HtmlEncode(run.CommitSha ?? "Unavailable")}}</dd>

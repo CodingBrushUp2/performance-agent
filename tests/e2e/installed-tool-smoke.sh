@@ -171,6 +171,15 @@ dotnet tool run perfagent -- storage | grep -F 'Writable: Yes'
 dotnet tool run perfagent -- history | grep -F 'Current Created'
 selected_run="$(python3 -c 'import json; print(json.loads(open(".performance-agent/baseline-events.jsonl").readline())["runId"])')"
 dotnet tool run perfagent -- history "$selected_run" | grep -F 'Current: True; Anchor: True'
+dotnet tool run perfagent -- config show | grep -F 'Budget source: Built-in defaults (file absent)'
+dotnet tool run perfagent -- report "$selected_run" > portable-report.html
+python3 - <<'PY'
+from pathlib import Path
+report=Path('portable-report.html').read_text()
+assert '<h2>PASS</h2>' in report and 'InstalledBenchmark.Allocate' in report
+assert 'Environment validation: compatible' in report and 'Measured baseline' in report
+assert ' src=' not in report and ' href=' not in report
+PY
 
 # A damaged installation fails clearly; it must not search for a source-tree host.
 rm "$NUGET_PACKAGES/performanceagent.cli/0.1.0/tools/net10.0/any/benchmark-host/PerformanceAgent.BenchmarkHost.dll"
