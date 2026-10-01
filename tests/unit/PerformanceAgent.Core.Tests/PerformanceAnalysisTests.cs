@@ -1,3 +1,4 @@
+using Xunit;
 using PerformanceAgent.Core.Analysis;
 using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Evidence;
