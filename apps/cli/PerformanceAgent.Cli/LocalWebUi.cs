@@ -181,11 +181,14 @@ internal static class LocalWebUi
 
     private static string RenderCheck(string baselineRunId, string candidateRunId, EvidenceCheckResult check, PerformanceBudget budget)
     {
-        var rows = string.Join("", check.Benchmarks.Select(item => $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "REGRESSION")}</td><td>{item.Result.Comparison.Mean.PercentChange?.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) ?? "Unavailable"}%</td><td>{item.Result.Comparison.AllocatedBytes.PercentChange?.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) ?? "Unavailable"}%</td></tr>"));
+        var rows = string.Join("", check.Benchmarks.Select(item => $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "REGRESSION")}</td><td>{FormatPercent(item.Result.Comparison.Mean.PercentChange)}</td><td>{FormatPercent(item.Result.Comparison.AllocatedBytes.PercentChange)}</td></tr>"));
         return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{(check.Passed ? "PASS" : "REGRESSION")}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">Budget: mean +{budget.MaxMeanRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}%, allocation +{budget.MaxAllocationRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}% (perfagent.json or defaults).</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean change</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
     }
 
-    private static string Page(string title, string content) => $$"""
+    private static string FormatPercent(double? value) =>
+        value is null ? "Unavailable" : value.Value.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) + "%";
+
+    private static string Page(string title, string content) => $"""
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>{{WebUtility.HtmlEncode(title)}}</title><style>
 body{font:15px system-ui;margin:0;background:#f6f7f9;color:#1f2937}main{max-width:1000px;margin:48px auto;padding:0 24px}
