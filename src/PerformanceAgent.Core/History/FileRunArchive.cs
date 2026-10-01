@@ -38,9 +38,12 @@ public sealed class FileRunArchive
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryPath, path, overwrite: false);
         }
-        catch (IOException) when (File.Exists(path))
+        catch (IOException exception)
         {
-            throw new InvalidOperationException($"Archived benchmark run '{run.RunId}' already exists.");
+            // File.Move(..., overwrite: false) is the atomic collision boundary. On some
+            // filesystems a losing concurrent move can observe the destination slightly
+            // later, so do not depend on a follow-up File.Exists check to classify it.
+            throw new InvalidOperationException($"Could not publish archived benchmark run '{run.RunId}'. The RunId may already exist.", exception);
         }
         finally
         {
