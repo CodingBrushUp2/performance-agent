@@ -10,6 +10,25 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
+    if (args.Length == 2 && args[0] == "config" && args[1] == "show")
+    {
+        try
+        {
+            var configuration = new PerformanceAgent.Cli.WorkspaceConfiguration(PerformanceAgent.Cli.WorkspaceStorage.Resolve()).Inspect();
+            Console.WriteLine($"Configuration: {configuration.Path}");
+            Console.WriteLine($"Budget source: {configuration.BudgetSource}");
+            Console.WriteLine($"Max mean regression (%): {configuration.Budget.MaxMeanRegressionPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Not configured"}");
+            Console.WriteLine($"Max allocation regression (%): {configuration.Budget.MaxAllocationRegressionPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Not configured"}");
+            Console.WriteLine("Explicit check thresholds or --budget override workspace settings. Do not store secrets in perfagent.json.");
+            return 0;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+    }
+
     if (args.Length == 0 || (args.Length >= 1 && string.Equals(args[0], "ui", StringComparison.OrdinalIgnoreCase)))
     {
         var openBrowser = args.Length == 0 || !args.Skip(1).Any(x => string.Equals(x, "--no-open", StringComparison.OrdinalIgnoreCase));

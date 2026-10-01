@@ -92,6 +92,36 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             assert not list(state.glob(".write-probe-*"))
             assert "no-store" in headers["Cache-Control"]
             assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
+            assert "Effective configuration" in page
+            config_path = work / "perfagent.json"
+            config_before = config_path.read_bytes() if config_path.exists() else None
+            for document, source, mean, allocation in [
+                (None, "Built-in defaults (file absent)", "5", "5"),
+                ({}, "Built-in defaults (budget absent)", "5", "5"),
+                ({"budget": {"maxMeanRegressionPercent": 12.5}, "apiKey": "MUST-NOT-BE-DISPLAYED"}, "perfagent.json", "12.5", "Not configured")]:
+                if document is None:
+                    config_path.unlink(missing_ok=True)
+                else:
+                    config_path.write_text(json.dumps(document))
+                status, config_page, _ = request("/configuration")
+                config_cli = run_cli(work, "config", "show")
+                assert status == 200 and source in config_page and source in config_cli
+                assert f"<dd>{mean}</dd>" in config_page and f"<dd>{allocation}</dd>" in config_page
+                assert f"Max mean regression (%): {mean}" in config_cli
+                assert f"Max allocation regression (%): {allocation}" in config_cli
+                assert "MUST-NOT-BE-DISPLAYED" not in config_page + config_cli
+                assert str(config_path) in config_page and str(config_path) in config_cli
+            for document in ['{broken', 'null', '{"budget":{"maxMeanRegressionPercent":-1}}']:
+                config_path.write_text(document)
+                assert request("/configuration")[0] == 409
+                bad = subprocess.run(["dotnet", str(cli), "config", "show"], cwd=work,
+                                     capture_output=True, text=True, timeout=30)
+                assert bad.returncode == 2 and "perfagent.json" in bad.stderr
+            if config_before is None:
+                config_path.unlink()
+            else:
+                config_path.write_bytes(config_before)
+            assert request("/configuration")[0] == 200
             token = re.search(r'name="__RequestVerificationToken" value="([^"]+)"', page)[1]
             form = {"runId": "run-first", "__RequestVerificationToken": token}
             assert request("/baselines/current")[0] == 405

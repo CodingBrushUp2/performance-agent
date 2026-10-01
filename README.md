@@ -164,6 +164,26 @@ unique temporary write probe; it does not alter evidence or baseline history. A
 successful probe is not a guarantee that every existing child file is writable.
 No automatic elevation or storage relocation is performed.
 
+## Workspace configuration
+
+`perfagent config show` and the UI's **Effective configuration** link display the
+same read-only budget settings, configuration path and source. Without a configured
+budget, the defaults are 5% mean and 5% allocation regression. Explicit CLI thresholds
+or `--budget` take precedence. A configured null metric threshold is not enforced.
+
+```json
+{
+  "budget": {
+    "maxMeanRegressionPercent": 5,
+    "maxAllocationRegressionPercent": 10
+  }
+}
+```
+
+Save this as `perfagent.json` in the workspace. Do not put API keys, tokens, passwords
+or other secrets in it. Configuration visibility displays recognized settings only,
+not raw JSON or unknown fields. No settings editor or secret storage is provided.
+
 ## CI performance gate
 
 A deterministic GitHub Actions example is included in `.github/workflows/performance-gate-demo.yml`. It demonstrates a version-controlled baseline, candidate evidence, and performance budget without depending on benchmark timing noise. See [GitHub performance regression gate](docs/github-performance-gate.md).
