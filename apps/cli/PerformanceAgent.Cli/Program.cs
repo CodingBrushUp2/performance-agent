@@ -219,6 +219,45 @@ static async Task<int> RunAsync(string[] args)
         }
     }
 
+    if (args.Length == 1 && string.Equals(args[0], "storage", StringComparison.OrdinalIgnoreCase))
+    {
+        var status = PerformanceAgent.Cli.WorkspaceStorage.Resolve().Inspect();
+        Console.WriteLine($"Workspace: {status.WorkspaceDirectory}");
+        Console.WriteLine($"Storage: {status.StateDirectory}");
+        Console.WriteLine($"Writable: {(status.Writable ? "Yes" : "No")}");
+        Console.WriteLine("Admin: Not required");
+        if (status.Error is not null) Console.Error.WriteLine(status.Error);
+        return status.Writable ? 0 : 2;
+    }
+
+    if (args.Length == 2 && string.Equals(args[0], "history", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            var details = await new PerformanceAgent.Cli.RunDetailsService(PerformanceAgent.Cli.WorkspaceStorage.Resolve()).ReadAsync(args[1]);
+            var run = details.Run;
+            Console.WriteLine($"RunId: {run.RunId}");
+            Console.WriteLine($"Timestamp: {run.Timestamp.ToString("O", System.Globalization.CultureInfo.InvariantCulture)}");
+            Console.WriteLine($"Commit: {run.CommitSha ?? "Unavailable"}");
+            Console.WriteLine($"Runtime: {run.Evidence.Environment?.Runtime ?? "Unavailable"}");
+            Console.WriteLine($"OS: {run.Evidence.Environment?.OperatingSystem ?? "Unavailable"}");
+            Console.WriteLine($"Architecture: {run.Evidence.Environment?.Architecture ?? "Unavailable"}");
+            Console.WriteLine($"Current: {details.IsCurrent}; Anchor: {details.IsAnchor}");
+            foreach (var measurement in run.Evidence.Measurements.OrderBy(x => x.Name, StringComparer.Ordinal))
+            {
+                Console.WriteLine(measurement.Name);
+                Console.WriteLine($"  Mean (ns): {measurement.MeanNanoseconds.ToString("G17", System.Globalization.CultureInfo.InvariantCulture)}");
+                Console.WriteLine($"  Allocation (B/op): {measurement.AllocatedBytesPerOperation?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Unavailable"}");
+            }
+            return 0;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+    }
+
     if (args.Length == 1 && string.Equals(args[0], "history", StringComparison.OrdinalIgnoreCase))
     {
         try
@@ -277,7 +316,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent ui [--no-open] | perfagent storage | perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history [<run-id>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
