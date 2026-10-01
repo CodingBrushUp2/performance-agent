@@ -1,4 +1,5 @@
 using PerformanceAgent.Core.Budgets;
+using PerformanceAgent.Core.Calibration;
 using PerformanceAgent.Core.Comparison;
 using PerformanceAgent.Core.Evidence;
 using PerformanceAgent.Core.Measurements;
@@ -9,6 +10,105 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
+    if (args.Length >= 2 && string.Equals(args[0], "calibrate", StringComparison.OrdinalIgnoreCase))
+    {
+        const int defaultRuns = 3;
+        const double defaultMaxSpreadPercent = 5;
+        var runCount = defaultRuns;
+        var maxSpreadPercent = defaultMaxSpreadPercent;
+
+        for (var index = 2; index < args.Length; index += 2)
+        {
+            if (index + 1 >= args.Length)
+            {
+                Console.Error.WriteLine("Usage: perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>]");
+                return 2;
+            }
+
+            if (string.Equals(args[index], "--runs", StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(args[index + 1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsedRuns)
+                && parsedRuns >= 2)
+            {
+                runCount = parsedRuns;
+            }
+            else if (string.Equals(args[index], "--max-spread", StringComparison.OrdinalIgnoreCase)
+                     && TryParse(args[index + 1], out var parsedSpread))
+            {
+                maxSpreadPercent = parsedSpread;
+            }
+            else
+            {
+                Console.Error.WriteLine($"Invalid calibration option '{args[index]}'. Runs must be at least 2 and max spread must be a non-negative percentage.");
+                return 2;
+            }
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, signal) =>
+        {
+            signal.Cancel = true;
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+        try
+        {
+            var samples = new List<BenchmarkEvidence>(runCount);
+            var runIds = new List<string>(runCount);
+            var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
+            var archive = new FileRunArchive(root);
+            var generator = new RunIdGenerator();
+
+            for (var index = 0; index < runCount; index++)
+            {
+                Console.Error.WriteLine($"Calibration run {index + 1}/{runCount}...");
+                var result = await new PerformanceAgent.Cli.ProjectRunner().RunAsync(args[1], cancellation.Token);
+                cancellation.Token.ThrowIfCancellationRequested();
+                Console.Error.Write(result.StandardError);
+                if (result.ExitCode != 0)
+                    return result.ExitCode;
+
+                var evidence = new JsonBenchmarkEvidenceReader().Read(result.Evidence);
+                var timestamp = DateTimeOffset.UtcNow;
+                var runId = generator.Create(timestamp);
+                await archive.AppendAsync(new ArchivedBenchmarkRun(runId, timestamp, null, evidence), cancellation.Token);
+                samples.Add(evidence);
+                runIds.Add(runId);
+            }
+
+            var calibration = new CalibrationAnalyzer().Analyze(samples, maxSpreadPercent);
+            Console.WriteLine($"Calibration: {(calibration.IsStable ? "STABLE" : "UNSTABLE")}");
+            Console.WriteLine($"Runs: {string.Join(", ", runIds)}");
+            Console.WriteLine($"Maximum allowed spread: {maxSpreadPercent:0.##}%");
+            foreach (var metric in calibration.Metrics)
+            {
+                Console.WriteLine(metric.BenchmarkName);
+                Console.WriteLine($"  Mean median: {metric.MedianMeanNanoseconds:0.##} ns; spread: {metric.MeanSpreadPercent:0.##}%");
+                Console.WriteLine(metric.MedianAllocatedBytesPerOperation is null
+                    ? "  Allocation: unavailable"
+                    : $"  Allocation median: {metric.MedianAllocatedBytesPerOperation} B/op; spread: {metric.AllocationSpreadPercent:0.##}%");
+            }
+            foreach (var reason in calibration.InstabilityReasons)
+                Console.WriteLine($"  - {reason}");
+
+            Console.WriteLine("Baselines were not changed. Select a baseline explicitly with 'perfagent baseline set <run-id>' or 'perfagent baseline anchor <run-id>'.");
+            return calibration.IsStable ? 0 : 1;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("Calibration cancelled.");
+            return 130;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or TimeoutException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
+    }
+
     if ((args.Length == 2 || args.Length == 4) && string.Equals(args[0], "run", StringComparison.OrdinalIgnoreCase))
     {
         using var cancellation = new CancellationTokenSource();
@@ -180,7 +280,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
+            "Usage: perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown>");
         return 2;
     }
 
