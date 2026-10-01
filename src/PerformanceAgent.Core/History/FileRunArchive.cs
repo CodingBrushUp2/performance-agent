@@ -23,8 +23,7 @@ public sealed class FileRunArchive
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(run);
-        if (string.IsNullOrWhiteSpace(run.RunId))
-            throw new ArgumentException("Archived benchmark run must have a run ID.", nameof(run));
+        RunIdValidation.Validate(run.RunId);
 
         Directory.CreateDirectory(_archiveDirectory);
         var path = Path.Combine(_archiveDirectory, $"{run.RunId}.json");
@@ -36,6 +35,7 @@ public sealed class FileRunArchive
         try
         {
             await File.WriteAllTextAsync(temporaryPath, json, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryPath, path, overwrite: false);
         }
         catch (IOException) when (File.Exists(path))
@@ -58,11 +58,9 @@ public sealed class FileRunArchive
             return [];
 
         var runs = new List<ArchivedBenchmarkRun>();
-        foreach (var path in Directory.EnumerateFiles(_archiveDirectory, "run-*.json"))
+        foreach (var path in Directory.EnumerateFiles(_archiveDirectory, "*.json").Order(StringComparer.Ordinal))
         {
-            var json = await File.ReadAllTextAsync(path, cancellationToken);
-            runs.Add(JsonSerializer.Deserialize<ArchivedBenchmarkRun>(json, Options)
-                ?? throw new InvalidOperationException($"Archived benchmark run '{path}' is invalid."));
+            runs.Add(await ReadFileAsync(path, Path.GetFileNameWithoutExtension(path), cancellationToken));
         }
 
         return runs
@@ -75,9 +73,7 @@ public sealed class FileRunArchive
         string runId,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
-        if (Path.GetFileName(runId) != runId)
-            throw new ArgumentException("Run ID must not contain path segments.", nameof(runId));
+        RunIdValidation.Validate(runId);
 
         var path = Path.Combine(_archiveDirectory, $"{runId}.json");
         if (!File.Exists(path))
