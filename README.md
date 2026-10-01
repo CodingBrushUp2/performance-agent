@@ -205,6 +205,14 @@ Save this as `perfagent.json` in the workspace. Do not put API keys, tokens, pas
 or other secrets in it. Configuration visibility displays recognized settings only,
 not raw JSON or unknown fields. No settings editor or secret storage is provided.
 
+## Optional AI analysis (V0.2)
+
+`perfagent analyze <candidate-run-id>` checks an archived run against the Current
+baseline with the workspace budget. It then asks the configured model (`ai.provider`,
+`ai.model` in `perfagent.json`, and `OPENAI_API_KEY` from the environment) for an
+advisory explanation. The measured PASS/REGRESSION result is authoritative and decides
+the exit code. AI failures only fail the analysis. See [V0.2 AI analysis](docs/ai-analysis-v02.md).
+
 ## CI performance gate
 
 A deterministic GitHub Actions example is included in `.github/workflows/performance-gate-demo.yml`. It demonstrates a version-controlled baseline, candidate evidence, and performance budget without depending on benchmark timing noise. See [GitHub performance regression gate](docs/github-performance-gate.md).

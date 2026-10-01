@@ -1,6 +1,6 @@
 # V0.2 AI analysis architecture
 
-Status: implementation direction
+Status: first vertical slice implemented (`perfagent analyze`)
 
 ## Goal
 
@@ -63,7 +63,42 @@ A deterministic `FakePerformanceAnalysisProvider` lives in the Core test project
 - Authentication, rate-limit, outage, network, and malformed-output failures surface as provider-neutral exceptions that say benchmark results are unaffected. Provider SDK types do not escape `PerformanceAgent.AI`.
 - Normal CI uses a fake `IChatClient` and never calls OpenAI.
 
-The `perfagent analyze` command is not implemented yet.
+### Implemented: `perfagent analyze <candidate-run-id>`
+
+```text
+perfagent analyze <candidate-run-id>
+  -> archived candidate (by run id)
+  -> Current baseline (required; Anchor is never a fallback)
+  -> effective workspace budget (same as config show / check / report)
+  -> RegressionCheckService            => deterministic PASS / REGRESSION
+  -> PerformanceAnalysisRequest (evidence, budget, PerformanceRegressionResult values)
+  -> PerformanceAnalysisService -> provider from ai.provider / ai.model
+  -> console: measured facts first, then a separate advisory AI section
+```
+
+- **Current baseline.** Analysis compares the candidate with the active Current baseline. If no Current baseline is set, the command fails and asks for `perfagent baseline set <run-id>`. Anchor is never used silently.
+- **Budget.** The effective workspace budget is used, from `perfagent.json` or the built-in defaults. Invalid configuration fails exactly as it does for other workspace commands. There is no separate AI budget check.
+- **Provider and model.** The provider comes from `ai.provider` (default `openai`, case-insensitive). An unsupported value fails and names the configured provider. The model comes from `ai.model`, with no default. The credential comes only from `OPENAI_API_KEY` (see [AI configuration](ai-configuration.md)).
+- **Advisory only.**
+  - The deterministic verdict is computed before any provider is created.
+  - Output prints it first, then repeats it after the AI section as authoritative.
+  - AI text is labelled as generated, hypotheses as unverified, and experiments as needing benchmark verification.
+  - Model text is stripped of terminal control characters.
+- **Read-only.** `analyze` never writes the archive, Current/Anchor pointers, or baseline events.
+
+Exit codes follow `check`/`report`. AI prose never decides them.
+
+| Outcome | Exit code |
+|---|---|
+| Analysis succeeded, deterministic PASS | 0 |
+| Analysis succeeded, deterministic REGRESSION | 1 |
+| Missing candidate, missing Current baseline, invalid configuration, incompatible environments | 2 (nothing is analyzed) |
+| Unsupported provider, missing model or `OPENAI_API_KEY`, authentication/rate-limit/outage/network failure, timeout, malformed AI output | 2 (deterministic result is still printed; `AI analysis failed: ...` on stderr) |
+| Ctrl+C | 130 |
+
+Provider failures fail only the analysis. Benchmark evidence, baselines, history, and the deterministic verdict are unaffected. The CLI adds no retries beyond what the provider SDK does.
+
+Not yet implemented: analysis in the local Web UI, Anchor or explicit-baseline analysis, and a configurable timeout.
 
 ## Provider boundary
 

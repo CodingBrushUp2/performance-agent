@@ -181,6 +181,23 @@ assert 'Environment validation: compatible' in report and 'Measured baseline' in
 assert ' src=' not in report and ' href=' not in report
 PY
 
+# AI analysis is advisory and optional: without ai.model or OPENAI_API_KEY (never available in CI, and OpenAI
+# is never contacted) the installed tool still prints the authoritative deterministic result, fails only the
+# analysis with exit code 2, and leaves archive, baselines, and events byte-for-byte unchanged.
+find .performance-agent -type f -print0 | sort -z | xargs -0 sha256sum > state-before.sha
+analyze_status=0
+env -u OPENAI_API_KEY dotnet tool run perfagent -- analyze "$selected_run" > analyze.stdout 2> analyze.stderr || analyze_status=$?
+test "$analyze_status" -eq 2
+grep -Fx 'Deterministic result: PASS' analyze.stdout
+grep -F "Baseline:  $selected_run (Current)" analyze.stdout
+grep -F 'AI analysis: unavailable' analyze.stdout
+grep -F 'AI analysis failed: AI analysis requires a model. Set "ai.model" in perfagent.json' analyze.stderr
+missing_status=0
+dotnet tool run perfagent -- analyze run-does-not-exist > /dev/null 2> analyze-missing.stderr || missing_status=$?
+test "$missing_status" -eq 2
+grep -F "Archived benchmark run 'run-does-not-exist' was not found." analyze-missing.stderr
+find .performance-agent -type f -print0 | sort -z | xargs -0 sha256sum | cmp - state-before.sha
+
 # A damaged installation fails clearly; it must not search for a source-tree host.
 rm "$NUGET_PACKAGES/performanceagent.cli/0.1.0/tools/net10.0/any/benchmark-host/PerformanceAgent.BenchmarkHost.dll"
 if dotnet tool run perfagent -- run "$PWD/Benchmarks/Benchmarks.csproj" --output missing.json > missing.stdout 2> missing.stderr; then
