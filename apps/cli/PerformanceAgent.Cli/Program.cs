@@ -10,6 +10,16 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
+    if (args.Length == 0)
+    {
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
+        Console.CancelKeyPress += cancelHandler;
+        try { return await PerformanceAgent.Cli.LocalWebUi.RunAsync(cancellation.Token); }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { return 0; }
+        finally { Console.CancelKeyPress -= cancelHandler; }
+    }
+
     if (args.Length >= 2 && string.Equals(args[0], "calibrate", StringComparison.OrdinalIgnoreCase))
     {
         const int defaultRuns = 3;
