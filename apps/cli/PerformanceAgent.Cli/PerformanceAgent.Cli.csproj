@@ -1,6 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <AssemblyName>perfagent</AssemblyName>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>perfagent</ToolCommandName>
