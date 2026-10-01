@@ -118,6 +118,31 @@ grep -F 'Active Anchor: -' calibration-history.stdout
 archive_count="$(find .performance-agent/archive -maxdepth 1 -name '*.json' | wc -l)"
 test "$archive_count" -eq 3
 
+
+# The bundled local UI must start from the installed tool, bind to loopback, and serve its root page.
+dotnet tool run perfagent -- ui --no-open > ui.stdout 2> ui.stderr &
+ui_pid=$!
+ui_address=""
+for _ in {1..50}; do
+  if grep -q 'Performance Agent UI:' ui.stdout 2>/dev/null; then
+    ui_address="$(sed -n 's/^Performance Agent UI: //p' ui.stdout | head -n1)"
+    break
+  fi
+  sleep 0.2
+done
+test -n "$ui_address"
+case "$ui_address" in http://127.0.0.1:*) ;; *) echo "UI did not bind to loopback: $ui_address" >&2; kill "$ui_pid" || true; exit 1;; esac
+python3 - "$ui_address" <<'PY'
+import sys, urllib.request
+with urllib.request.urlopen(sys.argv[1], timeout=5) as response:
+    body=response.read().decode()
+assert response.status == 200
+assert '<title>Performance Agent</title>' in body
+assert 'Benchmark history' in body
+PY
+kill "$ui_pid"
+wait "$ui_pid" || true
+
 # A damaged installation fails clearly; it must not search for a source-tree host.
 rm "$NUGET_PACKAGES/performanceagent.cli/0.1.0/tools/net10.0/any/benchmark-host/PerformanceAgent.BenchmarkHost.dll"
 if dotnet tool run perfagent -- run "$PWD/Benchmarks/Benchmarks.csproj" --output missing.json > missing.stdout 2> missing.stderr; then
