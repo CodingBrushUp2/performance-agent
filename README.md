@@ -66,6 +66,15 @@ This packs a local package, installs it with an isolated tool manifest, and meas
 standalone BenchmarkDotNet project outside the repository. Only the smoke benchmark
 uses a dry job; production runs retain the benchmark's normal BenchmarkDotNet configuration.
 
+## Archive identities
+
+Generated RunIds use an invariant UTC timestamp and random suffix. Safe custom IDs
+remain supported: append, read, and history listing use the same identity. IDs must
+be portable filenames, without path separators, reserved filename characters or
+device names, or trailing dots/spaces. An archive file's RunId must match its filename.
+All archive JSON files are listed; temporary files are ignored. Duplicate IDs never
+overwrite existing runs, including concurrent appends.
+
 ## Baseline history
 
 `perfagent history` lists archived runs with current/anchor labels, followed by baseline
