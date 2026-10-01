@@ -57,7 +57,7 @@ A deterministic `FakePerformanceAnalysisProvider` lives in the Core test project
 
 `OpenAIPerformanceAnalysisProvider` in `src/PerformanceAgent.AI` implements `IPerformanceAnalysisProvider` with `Microsoft.Extensions.AI` `IChatClient`, backed by the official OpenAI SDK through `Microsoft.Extensions.AI.OpenAI`.
 
-- Typed structured output (`GetResponseAsync<PerformanceAnalysis>`) sends a JSON schema for the existing `PerformanceAnalysis` contract. Output that does not parse or validate fails the analysis clearly.
+- Typed structured output (`GetResponseAsync<PerformanceAnalysis>`) sends a JSON schema for the existing `PerformanceAnalysis` contract. Output that does not parse or validate fails the analysis clearly. Cited measurements are always rendered from evidence (see *Evidence grounding* below).
 - The model receives only fixed grounding instructions and the serialized `PerformanceAnalysisRequest` (normalized evidence, budget, deterministic verdicts). It never receives repository content, workspace configuration, or credentials.
 - The model comes only from `ai.model`, and the credential only from `OPENAI_API_KEY` (see [AI configuration](ai-configuration.md)).
 - Authentication, rate-limit, outage, network, and malformed-output failures surface as provider-neutral exceptions that say benchmark results are unaffected. Provider SDK types do not escape `PerformanceAgent.AI`.
@@ -178,6 +178,18 @@ The first contract should remain deliberately small:
 - `Uncertainty`
 
 Evidence references identify measured facts already present in normalized evidence/regression output. Generated prose must be visibly distinguished from measured facts.
+
+### Evidence grounding (V0.2 hardening)
+
+The model is never the source of a displayed measured value.
+
+- An `AnalysisEvidenceReference` cites a benchmark by its exact name. `PerformanceAnalysisService` rejects any name that is not in the supplied evidence, as well as empty fields and null entries. Structurally invalid output fails; it is never repaired.
+- When a citation is rendered (CLI and Web UI), Performance Agent prints that benchmark's mean and allocation change, and their budget status, from the deterministic comparison. Both surfaces use the same `CheckFormatting.FormatMeasured` as the *Measured result* section.
+- The model's `observation` is shown only as a labelled, single-line **AI note**. Numbers written in it are model text, not measurements, and line breaks are collapsed so a note cannot add lines that look like measured values.
+- The instructions tell the model to cite benchmarks and explain why a measurement matters, without restating or recomputing values, percentages, or budget status.
+- Everything in the request JSON, including benchmark names and environment strings, is declared untrusted data that cannot change the instructions, verdicts or output format. The request is sent as a serialized JSON payload separate from the system instructions. The PASS/REGRESSION verdict, budget, and run identities come only from the deterministic phase, so model text cannot change them.
+
+The contract is unchanged (`BenchmarkName`, `Observation`); only the instructions and the presentation changed.
 
 The exact DTO shape is established by tests in the implementation PR rather than by provider response types.
 
