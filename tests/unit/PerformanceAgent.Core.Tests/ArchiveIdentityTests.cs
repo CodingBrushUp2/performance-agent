@@ -79,7 +79,7 @@ public sealed class ArchiveIdentityTests : IDisposable
             try { await Archive.AppendAsync(Run("collision", index.ToString(CultureInfo.InvariantCulture))); return index; }
             catch (InvalidOperationException) { return -1; }
         }));
-        var winner = Assert.Single(attempts.Where(index => index >= 0));
+        var winner = Assert.Single(attempts, index => index >= 0);
         Assert.Equal(winner.ToString(CultureInfo.InvariantCulture), (await Archive.ReadAsync("collision")).CommitSha);
         Assert.Single(await Archive.ListAsync());
         Assert.Single(Directory.EnumerateFiles(Path.Combine(_root, "archive")));
