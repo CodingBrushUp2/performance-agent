@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Globalization;
 using PerformanceAgent.Core.History;
+using PerformanceAgent.Core.Budgets;
 
 namespace PerformanceAgent.Cli;
 
@@ -82,6 +83,15 @@ internal static class LocalWebUi
                 return Results.Text(exception.Message, statusCode: StatusCodes.Status400BadRequest);
             }
         });
+        app.MapGet("/runs/{runId}/check-current", async (string runId, HttpContext context) =>
+        {
+            var current = await baselines.GetAsync(BaselineKind.Current, context.RequestAborted);
+            if (current is null) return Results.Text("No current baseline is configured.", statusCode: 409);
+            var baseline = await archive.ReadAsync(current.RunId, context.RequestAborted);
+            var candidate = await archive.ReadAsync(runId, context.RequestAborted);
+            var check = new RegressionCheckService().Check(baseline.Evidence, candidate.Evidence, new PerformanceBudget(5, 5));
+            return Results.Content(RenderCheck(current.RunId, candidate.RunId, check), "text/html; charset=utf-8");
+        });
         app.MapPost("/baselines/current", (Delegate)((HttpContext context) => SelectAsync(context, BaselineKind.Current)));
         app.MapPost("/baselines/anchor", (Delegate)((HttpContext context) => SelectAsync(context, BaselineKind.Anchor)));
 
@@ -125,7 +135,7 @@ internal static class LocalWebUi
     private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, AntiforgeryTokenSet token, WorkspaceStorageStatus storage)
     {
         var rows = string.Join("", runs.OrderByDescending(x => x.Timestamp).Select(run =>
-            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionForm(run.RunId, "current", "Make Current", token) + SelectionForm(run.RunId, "anchor", "Make Anchor", token) : "Storage is not writable")}</td></tr>"));
+            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a> · <a href=\"/runs/{Uri.EscapeDataString(run.RunId)}/check-current\">Check Current</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionForm(run.RunId, "current", "Make Current", token) + SelectionForm(run.RunId, "anchor", "Make Anchor", token) : "Storage is not writable")}</td></tr>"));
         if (rows.Length == 0) rows = "<tr><td colspan=\"4\">No benchmark runs yet.</td></tr>";
         return Page("Performance Agent", $$"""
 <h1>Performance Agent</h1><p class="muted">Local performance evidence. CLI remains the primary interface.</p>
@@ -160,6 +170,12 @@ internal static class LocalWebUi
 <h2>Measurements</h2><table><thead><tr><th>Benchmark</th><th>Mean (ns)</th><th>Allocation (B/op)</th></tr></thead><tbody>{{measurements}}</tbody></table>
 <p class="muted">Archived evidence is immutable. Unavailable values were not recorded.</p>
 """);
+    }
+
+    private static string RenderCheck(string baselineRunId, string candidateRunId, EvidenceCheckResult check)
+    {
+        var rows = string.Join("", check.Benchmarks.Select(item => $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "REGRESSION")}</td><td>{item.Result.Comparison.Mean.PercentChange?.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) ?? "Unavailable"}%</td><td>{item.Result.Comparison.AllocatedBytes.PercentChange?.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) ?? "Unavailable"}%</td></tr>"));
+        return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{(check.Passed ? "PASS" : "REGRESSION")}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">V0.1 UI budget: +5% mean and +5% allocation.</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean change</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
     }
 
     private static string Page(string title, string content) => $$"""
