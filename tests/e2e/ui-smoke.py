@@ -120,7 +120,12 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             before = events_path.read_bytes()
             page = request()[1]
             assert "<strong>run-second</strong>" in page and "<strong>run-first</strong>" in page
+            assert "Baseline timeline" in page and "run-first</code> → <code>run-second" in page
             assert events_path.read_bytes() == before  # Refresh is read-only.
+            status, regression, _ = request("/runs/run-second/check-current")
+            assert status == 200 and "<h1>PASS</h1>" in regression
+            assert "Candidate <code>run-second</code> vs Current <code>run-second</code>" in regression
+            assert "Budget: mean +5%, allocation +5%" in regression
             for run_id in ["run-first", "run-second", "run-'&é"]:
                 status, details, _ = request("/runs/" + urllib.parse.quote(run_id, safe=""))
                 assert status == 200 and run_id in html.unescape(details)
