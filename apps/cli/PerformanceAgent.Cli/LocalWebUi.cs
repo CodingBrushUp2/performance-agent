@@ -65,8 +65,9 @@ internal static class LocalWebUi
             var runs = await archive.ListAsync(context.RequestAborted);
             var current = await baselines.GetAsync(BaselineKind.Current, context.RequestAborted);
             var anchor = await baselines.GetAsync(BaselineKind.Anchor, context.RequestAborted);
+            var events = await new FileBaselineEventStore(storage.StateDirectory).ReadAllAsync(context.RequestAborted);
             var token = antiforgery.GetAndStoreTokens(context);
-            return Results.Content(Render(runs, current?.RunId, anchor?.RunId, token, storage.Inspect()), "text/html; charset=utf-8");
+            return Results.Content(Render(runs, current?.RunId, anchor?.RunId, events, token, storage.Inspect()), "text/html; charset=utf-8");
         });
         app.MapGet("/runs/{runId}", async (string runId, HttpContext context) =>
         {
@@ -134,11 +135,14 @@ internal static class LocalWebUi
         return 0;
     }
 
-    private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, AntiforgeryTokenSet token, WorkspaceStorageStatus storage)
+    private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, IReadOnlyList<BaselineEvent> events, AntiforgeryTokenSet token, WorkspaceStorageStatus storage)
     {
         var rows = string.Join("", runs.OrderByDescending(x => x.Timestamp).Select(run =>
             $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a> · <a href=\"/runs/{Uri.EscapeDataString(run.RunId)}/check-current\">Check Current</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionForm(run.RunId, "current", "Make Current", token) + SelectionForm(run.RunId, "anchor", "Make Anchor", token) : "Storage is not writable")}</td></tr>"));
         if (rows.Length == 0) rows = "<tr><td colspan=\"4\">No benchmark runs yet.</td></tr>";
+        var eventRows = string.Join("", events.Reverse().Select(item =>
+            $"<tr><td>{item.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{item.Kind}</td><td>{item.Type}</td><td><code>{WebUtility.HtmlEncode(item.PreviousRunId ?? "—")}</code> → <code>{WebUtility.HtmlEncode(item.RunId)}</code></td></tr>"));
+        if (eventRows.Length == 0) eventRows = "<tr><td colspan=\"4\">No baseline events yet.</td></tr>";
         return Page("Performance Agent", $$"""
 <h1>Performance Agent</h1><p class="muted">Local performance evidence. CLI remains the primary interface.</p>
 <section class="card"><h2>Workspace storage</h2><dl>
@@ -150,6 +154,7 @@ internal static class LocalWebUi
 <div class="cards"><div class="card"><div class="muted">Current baseline</div><strong>{{WebUtility.HtmlEncode(current ?? "Not set")}}</strong></div>
 <div class="card"><div class="muted">Anchor baseline</div><strong>{{WebUtility.HtmlEncode(anchor ?? "Not set")}}</strong></div></div>
 <h2>Benchmark history</h2><table><thead><tr><th>Run</th><th>Timestamp</th><th>Baseline</th><th>Actions</th></tr></thead><tbody>{{rows}}</tbody></table>
+<h2>Baseline timeline</h2><p class="muted">Append-only baseline selection history, newest first.</p><table><thead><tr><th>Timestamp</th><th>Kind</th><th>Event</th><th>Transition</th></tr></thead><tbody>{{eventRows}}</tbody></table>
 """);
     }
 
