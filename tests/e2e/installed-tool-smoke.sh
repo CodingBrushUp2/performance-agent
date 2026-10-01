@@ -2,8 +2,13 @@
 set -euo pipefail
 repo_root="$PWD"
 work="$(mktemp -d)"
+ui_pid=""
 cleanup() {
   result=$?
+  if [ -n "$ui_pid" ]; then
+    kill "$ui_pid" 2>/dev/null || true
+    wait "$ui_pid" 2>/dev/null || true
+  fi
   if [ "$result" -ne 0 ]; then
     for log in "$work/external consumer/run.stdout" "$work/external consumer/run.stderr"; do
       if [ -f "$log" ]; then cat "$log" >&2; fi
@@ -133,15 +138,39 @@ done
 test -n "$ui_address"
 case "$ui_address" in http://127.0.0.1:*) ;; *) echo "UI did not bind to loopback: $ui_address" >&2; kill "$ui_pid" || true; exit 1;; esac
 python3 - "$ui_address" <<'PY'
-import sys, urllib.request
-with urllib.request.urlopen(sys.argv[1], timeout=5) as response:
+import http.cookiejar, json, pathlib, re, sys, urllib.parse, urllib.request
+opener=urllib.request.build_opener(urllib.request.ProxyHandler({}), urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+with opener.open(sys.argv[1], timeout=5) as response:
     body=response.read().decode()
 assert response.status == 200
 assert '<title>Performance Agent</title>' in body
 assert 'Benchmark history' in body
+assert 'Workspace storage' in body and 'Admin</dt><dd>Not required' in body
+details_path=re.search(r'href="(/runs/[^"]+)"',body)[1]
+run_id=urllib.parse.unquote(details_path.removeprefix('/runs/'))
+token=re.search(r'name="__RequestVerificationToken" value="([^"]+)"',body)[1]
+evidence_path=pathlib.Path('.performance-agent/archive')/(run_id+'.json')
+original=evidence_path.read_bytes()
+for kind in ['current','anchor']:
+    form=urllib.parse.urlencode({'runId':run_id,'__RequestVerificationToken':token}).encode()
+    with opener.open(sys.argv[1]+'/baselines/'+kind, data=form, timeout=5) as response:
+        assert response.status==200  # Follows POST -> 303 -> GET.
+with opener.open(sys.argv[1]+details_path, timeout=5) as response:
+    details=response.read().decode()
+assert 'InstalledBenchmark.Allocate' in details and 'Mean (ns)' in details
+assert 'Allocation (B/op)' in details and '<span class="badge">Current</span>' in details
+assert '<span class="badge">Anchor</span>' in details
+assert evidence_path.read_bytes()==original
+events=[json.loads(line) for line in pathlib.Path('.performance-agent/baseline-events.jsonl').read_text().splitlines()]
+assert [(event['kind'],event['runId']) for event in events]==[(1,run_id),(0,run_id)]
 PY
 kill "$ui_pid"
 wait "$ui_pid" || true
+ui_pid=""
+dotnet tool run perfagent -- storage | grep -F 'Writable: Yes'
+dotnet tool run perfagent -- history | grep -F 'Current Created'
+selected_run="$(python3 -c 'import json; print(json.loads(open(".performance-agent/baseline-events.jsonl").readline())["runId"])')"
+dotnet tool run perfagent -- history "$selected_run" | grep -F 'Current: True; Anchor: True'
 
 # A damaged installation fails clearly; it must not search for a source-tree host.
 rm "$NUGET_PACKAGES/performanceagent.cli/0.1.0/tools/net10.0/any/benchmark-host/PerformanceAgent.BenchmarkHost.dll"

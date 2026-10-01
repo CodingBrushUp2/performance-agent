@@ -1,7 +1,22 @@
 namespace PerformanceAgent.Cli;
 
+internal sealed record WorkspaceStorageStatus(string WorkspaceDirectory, string StateDirectory, bool Writable, string? Error);
+
 internal sealed record WorkspaceStorage(string WorkspaceDirectory, string StateDirectory)
 {
+    public WorkspaceStorageStatus Inspect()
+    {
+        try
+        {
+            EnsureWritable();
+            return new(WorkspaceDirectory, StateDirectory, true, null);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return new(WorkspaceDirectory, StateDirectory, false, exception.Message);
+        }
+    }
+
     public static WorkspaceStorage Resolve(string? workspaceDirectory = null)
     {
         var workspace = Path.GetFullPath(workspaceDirectory ?? Environment.CurrentDirectory);

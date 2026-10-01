@@ -150,6 +150,18 @@ checks, and SameSite cookies. There are no accounts, persistent authentication k
 or administrator/root requirements. Errors after a committed baseline event can leave
 a stale derived pointer; reload history to see the authoritative selection before retrying.
 
+**View Details** shows archived measurements (mean in ns and allocation in B/op),
+timestamp, commit and environment when recorded, and active baseline labels.
+`perfagent history <run-id>` exposes the same read use case from the CLI. Missing
+metadata/allocation is shown as unavailable, never as a measured zero.
+
+The UI shows workspace/storage paths, writeability and permission guidance. Use
+`perfagent storage` for the same status from the CLI (exit 0 writable, 2 otherwise).
+The check initializes the workspace state directory if absent and creates/removes a
+unique temporary write probe; it does not alter evidence or baseline history. A
+successful probe is not a guarantee that every existing child file is writable.
+No automatic elevation or storage relocation is performed.
+
 ## CI performance gate
 
 A deterministic GitHub Actions example is included in `.github/workflows/performance-gate-demo.yml`. It demonstrates a version-controlled baseline, candidate evidence, and performance budget without depending on benchmark timing noise. See [GitHub performance regression gate](docs/github-performance-gate.md).

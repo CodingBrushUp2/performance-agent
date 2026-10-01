@@ -1,6 +1,8 @@
 """Real loopback HTTP checks against the CLI; no browser or third-party packages."""
 import http.cookiejar
 import json
+import html
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -30,11 +32,16 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
     state = work / ".performance-agent"
     archive = state / "archive"
     archive.mkdir(parents=True)
-    for run_id in ["run-first", "run-second"]:
+    for run_id in ["run-first", "run-second", "run-'&é"]:
         (archive / (run_id + ".json")).write_text(json.dumps({
-            "runId": run_id, "timestamp": "2026-10-01T10:00:00+00:00", "commitSha": None,
-            "evidence": {"schemaVersion": "1.0", "measurements": [
-                {"name": "Smoke", "meanNanoseconds": 100, "allocatedBytesPerOperation": 0}]}
+            "runId": run_id, "timestamp": "2026-10-01T10:00:00+00:00",
+            "commitSha": None if run_id == "run-first" else "abc<script>sha</script>",
+            "evidence": {"schemaVersion": "1.0",
+                "environment": None if run_id == "run-first" else {
+                    "runtime": "Runtime <script>runtime</script>", "operatingSystem": "OS & test", "architecture": "X64"},
+                "measurements": [
+                    {"name": "Smoke <script>name</script>", "meanNanoseconds": 100.125,
+                     "allocatedBytesPerOperation": None if run_id == "run-first" else 0}]}
         }))
     original_archive = {p.name: p.read_bytes() for p in archive.iterdir()}
     with (work / "server.log").open("w+") as log:
@@ -72,6 +79,13 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
 
             status, page, headers = request()
             assert status == 200 and "Make Current" in page and "Make Anchor" in page
+            assert "View Details" in page
+            assert str(work) in page and str(state) in page and "<dd>Yes</dd>" in page
+            assert "Admin</dt><dd>Not required" in page
+            storage_output = run_cli(work, "storage")
+            assert f"Workspace: {work}" in storage_output and f"Storage: {state}" in storage_output
+            assert "Writable: Yes" in storage_output and "Admin: Not required" in storage_output
+            assert not list(state.glob(".write-probe-*"))
             assert "no-store" in headers["Cache-Control"]
             assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
             token = re.search(r'name="__RequestVerificationToken" value="([^"]+)"', page)[1]
@@ -103,6 +117,33 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             page = request()[1]
             assert "<strong>run-second</strong>" in page and "<strong>run-first</strong>" in page
             assert events_path.read_bytes() == before  # Refresh is read-only.
+            for run_id in ["run-first", "run-second", "run-'&é"]:
+                status, details, _ = request("/runs/" + urllib.parse.quote(run_id, safe=""))
+                assert status == 200 and run_id in html.unescape(details)
+                assert "2026-10-01T10:00:00.0000000+00:00" in details and "100.125" in details
+                assert "Mean (ns)" in details and "Allocation (B/op)" in details
+                assert "<script>" not in details and "&lt;script&gt;name&lt;/script&gt;" in details
+                output = run_cli(work, "history", run_id)
+                assert f"RunId: {run_id}" in output and "Mean (ns): 100.125" in output
+                if run_id == "run-first":
+                    assert details.count("<dd>Unavailable</dd>") == 4
+                    assert "<td>Unavailable</td>" in details
+                    assert '<span class="badge">Anchor</span>' in details
+                    assert "Allocation (B/op): Unavailable" in output
+                else:
+                    assert "abc&lt;script&gt;sha&lt;/script&gt;" in details
+                    assert "Runtime &lt;script&gt;runtime&lt;/script&gt;" in details
+                    assert "OS &amp; test" in details and "X64" in details
+                    assert "Allocation (B/op): 0" in output
+                if run_id == "run-second":
+                    assert '<span class="badge">Current</span>' in details
+                    assert "Current: True; Anchor: False" in output
+            assert events_path.read_bytes() == before  # Details never change history.
+            assert request("/runs/run-missing")[0] == 404
+            assert request("/runs/bad%22id")[0] == 400
+            missing = subprocess.run(["dotnet", str(cli), "history", "run-missing"], cwd=work,
+                                     text=True, capture_output=True, timeout=30)
+            assert missing.returncode == 2 and "not found" in missing.stderr
             run_cli(work, "baseline", "anchor", "run-second")
             assert request()[1].count("<strong>run-second</strong>") == 2
 
@@ -116,6 +157,31 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             assert "<strong>run-first</strong>" in request()[1]
             assert "Active Current: run-first" in run_cli(work, "history")
             pointer.rmdir()
+            # Status uses the same storage boundary in CLI and UI. No silent relocation.
+            saved_state = work / "saved-state"
+            state.rename(saved_state)
+            state.write_text("A file prevents creating the state directory")
+            status, page, _ = request()
+            assert status == 200 and "<dd>No</dd>" in page and "Fix the folder permissions" in page
+            assert str(state) in page and "Make Current" not in page
+            blocked = subprocess.run(["dotnet", str(cli), "storage"], cwd=work,
+                                     text=True, capture_output=True, timeout=30)
+            assert blocked.returncode == 2 and "Writable: No" in blocked.stdout
+            assert "Administrator/root privileges are not required" in blocked.stderr
+            assert request("/baselines/current", form)[0] == 409
+            assert state.is_file()
+            state.unlink()
+            saved_state.rename(state)
+            if os.name == "posix" and os.geteuid() != 0:
+                mode = state.stat().st_mode
+                try:
+                    state.chmod(0o555)
+                    status, page, _ = request()
+                    assert status == 200 and "<dd>No</dd>" in page
+                    assert "Make Current" not in page and "Fix the folder permissions" in page
+                    assert request("/baselines/current", form)[0] == 409
+                finally:
+                    state.chmod(mode)
             # Corruption is reported, never silently treated as empty history.
             before = events_path.read_bytes()
             events_path.write_bytes(before + b"{broken\n")
@@ -123,7 +189,7 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             events_path.write_bytes(before)
             assert request()[0] == 200
             assert {p.name: p.read_bytes() for p in archive.iterdir()} == original_archive
-            print("UI HTTP smoke passed: loopback, CSRF, selections, CLI parity, immutable evidence, errors.")
+            print("UI HTTP smoke passed: loopback, CSRF, selections, details, storage, CLI parity, immutable evidence, errors.")
         finally:
             process.terminate()
             try:

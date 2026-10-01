@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
+using System.Globalization;
 using PerformanceAgent.Core.History;
 
 namespace PerformanceAgent.Cli;
@@ -57,7 +58,23 @@ internal static class LocalWebUi
             var current = await baselines.GetAsync(BaselineKind.Current, context.RequestAborted);
             var anchor = await baselines.GetAsync(BaselineKind.Anchor, context.RequestAborted);
             var token = antiforgery.GetAndStoreTokens(context);
-            return Results.Content(Render(runs, current?.RunId, anchor?.RunId, token), "text/html; charset=utf-8");
+            return Results.Content(Render(runs, current?.RunId, anchor?.RunId, token, storage.Inspect()), "text/html; charset=utf-8");
+        });
+        app.MapGet("/runs/{runId}", async (string runId, HttpContext context) =>
+        {
+            try
+            {
+                var details = await new RunDetailsService(storage).ReadAsync(runId, context.RequestAborted);
+                return Results.Content(RenderDetails(details), "text/html; charset=utf-8");
+            }
+            catch (FileNotFoundException exception)
+            {
+                return Results.Text(exception.Message, statusCode: StatusCodes.Status404NotFound);
+            }
+            catch (ArgumentException exception)
+            {
+                return Results.Text(exception.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
         });
         app.MapPost("/baselines/current", (Delegate)((HttpContext context) => SelectAsync(context, BaselineKind.Current)));
         app.MapPost("/baselines/anchor", (Delegate)((HttpContext context) => SelectAsync(context, BaselineKind.Anchor)));
@@ -99,27 +116,58 @@ internal static class LocalWebUi
         return 0;
     }
 
-    private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, AntiforgeryTokenSet token)
+    private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, AntiforgeryTokenSet token, WorkspaceStorageStatus storage)
     {
         var rows = string.Join("", runs.OrderByDescending(x => x.Timestamp).Select(run =>
-            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code></td><td>{run.Timestamp:O}</td><td>{Label(run.RunId, current, anchor)}</td><td>{SelectionForm(run.RunId, "current", "Make Current", token)}{SelectionForm(run.RunId, "anchor", "Make Anchor", token)}</td></tr>"));
+            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionForm(run.RunId, "current", "Make Current", token) + SelectionForm(run.RunId, "anchor", "Make Anchor", token) : "Storage is not writable")}</td></tr>"));
         if (rows.Length == 0) rows = "<tr><td colspan=\"4\">No benchmark runs yet.</td></tr>";
-        return $$"""
+        return Page("Performance Agent", $$"""
+<h1>Performance Agent</h1><p class="muted">Local performance evidence. CLI remains the primary interface.</p>
+<section class="card"><h2>Workspace storage</h2><dl>
+<dt>Workspace</dt><dd>{{WebUtility.HtmlEncode(storage.WorkspaceDirectory)}}</dd>
+<dt>Storage</dt><dd>{{WebUtility.HtmlEncode(storage.StateDirectory)}}</dd>
+<dt>Writable</dt><dd>{{(storage.Writable ? "Yes" : "No")}}</dd><dt>Admin</dt><dd>Not required</dd></dl>
+{{(storage.Error is null ? "" : $"<p role=\"alert\">{WebUtility.HtmlEncode(storage.Error)}</p>")}}
+<p class="muted">Checked with a temporary write probe. No elevation or automatic storage relocation.</p></section>
+<div class="cards"><div class="card"><div class="muted">Current baseline</div><strong>{{WebUtility.HtmlEncode(current ?? "Not set")}}</strong></div>
+<div class="card"><div class="muted">Anchor baseline</div><strong>{{WebUtility.HtmlEncode(anchor ?? "Not set")}}</strong></div></div>
+<h2>Benchmark history</h2><table><thead><tr><th>Run</th><th>Timestamp</th><th>Baseline</th><th>Actions</th></tr></thead><tbody>{{rows}}</tbody></table>
+""");
+    }
+
+    private static string RenderDetails(RunDetails details)
+    {
+        var run = details.Run;
+        var environment = run.Evidence.Environment;
+        var measurements = string.Join("", run.Evidence.Measurements.OrderBy(x => x.Name, StringComparer.Ordinal).Select(measurement =>
+            $"<tr><td>{WebUtility.HtmlEncode(measurement.Name)}</td><td>{measurement.MeanNanoseconds.ToString("G17", CultureInfo.InvariantCulture)}</td><td>{measurement.AllocatedBytesPerOperation?.ToString(CultureInfo.InvariantCulture) ?? "Unavailable"}</td></tr>"));
+        if (measurements.Length == 0) measurements = "<tr><td colspan=\"3\">No measurements recorded.</td></tr>";
+        return Page("Run details — Performance Agent", $$"""
+<p><a href="/">Back to history</a></p><h1>Run details</h1>
+<dl><dt>RunId</dt><dd>{{WebUtility.HtmlEncode(run.RunId)}}</dd>
+<dt>Timestamp</dt><dd>{{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}}</dd>
+<dt>Commit SHA</dt><dd>{{WebUtility.HtmlEncode(run.CommitSha ?? "Unavailable")}}</dd>
+<dt>Runtime</dt><dd>{{WebUtility.HtmlEncode(environment?.Runtime ?? "Unavailable")}}</dd>
+<dt>OS</dt><dd>{{WebUtility.HtmlEncode(environment?.OperatingSystem ?? "Unavailable")}}</dd>
+<dt>Architecture</dt><dd>{{WebUtility.HtmlEncode(environment?.Architecture ?? "Unavailable")}}</dd>
+<dt>Active baselines</dt><dd>{{Label(run.RunId, details.IsCurrent ? run.RunId : null, details.IsAnchor ? run.RunId : null)}}</dd></dl>
+<h2>Measurements</h2><table><thead><tr><th>Benchmark</th><th>Mean (ns)</th><th>Allocation (B/op)</th></tr></thead><tbody>{{measurements}}</tbody></table>
+<p class="muted">Archived evidence is immutable. Unavailable values were not recorded.</p>
+""");
+    }
+
+    private static string Page(string title, string content) => $$"""
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Performance Agent</title><style>
+<title>{{WebUtility.HtmlEncode(title)}}</title><style>
 body{font:15px system-ui;margin:0;background:#f6f7f9;color:#1f2937}main{max-width:1000px;margin:48px auto;padding:0 24px}
 h1{font-size:28px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:24px 0}
 .card,table{background:white;border:1px solid #e5e7eb;border-radius:10px}.card{padding:18px}.muted{color:#6b7280}
 table{width:100%;border-collapse:collapse;overflow:hidden}th,td{text-align:left;padding:13px;border-bottom:1px solid #eee}th{background:#fafafa}
 .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;margin-right:5px}code{font-size:13px}
 form{display:inline-block;margin:3px}button{cursor:pointer;padding:6px 10px}
-</style></head><body><main><h1>Performance Agent</h1><p class="muted">Local performance evidence. CLI remains the primary interface.</p>
-<div class="cards"><div class="card"><div class="muted">Current baseline</div><strong>{{WebUtility.HtmlEncode(current ?? "Not set")}}</strong></div>
-<div class="card"><div class="muted">Anchor baseline</div><strong>{{WebUtility.HtmlEncode(anchor ?? "Not set")}}</strong></div></div>
-<h2>Benchmark history</h2><table><thead><tr><th>Run</th><th>Timestamp</th><th>Baseline</th><th>Actions</th></tr></thead><tbody>{{rows}}</tbody></table>
-</main></body></html>
+dt{font-weight:600;margin-top:10px}dd{margin:4px 0;overflow-wrap:anywhere}p[role=alert]{color:#991b1b}
+</style></head><body><main>{{content}}</main></body></html>
 """;
-    }
 
     private static string SelectionForm(string runId, string kind, string label, AntiforgeryTokenSet token) =>
         $"<form method=\"post\" action=\"/baselines/{kind}\"><input type=\"hidden\" name=\"runId\" value=\"{WebUtility.HtmlEncode(runId)}\"><input type=\"hidden\" name=\"{WebUtility.HtmlEncode(token.FormFieldName)}\" value=\"{WebUtility.HtmlEncode(token.RequestToken)}\"><button type=\"submit\">{label}</button></form>";
