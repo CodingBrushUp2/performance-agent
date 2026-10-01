@@ -14,7 +14,7 @@ public sealed record PerformanceAnalysisRequest(
     BenchmarkEvidence Baseline,
     BenchmarkEvidence Candidate,
     PerformanceBudget Budget,
-    IReadOnlyList<BudgetCheckResult>? RegressionResults = null)
+    IReadOnlyList<PerformanceRegressionResult>? RegressionResults = null)
 {
     public PerformanceAnalysisRequest Validate()
     {
@@ -34,7 +34,7 @@ public sealed record PerformanceAnalysisRequest(
         return this;
     }
 
-    private void ValidateRegressionResults(IReadOnlyList<BudgetCheckResult> results)
+    private void ValidateRegressionResults(IReadOnlyList<PerformanceRegressionResult> results)
     {
         var baselineNames = Baseline.Measurements.Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
         var candidateNames = Candidate.Measurements.Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
