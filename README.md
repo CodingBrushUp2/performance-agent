@@ -97,6 +97,15 @@ Calibration archives each measured run but intentionally leaves Current and Anch
 
 This is the first operational local workflow: measure a real BenchmarkDotNet project, evaluate cross-run stability, retain immutable evidence, and explicitly establish baseline provenance. No AI, cloud account, database, or monitoring platform is required.
 
+After selecting a trusted RunId, re-run the same benchmark and enforce the sample performance budget with:
+
+```bash
+bash scripts/check-local.sh <run-id>
+```
+
+The command exits 0 when the candidate stays within budget, 1 on a measured regression, and 2 when the evidence cannot be compared or the command is invalid. The candidate run is still archived, while the selected baseline remains unchanged.
+
+
 ## Archive identities
 
 Generated RunIds use an invariant UTC timestamp and random suffix. Safe custom IDs
