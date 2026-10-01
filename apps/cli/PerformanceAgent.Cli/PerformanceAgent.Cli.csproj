@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <AssemblyName>perfagent</AssemblyName>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>perfagent</ToolCommandName>
@@ -12,6 +11,7 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../../../src/PerformanceAgent.Core/PerformanceAgent.Core.csproj" />
     <ProjectReference Include="../../benchmark-host/PerformanceAgent.BenchmarkHost/PerformanceAgent.BenchmarkHost.csproj"
                       ReferenceOutputAssembly="false" Private="false" />
