@@ -60,6 +60,12 @@ internal static class LocalWebUi
                 await context.Response.WriteAsync($"Unable to complete the request: {exception.Message}\nReload history to check the active baseline before retrying. No administrator/root privileges are required.");
             }
         });
+        app.MapGet("/configuration", () =>
+        {
+            var effective = configuration.Inspect();
+            var content = $"<p><a href=\"/\">Back to history</a></p><h1>Effective configuration</h1><dl><dt>Configuration file</dt><dd>{WebUtility.HtmlEncode(effective.Path)}</dd><dt>Budget source</dt><dd>{WebUtility.HtmlEncode(effective.BudgetSource)}</dd><dt>Max mean regression (%)</dt><dd>{effective.Budget.MaxMeanRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd><dt>Max allocation regression (%)</dt><dd>{effective.Budget.MaxAllocationRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd></dl><p>Explicit CLI check thresholds or --budget override workspace settings. Do not store secrets in perfagent.json.</p>";
+            return Results.Content(Page("Effective configuration — Performance Agent", content), "text/html; charset=utf-8");
+        });
         app.MapGet("/", async (HttpContext context) =>
         {
             var runs = await archive.ListAsync(context.RequestAborted);
@@ -145,6 +151,7 @@ internal static class LocalWebUi
         if (eventRows.Length == 0) eventRows = "<tr><td colspan=\"4\">No baseline events yet.</td></tr>";
         return Page("Performance Agent", $$"""
 <h1>Performance Agent</h1><p class="muted">Local performance evidence. CLI remains the primary interface.</p>
+<p><a href="/configuration">Effective configuration</a></p>
 <section class="card"><h2>Workspace storage</h2><dl>
 <dt>Workspace</dt><dd>{{WebUtility.HtmlEncode(storage.WorkspaceDirectory)}}</dd>
 <dt>Storage</dt><dd>{{WebUtility.HtmlEncode(storage.StateDirectory)}}</dd>

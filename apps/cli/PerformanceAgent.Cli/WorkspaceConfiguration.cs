@@ -10,28 +10,41 @@ internal sealed record PerformanceAgentConfiguration(
         new(new PerformanceBudget(5, 5));
 }
 
+internal sealed record EffectiveWorkspaceConfiguration(string Path, string BudgetSource, PerformanceBudget Budget);
+
 internal sealed class WorkspaceConfiguration
 {
     private readonly WorkspaceStorage _storage;
 
     public WorkspaceConfiguration(WorkspaceStorage storage) => _storage = storage;
 
-    public PerformanceAgentConfiguration Load()
+    public PerformanceAgentConfiguration Load() => new(Inspect().Budget);
+
+    public EffectiveWorkspaceConfiguration Inspect()
     {
         var path = Path.Combine(_storage.WorkspaceDirectory, "perfagent.json");
         if (!File.Exists(path))
-            return PerformanceAgentConfiguration.Default;
+            return new(path, "Built-in defaults (file absent)", PerformanceAgentConfiguration.Default.Budget!);
 
-        var configuration = JsonSerializer.Deserialize<PerformanceAgentConfiguration>(
-            File.ReadAllText(path),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        PerformanceAgentConfiguration? configuration;
+        try
+        {
+            configuration = JsonSerializer.Deserialize<PerformanceAgentConfiguration>(
+                File.ReadAllText(path),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException exception)
+        {
+            // Do not echo raw JSON or values from unknown fields, which may contain secrets.
+            throw new InvalidOperationException("perfagent.json is not valid configuration JSON. Fix the file and retry.", exception);
+        }
 
         if (configuration is null)
             throw new InvalidOperationException("perfagent.json must contain a JSON object.");
 
         var budget = configuration.Budget ?? PerformanceAgentConfiguration.Default.Budget!;
         ValidateBudget(budget);
-        return configuration with { Budget = budget };
+        return new(path, configuration.Budget is null ? "Built-in defaults (budget absent)" : "perfagent.json", budget);
     }
 
     private static void ValidateBudget(PerformanceBudget budget)
