@@ -353,6 +353,46 @@ static async Task<int> RunAsync(string[] args)
         }
     }
 
+    if (string.Equals(args.FirstOrDefault(), "analyze", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length != 2)
+        {
+            Console.Error.WriteLine("Usage: perfagent analyze <candidate-run-id>");
+            return 2;
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, signal) =>
+        {
+            signal.Cancel = true;
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+        try
+        {
+            var result = await new PerformanceAgent.Cli.AnalyzeService(PerformanceAgent.Cli.WorkspaceStorage.Resolve())
+                .AnalyzeAsync(args[1], cancellation.Token);
+            PerformanceAgent.Cli.AnalysisConsoleWriter.Write(Console.Out, result);
+            if (result.AnalysisError is not null)
+                Console.Error.WriteLine($"AI analysis failed: {result.AnalysisError}");
+            return result.ExitCode;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("Analysis cancelled. Benchmark results and baselines were not changed.");
+            return 130;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
+    }
+
     if (string.Equals(args.FirstOrDefault(), "check", StringComparison.OrdinalIgnoreCase))
     {
         return await RunCheckAsync(args);
@@ -361,7 +401,7 @@ static async Task<int> RunAsync(string[] args)
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
         Console.Error.WriteLine(
-            "Usage: perfagent config show | perfagent report <candidate-run-id> [--baseline <run-id>] [--budget <budget.json>] | perfagent ui [--no-open] | perfagent storage | perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history [<run-id>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown|html>");
+            "Usage: perfagent config show | perfagent analyze <candidate-run-id> | perfagent report <candidate-run-id> [--baseline <run-id>] [--budget <budget.json>] | perfagent ui [--no-open] | perfagent storage | perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history [<run-id>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown|html>");
         return 2;
     }
 
@@ -629,12 +669,6 @@ static void PrintCheckUsage() =>
         "Usage: perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
 
 
-static string FormatBudget(double? threshold, bool exceeded) =>
-    threshold is null
-        ? " (budget not configured)"
-        : $" (budget +{threshold:0.##}%) {(exceeded ? "FAIL" : "PASS")}";
+static string FormatBudget(double? threshold, bool exceeded) => PerformanceAgent.Cli.CheckFormatting.FormatBudget(threshold, exceeded);
 
-static string FormatChange(MetricChange change) =>
-    change.Status == ComparisonStatus.Comparable && change.PercentChange is not null
-        ? $"{change.Baseline:0.##} -> {change.Candidate:0.##} ({change.PercentChange:+0.##;-0.##;0}%)"
-        : $"{change.Baseline?.ToString() ?? "n/a"} -> {change.Candidate?.ToString() ?? "n/a"} ({change.Status})";
+static string FormatChange(MetricChange change) => PerformanceAgent.Cli.CheckFormatting.FormatChange(change);

@@ -13,8 +13,10 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../../../src/PerformanceAgent.Core/PerformanceAgent.Core.csproj" />
+    <ProjectReference Include="../../../src/PerformanceAgent.AI/PerformanceAgent.AI.csproj" />
     <ProjectReference Include="../../benchmark-host/PerformanceAgent.BenchmarkHost/PerformanceAgent.BenchmarkHost.csproj"
                       ReferenceOutputAssembly="false" Private="false" />
+    <InternalsVisibleTo Include="PerformanceAgent.Cli.IntegrationTests" />
   </ItemGroup>
 
   <!-- Keep the host isolated, including its deps/runtimeconfig and transitive assets. -->

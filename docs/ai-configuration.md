@@ -13,13 +13,13 @@ Workspace `perfagent.json` may contain non-secret settings:
 }
 ```
 
-`provider` defaults to `openai` for V0.2. The model is deliberately not hard-coded; configure a model before live analysis.
+`provider` defaults to `openai` for V0.2 and is matched case-insensitively. Other values fail `perfagent analyze` with a message naming the configured provider. The model is deliberately not hard-coded; configure a model before live analysis.
 
 Future provider adapters use the same settings shape. Provider-specific credentials are never stored here.
 
 ## OpenAI credential
 
-The OpenAI adapter (`src/PerformanceAgent.AI`) reads the API key only from the `OPENAI_API_KEY` environment variable, and only when analysis is requested. Deterministic commands (`run`, `check`, `report`, `baseline`, `config show`, ...) never read it.
+The OpenAI adapter (`src/PerformanceAgent.AI`) reads the API key only from the `OPENAI_API_KEY` environment variable, and only when analysis is requested (`perfagent analyze <candidate-run-id>`). Deterministic commands (`run`, `check`, `report`, `baseline`, `config show`, ...) never read it.
 
 The key is passed to the OpenAI client for authentication only. It is never written to `perfagent.json`, evidence, baseline history, reports, or prompts, and Performance Agent never logs it or includes it in its error messages. Provider error responses are not echoed, because they can contain credential fragments. `perfagent config show` continues to show only non-secret settings.
 

@@ -7,4 +7,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj" />
+  </ItemGroup>
 </Project>
