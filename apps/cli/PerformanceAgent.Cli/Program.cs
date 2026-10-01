@@ -10,12 +10,18 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
-    if (args.Length == 0)
+    if (args.Length == 0 || (args.Length >= 1 && string.Equals(args[0], "ui", StringComparison.OrdinalIgnoreCase)))
     {
+        var openBrowser = args.Length == 0 || !args.Skip(1).Any(x => string.Equals(x, "--no-open", StringComparison.OrdinalIgnoreCase));
+        if (args.Length > 2 || (args.Length == 2 && openBrowser))
+        {
+            Console.Error.WriteLine("Usage: perfagent ui [--no-open]");
+            return 2;
+        }
         using var cancellation = new CancellationTokenSource();
         ConsoleCancelEventHandler cancelHandler = (_, signal) => { signal.Cancel = true; cancellation.Cancel(); };
         Console.CancelKeyPress += cancelHandler;
-        try { return await PerformanceAgent.Cli.LocalWebUi.RunAsync(cancellation.Token); }
+        try { return await PerformanceAgent.Cli.LocalWebUi.RunAsync(openBrowser, cancellation.Token); }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { return 0; }
         finally { Console.CancelKeyPress -= cancelHandler; }
     }
