@@ -4,7 +4,7 @@ Evidence-driven performance engineering for .NET developers and coding agents.
 
 Performance Agent measures first and explains second. Its core workflow works without an LLM; optional AI can help plan experiments and interpret evidence, but benchmark measurements remain the source of truth.
 
-> Project status: early design / V1 bootstrap. The repository name is temporary and is not the final product brand.
+> Project status: .NET V0.1 release candidate. The deterministic local workflow is usable without AI. The repository name is temporary and is not the final product brand.
 
 ## Runtime compatibility
 
