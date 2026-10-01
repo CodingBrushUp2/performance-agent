@@ -107,6 +107,17 @@ PY
 
 dotnet tool run perfagent -- history | grep -F 'No baseline events.'
 
+# Calibration uses repeated real tool executions but must never select a baseline implicitly.
+timeout 180s dotnet tool run perfagent -- calibrate "$PWD/Benchmarks/Benchmarks.csproj" \
+  --runs 2 --max-spread 100000 > calibrate.stdout 2> calibrate.stderr
+grep -F 'Calibration: STABLE' calibrate.stdout
+grep -F 'Baselines were not changed.' calibrate.stdout
+dotnet tool run perfagent -- history > calibration-history.stdout
+grep -F 'Active Current: -' calibration-history.stdout
+grep -F 'Active Anchor: -' calibration-history.stdout
+archive_count="$(find .performance-agent/archive -maxdepth 1 -name '*.json' | wc -l)"
+test "$archive_count" -eq 3
+
 # A damaged installation fails clearly; it must not search for a source-tree host.
 rm "$NUGET_PACKAGES/performanceagent.cli/0.1.0/tools/net10.0/any/benchmark-host/PerformanceAgent.BenchmarkHost.dll"
 if dotnet tool run perfagent -- run "$PWD/Benchmarks/Benchmarks.csproj" --output missing.json > missing.stdout 2> missing.stderr; then

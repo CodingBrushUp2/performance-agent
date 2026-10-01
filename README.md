@@ -44,8 +44,11 @@ Then run:
 
 ```bash
 perfagent run path/to/Benchmarks.csproj
+perfagent calibrate path/to/Benchmarks.csproj
 perfagent check baseline.json candidate.json --budget performance-budget.json
 ```
+
+Calibration runs the benchmark repeatedly (3 runs by default) and reports timing/allocation medians and cross-run spread. A stable calibration never changes `Current` or `Anchor`; baseline selection remains an explicit user action. Use `--runs <count>` and `--max-spread <percent>` to tune the calibration check.
 
 Example budget:
 
