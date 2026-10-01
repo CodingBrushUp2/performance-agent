@@ -66,6 +66,11 @@ This packs a local package, installs it with an isolated tool manifest, and meas
 standalone BenchmarkDotNet project outside the repository. Only the smoke benchmark
 uses a dry job; production runs retain the benchmark's normal BenchmarkDotNet configuration.
 
+Press Ctrl+C during `perfagent run` to cancel project inspection, build, or benchmark
+execution. The CLI terminates the active child process tree, removes temporary host
+evidence, reports cancellation, and exits with code 130. Measurements completed and
+archived before cancellation remain valid; an interrupted benchmark is not archived.
+
 ## Archive identities
 
 Generated RunIds use an invariant UTC timestamp and random suffix. Safe custom IDs

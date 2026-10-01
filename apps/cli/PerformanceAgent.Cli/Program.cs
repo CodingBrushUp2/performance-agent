@@ -11,6 +11,13 @@ static async Task<int> RunAsync(string[] args)
 {
     if ((args.Length == 2 || args.Length == 4) && string.Equals(args[0], "run", StringComparison.OrdinalIgnoreCase))
     {
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, signal) =>
+        {
+            signal.Cancel = true;
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
         try
         {
             string? outputPath = null;
@@ -25,14 +32,15 @@ static async Task<int> RunAsync(string[] args)
                 outputPath = args[3];
             }
 
-            var result = await new PerformanceAgent.Cli.ProjectRunner().RunAsync(args[1]);
+            var result = await new PerformanceAgent.Cli.ProjectRunner().RunAsync(args[1], cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
             if (result.ExitCode == 0)
             {
                 var evidence = new JsonBenchmarkEvidenceReader().Read(result.Evidence);
                 var timestamp = DateTimeOffset.UtcNow;
                 var runId = new RunIdGenerator().Create(timestamp);
                 var archive = new FileRunArchive(Path.Combine(Environment.CurrentDirectory, ".performance-agent"));
-                await archive.AppendAsync(new ArchivedBenchmarkRun(runId, timestamp, null, evidence));
+                await archive.AppendAsync(new ArchivedBenchmarkRun(runId, timestamp, null, evidence), cancellation.Token);
 
                 if (outputPath is not null)
                 {
@@ -40,7 +48,7 @@ static async Task<int> RunAsync(string[] args)
                     var directory = Path.GetDirectoryName(fullOutputPath);
                     if (!string.IsNullOrEmpty(directory))
                         Directory.CreateDirectory(directory);
-                    await File.WriteAllTextAsync(fullOutputPath, result.Evidence);
+                    await File.WriteAllTextAsync(fullOutputPath, result.Evidence, cancellation.Token);
                 }
                 else
                 {
@@ -53,10 +61,19 @@ static async Task<int> RunAsync(string[] args)
             Console.Error.Write(result.StandardError);
             return result.ExitCode;
         }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("Benchmark run cancelled.");
+            return 130;
+        }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or TimeoutException)
         {
             Console.Error.WriteLine(exception.Message);
             return 2;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
         }
     }
 

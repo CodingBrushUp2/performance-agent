@@ -19,6 +19,7 @@ jobs:
       - run: bash tests/e2e/cli-smoke.sh
       - run: bash tests/e2e/history-smoke.sh
       - run: bash tests/e2e/discovery-smoke.sh
+      - run: python3 tests/e2e/cancellation-smoke.py
       - name: Pack and smoke-test dotnet tool
         run: |
           dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj --configuration Release --no-build --output artifacts
