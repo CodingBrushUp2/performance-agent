@@ -21,9 +21,9 @@ internal sealed class TestWorkspace : IDisposable
     public string Directory { get; }
     public WorkspaceStorage Storage { get; }
 
-    public async Task<BenchmarkEvidence> ArchiveAsync(string runId, double meanNanoseconds, long allocatedBytes)
+    public async Task<BenchmarkEvidence> ArchiveAsync(string runId, double meanNanoseconds, long allocatedBytes, string benchmarkName = "Sample.Work")
     {
-        var evidence = new BenchmarkEvidence("1.0", [new BenchmarkMeasurement("Sample.Work", meanNanoseconds, allocatedBytes)], Environment);
+        var evidence = new BenchmarkEvidence("1.0", [new BenchmarkMeasurement(benchmarkName, meanNanoseconds, allocatedBytes)], Environment);
         await new FileRunArchive(Storage.StateDirectory).AppendAsync(
             new ArchivedBenchmarkRun(runId, DateTimeOffset.UtcNow, null, evidence));
         return evidence;
