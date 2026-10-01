@@ -61,6 +61,28 @@ public sealed class FileRunArchiveTests
     }
 
     [Fact]
+    public async Task Append_LeavesNoTemporaryFilesAfterSuccess()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"perfagent-test-{Guid.NewGuid():N}");
+        try
+        {
+            var evidence = new BenchmarkEvidence("1.0", [new BenchmarkMeasurement("A", 100, 0)]);
+            var archive = new FileRunArchive(root);
+
+            await archive.AppendAsync(new ArchivedBenchmarkRun("run-test", DateTimeOffset.UtcNow, null, evidence));
+
+            var archiveDirectory = Path.Combine(root, "archive");
+            Assert.Empty(Directory.EnumerateFiles(archiveDirectory, "*.tmp"));
+            Assert.True(File.Exists(Path.Combine(archiveDirectory, "run-test.json")));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Read_RejectsPathTraversal()
     {
         var archive = new FileRunArchive(Path.GetTempPath());
