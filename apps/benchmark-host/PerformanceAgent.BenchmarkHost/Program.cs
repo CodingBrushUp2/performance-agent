@@ -19,24 +19,51 @@ if (!File.Exists(assemblyPath))
     return 2;
 }
 
-var resolver = new AssemblyDependencyResolver(assemblyPath);
-AssemblyLoadContext.Default.Resolving += (_, name) =>
-{
-    var path = resolver.ResolveAssemblyToPath(name);
-    return path is null ? null : AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
-};
-
-var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
 var runner = new BenchmarkDotNetRunner();
-var benchmarkTypes = runner.DiscoverBenchmarkTypes(assembly);
-
-if (benchmarkTypes.Count == 0)
+BenchmarkDiscoveryResult discovery;
+try
 {
-    Console.Error.WriteLine("No BenchmarkDotNet [Benchmark] methods were discovered.");
+    var resolver = new AssemblyDependencyResolver(assemblyPath);
+    AssemblyLoadContext.Default.Resolving += (_, name) =>
+    {
+        var path = resolver.ResolveAssemblyToPath(name);
+        return path is null ? null : AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
+    };
+
+    var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+    discovery = runner.DiscoverBenchmarks(assembly);
+}
+catch (Exception exception) when (exception is IOException or BadImageFormatException or TypeLoadException or InvalidOperationException)
+{
+    Console.Error.WriteLine($"Cannot load benchmark assembly '{assemblyPath}': {exception.Message} Restore dependencies and rebuild the benchmark project for the installed runtime.");
     return 2;
 }
 
-var measurements = benchmarkTypes.SelectMany(runner.Run).ToArray();
+foreach (var diagnostic in discovery.Diagnostics)
+    Console.Error.WriteLine($"Benchmark discovery warning: {diagnostic}");
+var benchmarkTypes = discovery.BenchmarkTypes;
+
+if (benchmarkTypes.Count == 0)
+{
+    Console.Error.WriteLine(discovery.Diagnostics.Count == 0
+        ? "No BenchmarkDotNet [Benchmark] methods were discovered."
+        : "No loadable BenchmarkDotNet benchmark types remain. Resolve the discovery warnings before retrying.");
+    return 2;
+}
+
+PerformanceAgent.Core.Measurements.BenchmarkMeasurement[] measurements;
+try
+{
+    measurements = benchmarkTypes.SelectMany(runner.Run).ToArray();
+}
+catch (Exception exception) when (exception is ReflectionTypeLoadException or TypeLoadException or FileLoadException or FileNotFoundException or BadImageFormatException)
+{
+    var details = exception is ReflectionTypeLoadException load
+        ? string.Join(Environment.NewLine, load.LoaderExceptions.OfType<Exception>().Select(error => error.Message))
+        : exception.Message;
+    Console.Error.WriteLine($"Benchmark execution could not load required types: {details} Restore dependencies and rebuild the benchmark project.");
+    return 2;
+}
 var environment = new BenchmarkEnvironment(
     RuntimeInformation.FrameworkDescription,
     RuntimeInformation.OSDescription,
