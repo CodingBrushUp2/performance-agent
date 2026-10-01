@@ -185,7 +185,10 @@ internal static class LocalWebUi
         return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{(check.Passed ? "PASS" : "REGRESSION")}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">Budget: mean +{budget.MaxMeanRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}%, allocation +{budget.MaxAllocationRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}% (perfagent.json or defaults).</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean baseline (ns)</th><th>Mean candidate (ns)</th><th>Mean change</th><th>Allocation baseline (B/op)</th><th>Allocation candidate (B/op)</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
     }
 
-    private static string FormatMetric(double? value) =>\n        value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "Unavailable";\n\n    private static string FormatPercent(double? value)
+    private static string FormatMetric(double? value) =>
+        value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "Unavailable";
+
+    private static string FormatPercent(double? value)
     {
         if (value is null) return "Unavailable";
         return value.Value.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) + "%";
