@@ -14,6 +14,7 @@ internal sealed class ProjectRunner
         CancellationToken cancellationToken = default,
         TimeSpan? benchmarkTimeout = null)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var fullPath = Path.GetFullPath(projectPath);
         if (!File.Exists(fullPath) || !string.Equals(Path.GetExtension(fullPath), ".csproj", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"Benchmark project does not exist or is not a .csproj: {projectPath}");
@@ -114,19 +115,23 @@ internal sealed class ProjectRunner
             startInfo.ArgumentList.Add(argument);
 
         using var process = new Process { StartInfo = startInfo };
+        cancellationToken.ThrowIfCancellationRequested();
         process.Start();
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
         try
         {
             await process.WaitForExitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
         }
         catch (OperationCanceledException)
         {
             TryKillProcessTree(process);
             await WaitForExitAfterKillAsync(process);
+            try { await Task.WhenAll(stdoutTask, stderrTask); }
+            catch (OperationCanceledException) { /* Cancellation also interrupts pipe reads. */ }
             throw;
         }
 
