@@ -17,6 +17,21 @@ Do not run untrusted pull-request code on runners that contain secrets or have a
 - Temporary evidence files use randomized names and are deleted after execution.
 - Secrets must not be stored in evidence, repository configuration, prompts, or logs.
 
+## Local Web UI
+
+The bundled UI binds only to an ephemeral IPv4 loopback port. It does not inherit
+ASP.NET/Kestrel endpoints from workspace configuration or environment variables.
+Requests must use the published loopback Host; cross-origin browser requests are
+rejected. Baseline changes require POST and a valid ASP.NET antiforgery token with
+a SameSite cookie. Tokens use ephemeral protection keys, not persistent accounts.
+Rendered evidence is HTML encoded and the UI disallows framing and scripts.
+
+These safeguards protect the local browser surface, not against hostile processes
+already running as the same user. Such processes can already access workspace
+files and the CLI. Do not expose or reverse-proxy this server to other machines.
+The UI never requests elevation, executes benchmark code from a web request, or
+modifies archived evidence; selection uses the same event-first service as the CLI.
+
 ## AI and integrations
 
 AI is optional and must not override measured evidence. Future tools, MCP servers, and observability integrations must use explicit capabilities, least-privilege credentials, and secret-safe logging. Model output must not become unrestricted shell execution.

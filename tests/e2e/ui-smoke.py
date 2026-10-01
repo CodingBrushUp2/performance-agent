@@ -44,9 +44,14 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
                      "allocatedBytesPerOperation": None if run_id == "run-first" else 0}]}
         }))
     original_archive = {p.name: p.read_bytes() for p in archive.iterdir()}
+    # Workspace applications and inherited ASP.NET settings cannot widen UI binding.
+    (work / "appsettings.json").write_text(json.dumps({
+        "Kestrel": {"Endpoints": {"Workspace": {"Url": "http://0.0.0.0:0"}}}}))
+    server_environment = dict(os.environ, ASPNETCORE_URLS="http://0.0.0.0:0",
+                              Kestrel__Endpoints__Environment__Url="http://0.0.0.0:0")
     with (work / "server.log").open("w+") as log:
         process = subprocess.Popen(["dotnet", str(cli), "ui", "--no-open"], cwd=work,
-                                   stdout=log, stderr=subprocess.STDOUT)
+                                   stdout=log, stderr=subprocess.STDOUT, env=server_environment)
         try:
             deadline = time.monotonic() + 30
             address = None
@@ -61,8 +66,7 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
                 time.sleep(0.05)
             assert address, output
             # Check the announced address and every Kestrel listener.
-            assert all(url.startswith("http://127.0.0.1:")
-                       for url in re.findall(r"Now listening on: (\S+)", output)), output
+            assert re.findall(r"Now listening on: (\S+)", output) == [address], output
             opener = urllib.request.build_opener(
                 urllib.request.ProxyHandler({}),
                 urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()), NoRedirect())

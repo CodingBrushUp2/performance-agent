@@ -21,8 +21,14 @@ internal static class LocalWebUi
         var selection = new BaselineSelectionService(storage);
 
         var builder = WebApplication.CreateSlimBuilder();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
-        builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 16 * 1024);
+        // The local UI must not inherit endpoint settings from a benchmark project's
+        // appsettings.json or ASP.NET/Kestrel environment variables.
+        builder.Configuration.Sources.Clear();
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.Listen(IPAddress.Loopback, 0);
+            options.Limits.MaxRequestBodySize = 16 * 1024;
+        });
         // Tokens are scoped to this server lifetime; no key files or accounts are needed.
         builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
         builder.Services.AddAntiforgery(options => options.Cookie.SameSite = SameSiteMode.Strict);
