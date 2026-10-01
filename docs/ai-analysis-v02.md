@@ -51,7 +51,19 @@ The same application capability will later back the local Web UI. The CLI remain
 
 The service has no access to archives, baseline stores, or regression checks, so analysis cannot alter measured facts, baselines, or PASS/REGRESSION verdicts.
 
-A deterministic `FakePerformanceAnalysisProvider` lives in the Core test project for offline testing. Its output is labelled as fake and states that no AI model was called. The `perfagent analyze` command and the first real (OpenAI) adapter are not implemented yet.
+A deterministic `FakePerformanceAnalysisProvider` lives in the Core test project for offline testing. Its output is labelled as fake and states that no AI model was called.
+
+### Implemented: OpenAI provider
+
+`OpenAIPerformanceAnalysisProvider` in `src/PerformanceAgent.AI` implements `IPerformanceAnalysisProvider` with `Microsoft.Extensions.AI` `IChatClient`, backed by the official OpenAI SDK through `Microsoft.Extensions.AI.OpenAI`.
+
+- Typed structured output (`GetResponseAsync<PerformanceAnalysis>`) sends a JSON schema for the existing `PerformanceAnalysis` contract. Output that does not parse or validate fails the analysis clearly.
+- The model receives only fixed grounding instructions and the serialized `PerformanceAnalysisRequest` (normalized evidence, budget, deterministic verdicts). It never receives repository content, workspace configuration, or credentials.
+- The model comes only from `ai.model`, and the credential only from `OPENAI_API_KEY` (see [AI configuration](ai-configuration.md)).
+- Authentication, rate-limit, outage, network, and malformed-output failures surface as provider-neutral exceptions that say benchmark results are unaffected. Provider SDK types do not escape `PerformanceAgent.AI`.
+- Normal CI uses a fake `IChatClient` and never calls OpenAI.
+
+The `perfagent analyze` command is not implemented yet.
 
 ## Provider boundary
 

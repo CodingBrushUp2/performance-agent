@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.Cli", "app
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.BenchmarkHost", "apps\\benchmark-host\\PerformanceAgent.BenchmarkHost\\PerformanceAgent.BenchmarkHost.csproj", "{D4C96747-23A5-4D80-91AA-28B7CB63C920}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.AI", "src\\PerformanceAgent.AI\\PerformanceAgent.AI.csproj", "{467A345E-072F-4DEB-AB2A-503BAB6A6524}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerformanceAgent.AI.Tests", "tests\\unit\\PerformanceAgent.AI.Tests\\PerformanceAgent.AI.Tests.csproj", "{0562D3E1-2D6D-4766-86EB-C8F4CB1AF004}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,5 +49,13 @@ Global
 		{D4C96747-23A5-4D80-91AA-28B7CB63C920}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4C96747-23A5-4D80-91AA-28B7CB63C920}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4C96747-23A5-4D80-91AA-28B7CB63C920}.Release|Any CPU.Build.0 = Release|Any CPU
+		{467A345E-072F-4DEB-AB2A-503BAB6A6524}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{467A345E-072F-4DEB-AB2A-503BAB6A6524}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{467A345E-072F-4DEB-AB2A-503BAB6A6524}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{467A345E-072F-4DEB-AB2A-503BAB6A6524}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0562D3E1-2D6D-4766-86EB-C8F4CB1AF004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0562D3E1-2D6D-4766-86EB-C8F4CB1AF004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0562D3E1-2D6D-4766-86EB-C8F4CB1AF004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0562D3E1-2D6D-4766-86EB-C8F4CB1AF004}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
