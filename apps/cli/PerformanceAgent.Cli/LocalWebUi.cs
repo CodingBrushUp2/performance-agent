@@ -135,7 +135,7 @@ internal static class LocalWebUi
     private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, AntiforgeryTokenSet token, WorkspaceStorageStatus storage)
     {
         var rows = string.Join("", runs.OrderByDescending(x => x.Timestamp).Select(run =>
-            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a> · <a href="/runs/{Uri.EscapeDataString(run.RunId)}/check-current">Check Current</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionForm(run.RunId, "current", "Make Current", token) + SelectionForm(run.RunId, "anchor", "Make Anchor", token) : "Storage is not writable")}</td></tr>"));
+            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a> · <a href=\"/runs/{Uri.EscapeDataString(run.RunId)}/check-current\">Check Current</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionForm(run.RunId, "current", "Make Current", token) + SelectionForm(run.RunId, "anchor", "Make Anchor", token) : "Storage is not writable")}</td></tr>"));
         if (rows.Length == 0) rows = "<tr><td colspan=\"4\">No benchmark runs yet.</td></tr>";
         return Page("Performance Agent", $$"""
 <h1>Performance Agent</h1><p class="muted">Local performance evidence. CLI remains the primary interface.</p>
