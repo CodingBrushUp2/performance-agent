@@ -16,13 +16,13 @@ public sealed record PerformanceAnalysis(
         ArgumentNullException.ThrowIfNull(Hypotheses);
         ArgumentNullException.ThrowIfNull(SuggestedExperiments);
 
-        if (EvidenceReferences.Any(x => string.IsNullOrWhiteSpace(x.BenchmarkName) || string.IsNullOrWhiteSpace(x.Observation)))
+        if (EvidenceReferences.Any(x => x is null || string.IsNullOrWhiteSpace(x.BenchmarkName) || string.IsNullOrWhiteSpace(x.Observation)))
             throw new InvalidOperationException("AI evidence references require a benchmark name and observation.");
 
-        if (Hypotheses.Any(x => string.IsNullOrWhiteSpace(x.Statement)))
+        if (Hypotheses.Any(x => x is null || string.IsNullOrWhiteSpace(x.Statement)))
             throw new InvalidOperationException("AI hypotheses require a statement.");
 
-        if (SuggestedExperiments.Any(x => string.IsNullOrWhiteSpace(x.Description)))
+        if (SuggestedExperiments.Any(x => x is null || string.IsNullOrWhiteSpace(x.Description)))
             throw new InvalidOperationException("AI suggested experiments require a description.");
 
         return this;

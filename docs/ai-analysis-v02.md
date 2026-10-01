@@ -40,6 +40,19 @@ PerformanceAnalysis
 
 The same application capability will later back the local Web UI. The CLI remains the primary/headless surface.
 
+### Implemented: analysis orchestration
+
+`PerformanceAnalysisService` (Core) is the use case behind the provider boundary:
+
+1. validates `PerformanceAnalysisRequest` (normalized evidence, budget, and optional deterministic `RegressionResults`);
+2. passes the provider read-only copies of the evidence and verdict collections, plus the caller's `CancellationToken`;
+3. validates the returned `PerformanceAnalysis`, including that every evidence reference names a measured benchmark;
+4. returns the validated result. Provider exceptions and cancellation propagate unchanged.
+
+The service has no access to archives, baseline stores, or regression checks, so analysis cannot alter measured facts, baselines, or PASS/REGRESSION verdicts.
+
+A deterministic `FakePerformanceAnalysisProvider` lives in the Core test project for offline testing. Its output is labelled as fake and states that no AI model was called. The `perfagent analyze` command and the first real (OpenAI) adapter are not implemented yet.
+
 ## Provider boundary
 
 The product owns a small performance-analysis-specific boundary rather than exposing an LLM SDK to Core:
