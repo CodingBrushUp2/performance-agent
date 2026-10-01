@@ -43,7 +43,9 @@ static async Task<int> RunAsync(string[] args)
             Console.WriteLine($"Budget source: {configuration.BudgetSource}");
             Console.WriteLine($"Max mean regression (%): {configuration.Budget.MaxMeanRegressionPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Not configured"}");
             Console.WriteLine($"Max allocation regression (%): {configuration.Budget.MaxAllocationRegressionPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Not configured"}");
-            Console.WriteLine("Explicit check thresholds or --budget override workspace settings. Do not store secrets in perfagent.json.");
+            Console.WriteLine($"AI provider: {configuration.AiProvider}");
+            Console.WriteLine($"AI model: {configuration.AiModel ?? "Not configured"}");
+            Console.WriteLine("Explicit check thresholds or --budget override workspace settings. Do not store API keys or other secrets in perfagent.json.");
             return 0;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
