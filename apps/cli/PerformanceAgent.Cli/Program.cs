@@ -539,43 +539,17 @@ static async Task<int> RunCheckAsync(string[] args)
             }
         }
 
-        var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
-            baseline.Environment,
-            candidate.Environment);
-        if (!environmentComparison.IsComparable)
+        var check = new PerformanceAgent.Cli.RegressionCheckService().Check(baseline, candidate, budget);
+        foreach (var item in check.Benchmarks)
         {
-            Console.Error.WriteLine("Baseline and candidate benchmark environments are not comparable:");
-            foreach (var difference in environmentComparison.Differences)
-                Console.Error.WriteLine($"  - {difference}");
-            return 2;
-        }
-
-        var baselineByName = baseline.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
-        var candidateByName = candidate.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
-
-        var missingCandidates = baselineByName.Keys.Except(candidateByName.Keys, StringComparer.Ordinal).ToArray();
-        var newCandidates = candidateByName.Keys.Except(baselineByName.Keys, StringComparer.Ordinal).ToArray();
-        if (missingCandidates.Length > 0 || newCandidates.Length > 0)
-        {
-            Console.Error.WriteLine("Baseline and candidate benchmark identities do not match.");
-            return 2;
-        }
-
-        var checker = new PerformanceBudgetChecker();
-        var passed = true;
-
-        foreach (var name in baselineByName.Keys.Order(StringComparer.Ordinal))
-        {
-            var result = checker.Check(baselineByName[name], candidateByName[name], budget);
-            passed &= result.Passed;
-
-            Console.WriteLine($"{name}: {(result.Passed ? "PASS" : "FAIL")}");
+            var result = item.Result;
+            Console.WriteLine($"{item.Name}: {(result.Passed ? "PASS" : "FAIL")}");
             Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
             Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
         }
 
-        Console.WriteLine($"Overall: {(passed ? "PASS" : "FAIL")}");
-        return passed ? 0 : 1;
+        Console.WriteLine($"Overall: {(check.Passed ? "PASS" : "FAIL")}");
+        return check.Passed ? 0 : 1;
     }
     catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
     {
@@ -590,31 +564,17 @@ static bool CheckEvidence(
     BenchmarkEvidence candidate,
     PerformanceBudget budget)
 {
-    var environmentComparison = new BenchmarkEnvironmentComparer().Compare(
-        baseline.Environment,
-        candidate.Environment);
-    if (!environmentComparison.IsComparable)
-        throw new InvalidOperationException($"{label} baseline and candidate benchmark environments are not comparable: {string.Join("; ", environmentComparison.Differences)}");
-
-    var baselineByName = baseline.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
-    var candidateByName = candidate.Measurements.ToDictionary(measurement => measurement.Name, StringComparer.Ordinal);
-    if (baselineByName.Keys.Except(candidateByName.Keys, StringComparer.Ordinal).Any()
-        || candidateByName.Keys.Except(baselineByName.Keys, StringComparer.Ordinal).Any())
-        throw new InvalidOperationException($"{label} baseline and candidate benchmark identities do not match.");
-
-    var checker = new PerformanceBudgetChecker();
-    var passed = true;
+    var check = new PerformanceAgent.Cli.RegressionCheckService().Check(baseline, candidate, budget);
     Console.WriteLine($"{label} baseline:");
-    foreach (var name in baselineByName.Keys.Order(StringComparer.Ordinal))
+    foreach (var item in check.Benchmarks)
     {
-        var result = checker.Check(baselineByName[name], candidateByName[name], budget);
-        passed &= result.Passed;
-        Console.WriteLine($"{name}: {(result.Passed ? "PASS" : "FAIL")}");
+        var result = item.Result;
+        Console.WriteLine($"{item.Name}: {(result.Passed ? "PASS" : "FAIL")}");
         Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
         Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
     }
 
-    return passed;
+    return check.Passed;
 }
 
 static void PrintCheckUsage() =>
