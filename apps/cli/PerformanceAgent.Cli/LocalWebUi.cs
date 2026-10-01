@@ -191,9 +191,11 @@ internal static class LocalWebUi
         return value.Value.ToString("+0.##;-0.##;0", CultureInfo.InvariantCulture) + "%";
     }
 
-    private static string Page(string title, string content) => $"""
+    private static string Page(string title, string content)
+    {
+        const string template = """
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>{{WebUtility.HtmlEncode(title)}}</title><style>
+<title>__TITLE__</title><style>
 body{font:15px system-ui;margin:0;background:#f6f7f9;color:#1f2937}main{max-width:1000px;margin:48px auto;padding:0 24px}
 h1{font-size:28px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:24px 0}
 .card,table{background:white;border:1px solid #e5e7eb;border-radius:10px}.card{padding:18px}.muted{color:#6b7280}
@@ -201,8 +203,11 @@ table{width:100%;border-collapse:collapse;overflow:hidden}th,td{text-align:left;
 .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;margin-right:5px}code{font-size:13px}
 form{display:inline-block;margin:3px}button{cursor:pointer;padding:6px 10px}
 dt{font-weight:600;margin-top:10px}dd{margin:4px 0;overflow-wrap:anywhere}p[role=alert]{color:#991b1b}
-</style></head><body><main>{{content}}</main></body></html>
+</style></head><body><main>__CONTENT__</main></body></html>
 """;
+        return template.Replace("__TITLE__", WebUtility.HtmlEncode(title), StringComparison.Ordinal)
+            .Replace("__CONTENT__", content, StringComparison.Ordinal);
+    }
 
     private static string SelectionForm(string runId, string kind, string label, AntiforgeryTokenSet token) =>
         $"<form method=\"post\" action=\"/baselines/{kind}\"><input type=\"hidden\" name=\"runId\" value=\"{WebUtility.HtmlEncode(runId)}\"><input type=\"hidden\" name=\"{WebUtility.HtmlEncode(token.FormFieldName)}\" value=\"{WebUtility.HtmlEncode(token.RequestToken)}\"><button type=\"submit\">{label}</button></form>";
