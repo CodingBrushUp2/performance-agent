@@ -111,6 +111,8 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
                 assert f"Max allocation regression (%): {allocation}" in config_cli
                 assert "MUST-NOT-BE-DISPLAYED" not in config_page + config_cli
                 assert str(config_path) in config_page and str(config_path) in config_cli
+                assert "<dt>AI provider</dt><dd>openai</dd>" in config_page and "AI provider: openai" in config_cli
+                assert "<dt>AI model</dt><dd>Not configured</dd>" in config_page and "AI model: Not configured" in config_cli
             for document in ['{broken', 'null', '{"budget":{"maxMeanRegressionPercent":-1}}']:
                 config_path.write_text(document)
                 assert request("/configuration")[0] == 409
@@ -212,6 +214,33 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
                     assert '<span class="badge">Current</span>' in details
                     assert "Current: True; Anchor: False" in output
             assert events_path.read_bytes() == before  # Details never change history.
+
+            # AI analysis is an explicit, CSRF-protected POST through the same use case as `perfagent analyze`.
+            # Without ai.model (and no OPENAI_API_KEY; OpenAI is never contacted) the measured result is still
+            # shown, only the AI part fails, and workspace state stays byte-identical.
+            state_before = {p: p.read_bytes() for p in state.rglob("*") if p.is_file()}
+            status, details, _ = request("/runs/run-regression")
+            assert status == 200 and '<form method="post" action="/runs/run-regression/analyze">' in details
+            assert "Analyze with AI" in details
+            assert "<dt>Deterministic result</dt><dd><strong>REGRESSION</strong></dd>" in details
+            assert request("/runs/run-regression/analyze")[0] == 405
+            assert request("/runs/run-regression/analyze", {"x": "y"})[0] == 400
+            analyze_form = {"__RequestVerificationToken": re.search(
+                r'name="__RequestVerificationToken" value="([^"]+)"', details)[1]}
+            assert request("/runs/run-regression/analyze", analyze_form, {"Origin": "https://evil.example"})[0] == 403
+            assert request("/runs/run-regression/analyze", analyze_form, {"Sec-Fetch-Site": "cross-site"})[0] == 403
+            status, analysis_page, _ = request("/runs/run-regression/analyze", analyze_form)
+            assert status == 200 and '<p class="verdict">REGRESSION</p>' in analysis_page
+            assert "<dt>Current baseline</dt><dd><code>run-second</code></dd>" in analysis_page
+            assert "AI analysis failed" in analysis_page and "&quot;ai.model&quot;" in analysis_page
+            assert "Only the AI analysis failed" in analysis_page
+            assert "<script>" not in analysis_page and "&lt;script&gt;name&lt;/script&gt;" in analysis_page
+            cli_environment = {k: v for k, v in os.environ.items() if k != "OPENAI_API_KEY"}
+            cli_analyze = subprocess.run(["dotnet", str(cli), "analyze", "run-regression"], cwd=work, text=True,
+                                         capture_output=True, timeout=30, env=cli_environment)
+            assert cli_analyze.returncode == 2 and "Deterministic result: REGRESSION" in cli_analyze.stdout
+            assert "Baseline:  run-second (Current)" in cli_analyze.stdout
+            assert {p: p.read_bytes() for p in state.rglob("*") if p.is_file()} == state_before
             assert request("/runs/run-missing")[0] == 404
             assert request("/runs/bad%22id")[0] == 400
             missing = subprocess.run(["dotnet", str(cli), "history", "run-missing"], cwd=work,

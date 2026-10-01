@@ -91,7 +91,7 @@ internal static class AnalysisConsoleWriter
 
     // Model output is untrusted text: keep line breaks for layout, drop other control characters
     // (including ANSI escape sequences' ESC) so it cannot rewrite or spoof earlier terminal output.
-    private static string Sanitize(string text) =>
+    internal static string Sanitize(string text) =>
         new(text.Replace("\r\n", "\n", StringComparison.Ordinal)
             .Where(c => c == '\n' || !char.IsControl(c))
             .ToArray());

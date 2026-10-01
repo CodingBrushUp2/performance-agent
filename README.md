@@ -211,7 +211,10 @@ not raw JSON or unknown fields. No settings editor or secret storage is provided
 baseline with the workspace budget. It then asks the configured model (`ai.provider`,
 `ai.model` in `perfagent.json`, and `OPENAI_API_KEY` from the environment) for an
 advisory explanation. The measured PASS/REGRESSION result is authoritative and decides
-the exit code. AI failures only fail the analysis. See [V0.2 AI analysis](docs/ai-analysis-v02.md).
+the exit code. AI failures only fail the analysis. In the local UI, **Run Details →
+Analyze with AI** runs the same analysis on an explicit click. AI text is shown
+separately from the measured result, HTML-encoded, and not saved. See
+[V0.2 AI analysis](docs/ai-analysis-v02.md).
 
 ## CI performance gate
 
