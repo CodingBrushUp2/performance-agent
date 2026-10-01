@@ -1,6 +1,6 @@
 # Product Specification v0.1
 
-Status: Draft for V1 implementation
+Status: .NET V0.1 release candidate
 
 ## Product
 
