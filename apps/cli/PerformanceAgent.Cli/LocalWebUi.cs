@@ -11,7 +11,7 @@ namespace PerformanceAgent.Cli;
 
 internal static class LocalWebUi
 {
-    public static async Task<int> RunAsync(CancellationToken cancellationToken)
+    public static async Task<int> RunAsync(bool openBrowser, CancellationToken cancellationToken)
     {
         var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
         var archive = new FileRunArchive(root);
@@ -28,7 +28,8 @@ internal static class LocalWebUi
 
         var address = app.Urls.First();
         Console.WriteLine($"Performance Agent UI: {address}");
-        TryOpenBrowser(address);
+        if (openBrowser)
+            TryOpenBrowser(address);
         await app.WaitForShutdownAsync(cancellationToken);
         return 0;
     }
