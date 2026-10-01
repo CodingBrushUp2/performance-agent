@@ -203,8 +203,8 @@ static async Task<int> RunAsync(string[] args)
             var kind = string.Equals(args[1], "anchor", StringComparison.OrdinalIgnoreCase)
                 ? BaselineKind.Anchor
                 : BaselineKind.Current;
-            var storage = WorkspaceStorage.Resolve();
-            await new BaselineSelectionService(storage).SetAsync(
+            var storage = PerformanceAgent.Cli.WorkspaceStorage.Resolve();
+            await new PerformanceAgent.Cli.BaselineSelectionService(storage).SetAsync(
                 kind,
                 args[2],
                 "CLI baseline selection");
