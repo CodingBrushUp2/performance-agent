@@ -32,7 +32,8 @@ internal sealed class GitDiffCandidateService
         string baseRef,
         string headRef = "HEAD",
         int limit = 5,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? repositoryPath = null)
     {
         if (string.IsNullOrWhiteSpace(baseRef))
             throw new ArgumentException("A non-empty git base ref is required.", nameof(baseRef));
@@ -42,7 +43,7 @@ internal sealed class GitDiffCandidateService
             throw new ArgumentOutOfRangeException(nameof(limit), "Candidate limit must be between 1 and 20.");
 
         var rootResult = await RunGitAsync(
-            Environment.CurrentDirectory,
+            repositoryPath is null ? Environment.CurrentDirectory : Path.GetFullPath(repositoryPath),
             ["rev-parse", "--show-toplevel"],
             cancellationToken);
         if (rootResult.ExitCode != 0)
