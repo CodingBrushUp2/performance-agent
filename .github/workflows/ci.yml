@@ -21,9 +21,18 @@ jobs:
       - name: Test AI
         timeout-minutes: 5
         run: dotnet test tests/unit/PerformanceAgent.AI.Tests/PerformanceAgent.AI.Tests.csproj --configuration Release --no-build
-      - name: Test BenchmarkDotNet integration
-        timeout-minutes: 5
-        run: dotnet test tests/integration/PerformanceAgent.BenchmarkDotNet.IntegrationTests/PerformanceAgent.BenchmarkDotNet.IntegrationTests.csproj --configuration Release --no-build
+      - name: Test BenchmarkDotNet discovery
+        timeout-minutes: 2
+        run: dotnet test tests/integration/PerformanceAgent.BenchmarkDotNet.IntegrationTests/PerformanceAgent.BenchmarkDotNet.IntegrationTests.csproj --configuration Release --no-build --filter FullyQualifiedName~DiscoveryTests
+      - name: Test BenchmarkDotNet runner discovery
+        timeout-minutes: 2
+        run: dotnet test tests/integration/PerformanceAgent.BenchmarkDotNet.IntegrationTests/PerformanceAgent.BenchmarkDotNet.IntegrationTests.csproj --configuration Release --no-build --filter FullyQualifiedName~DiscoverBenchmarkTypes_FindsAttributedBenchmarks
+      - name: Test BenchmarkDotNet dry normalization
+        timeout-minutes: 2
+        run: dotnet test tests/integration/PerformanceAgent.BenchmarkDotNet.IntegrationTests/PerformanceAgent.BenchmarkDotNet.IntegrationTests.csproj --configuration Release --no-build --filter FullyQualifiedName~RunDry_ExecutesDiscoveredBenchmarkAndReturnsNormalizedEvidence
+      - name: Test BenchmarkDotNet dry parameterized
+        timeout-minutes: 2
+        run: dotnet test tests/integration/PerformanceAgent.BenchmarkDotNet.IntegrationTests/PerformanceAgent.BenchmarkDotNet.IntegrationTests.csproj --configuration Release --no-build --filter FullyQualifiedName~RunDry_DistinguishesParameterizedBenchmarkCases
       - name: Test CLI integration
         timeout-minutes: 5
         run: dotnet test tests/integration/PerformanceAgent.Cli.IntegrationTests/PerformanceAgent.Cli.IntegrationTests.csproj --configuration Release --no-build
