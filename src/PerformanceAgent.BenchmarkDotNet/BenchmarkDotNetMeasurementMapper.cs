@@ -1,3 +1,4 @@
+using BenchmarkDotNet.Mathematics;
 using BenchmarkDotNet.Reports;
 using PerformanceAgent.Core.Measurements;
 
@@ -28,7 +29,8 @@ public sealed class BenchmarkDotNetMeasurementMapper
             FiniteOrNull(statistics.StandardError),
             statistics.AllOutliers.Length,
             FiniteOrNull(confidenceInterval.Lower),
-            FiniteOrNull(confidenceInterval.Upper));
+            FiniteOrNull(confidenceInterval.Upper),
+            confidenceInterval.Level.ToPercent());
 
         return new BenchmarkMeasurement(
             name,
