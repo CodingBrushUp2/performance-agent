@@ -25,6 +25,8 @@ set +e
 invalid_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/InvalidBenchmarks/InvalidBenchmarks.csproj 2>&1)"
 invalid_validate_code=$?
 set -e
+printf '%s\n' "$invalid_validate_output"
+echo "Invalid validation exit code: $invalid_validate_code"
 test "$invalid_validate_code" -eq 1
 grep -F "Validation: INVALID" <<< "$invalid_validate_output"
 grep -F "Method must be public" <<< "$invalid_validate_output"
