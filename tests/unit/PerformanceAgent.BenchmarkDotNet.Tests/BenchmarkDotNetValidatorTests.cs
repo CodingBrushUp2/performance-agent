@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BenchmarkDotNet.Attributes;
 using PerformanceAgent.BenchmarkDotNet;
 using Xunit;
@@ -43,6 +44,30 @@ public sealed class BenchmarkDotNetValidatorTests
     }
 
     [Fact]
+    public void ManualStopwatchTiming_ProducesPA1002WithoutInvalidatingBenchmark()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(ManualTimingBenchmark));
+
+        Assert.True(result.IsValid);
+        var warning = Assert.Single(result.Diagnostics, diagnostic =>
+            diagnostic.Source == "PerformanceAgent.PA1002");
+
+        Assert.Equal(BenchmarkValidationSeverity.Warning, warning.Severity);
+        Assert.Equal(nameof(ManualTimingBenchmark.Work), warning.BenchmarkMethod);
+        Assert.Contains("Stopwatch", warning.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NormalBenchmark_DoesNotProducePA1002()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(NonTrivialBenchmark));
+
+        Assert.DoesNotContain(
+            result.Diagnostics,
+            diagnostic => diagnostic.Source == "PerformanceAgent.PA1002");
+    }
+
+    [Fact]
     public void PrivateBenchmarkMethod_IsReportedAsInvalid()
     {
         var result = new BenchmarkDotNetValidator().Validate(typeof(PrivateBenchmark));
@@ -79,6 +104,19 @@ public sealed class BenchmarkDotNetValidatorTests
 
         [Benchmark]
         public int Work() => _value + 1;
+    }
+
+    public class ManualTimingBenchmark
+    {
+        private int _value = 41;
+
+        [Benchmark]
+        public long Work()
+        {
+            var start = Stopwatch.GetTimestamp();
+            var value = _value + 1;
+            return Stopwatch.GetTimestamp() - start + value;
+        }
     }
 
     public class PrivateBenchmark
