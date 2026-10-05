@@ -191,7 +191,8 @@ test "$analyze_status" -eq 2
 grep -Fx 'Deterministic result: PASS' analyze.stdout
 grep -F "Baseline:  $selected_run (Current)" analyze.stdout
 grep -F 'AI analysis: unavailable' analyze.stdout
-grep -F 'AI analysis failed: AI analysis requires a model. Set "ai.model" in perfagent.json' analyze.stderr
+grep -F 'AI analysis failed: AI analysis requires a model.' analyze.stderr
+grep -F 'user config or workspace perfagent.json' analyze.stderr
 missing_status=0
 dotnet tool run perfagent -- analyze run-does-not-exist > /dev/null 2> analyze-missing.stderr || missing_status=$?
 test "$missing_status" -eq 2
