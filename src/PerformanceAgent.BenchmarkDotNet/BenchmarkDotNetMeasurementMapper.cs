@@ -30,7 +30,7 @@ public sealed class BenchmarkDotNetMeasurementMapper
             statistics.AllOutliers.Length,
             FiniteOrNull(confidenceInterval.Lower),
             FiniteOrNull(confidenceInterval.Upper),
-            confidenceInterval.Level.ToPercent());
+            confidenceInterval.Level.ToPercent() * 100d);
 
         return new BenchmarkMeasurement(
             name,
