@@ -249,6 +249,8 @@ For V0.4 benchmark-quality work, `perfagent validate <benchmark.csproj>` exposes
 
 V0.5 starts with deterministic [diff-based benchmark candidate hints](docs/diff-candidate-hints.md): `perfagent candidates --base <git-ref>` maps changed C# lines to touched members and returns a small ranked review list without AI or benchmark generation.
 
+V0.6 begins with [experiment readiness](docs/experiment-readiness.md): `perfagent readiness` combines candidate selection, benchmark validation, Current baseline availability, and effective budget policy. A green readiness result is deliberately named `READY_WITH_UNVERIFIED_ASSUMPTIONS`; benchmark-to-target coverage and Current-baseline scenario compatibility are not inferred.
+
 ## Non-goals for V1
 
 No hosted dashboard, accounts, database, IDE extension, distributed runners, or mandatory cloud service.

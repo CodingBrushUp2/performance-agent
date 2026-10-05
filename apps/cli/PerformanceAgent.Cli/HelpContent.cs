@@ -14,6 +14,14 @@ internal static class HelpContent
 {
     private static readonly CommandHelp[] Commands =
     [
+        new("readiness", "Check whether a changed-code experiment has the prerequisites needed for measurement.",
+            "perfagent readiness --base <git-ref> --benchmark <benchmark.csproj> [--head <git-ref> | --working-tree] [--target <file::member>] [--limit <1-20>] [--format <text|json>]",
+            [
+                "perfagent readiness --base origin/main --benchmark Benchmarks/Benchmarks.csproj",
+                "perfagent readiness --base HEAD --working-tree --benchmark Benchmarks/Benchmarks.csproj",
+                "perfagent readiness --base main --benchmark Benchmarks/Benchmarks.csproj --target src/Checkout.cs::Checkout.Process(Order) --format json"
+            ],
+            "Combines deterministic changed-member hints, BenchmarkDotNet validation, Current baseline availability, and effective budget policy. A successful result is READY_WITH_UNVERIFIED_ASSUMPTIONS: Performance Agent does not claim that the benchmark covers the selected target or that Current is scenario-compatible."),
         new("candidates", "List changed C# members that may deserve a benchmark review.",
             "perfagent candidates --base <git-ref> [--head <git-ref> | --working-tree] [--limit <1-20>] [--format <text|json>]",
             [
@@ -125,9 +133,11 @@ internal static class HelpContent
             builder.AppendLine($"  {command.Name,-11} {command.Summary}");
         builder.AppendLine();
         builder.AppendLine("Typical workflow:");
-        builder.AppendLine("  validate -> run -> baseline -> change code -> run -> check -> analyze -> report");
+        builder.AppendLine("  candidates -> readiness -> run -> baseline -> change code -> run -> check -> analyze -> report");
         builder.AppendLine();
         builder.AppendLine("Examples:");
+        builder.AppendLine("  perfagent candidates --base origin/main");
+        builder.AppendLine("  perfagent readiness --base origin/main --benchmark MyBenchmarks.csproj");
         builder.AppendLine("  perfagent validate MyBenchmarks.csproj");
         builder.AppendLine("  perfagent run MyBenchmarks.csproj");
         builder.AppendLine("  perfagent history");
