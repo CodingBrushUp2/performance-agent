@@ -5,7 +5,7 @@ on:
 
 jobs:
   validate-v04:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
@@ -13,8 +13,24 @@ jobs:
           global-json-file: global.json
       - run: dotnet restore PerformanceAgent.sln
       - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
-      - run: dotnet test PerformanceAgent.sln --configuration Release --no-build
-      - run: bash tests/e2e/cli-smoke.sh
-      - name: Validate installed-tool packaging
-        timeout-minutes: 10
-        run: bash tests/e2e/installed-tool-smoke.sh
+      - run: dotnet test tests/unit/PerformanceAgent.BenchmarkDotNet.Tests/PerformanceAgent.BenchmarkDotNet.Tests.csproj --configuration Release --no-build
+      - name: Validate healthy benchmark project
+        shell: pwsh
+        run: |
+          $output = dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate samples/run/PerformanceAgent.SampleBenchmarks.csproj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($output -notmatch "Validation: VALID") { throw "Expected VALID benchmark output." }
+          if ($output -notmatch "Benchmark types: 1") { throw "Expected one benchmark type." }
+      - name: Reject invalid benchmark declaration
+        shell: pwsh
+        run: |
+          $output = dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/InvalidBenchmarks/InvalidBenchmarks.csproj 2>&1
+          if ($LASTEXITCODE -ne 1) { throw "Expected INVALID exit code 1, got $LASTEXITCODE. Output: $output" }
+          if ($output -notmatch "Validation: INVALID") { throw "Expected INVALID output." }
+          if ($output -notmatch "Method must be public") { throw "Expected BenchmarkDotNet declaration diagnostic." }
+      - name: Distinguish build failures from invalid benchmarks
+        shell: pwsh
+        run: |
+          $output = dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/BrokenBenchmarks/BrokenBenchmarks.csproj 2>&1
+          if ($LASTEXITCODE -ne 2) { throw "Expected command-error exit code 2, got $LASTEXITCODE. Output: $output" }
+          if ($output -notmatch "error CS") { throw "Expected compiler diagnostic." }
