@@ -4,6 +4,7 @@ V0.5 starts with a deterministic source-selection helper:
 
 ```bash
 perfagent candidates --base origin/main
+perfagent candidates --base HEAD --working-tree
 perfagent candidates --base main --head HEAD --limit 5 --format json
 ```
 
@@ -17,7 +18,7 @@ It performs three narrow steps:
 3. rank touched members by the number of changed lines and return at most the requested
    limit.
 
-The default head is `HEAD`. The default limit is 5 and the accepted range is 1–20.
+The default head is `HEAD`. Use `--working-tree` to compare the base directly with the current working tree, including committed, staged, and unstaged changes since that base. `--working-tree` and `--head` are mutually exclusive. The default limit is 5 and the accepted range is 1–20.
 
 ## Output
 
