@@ -160,7 +160,10 @@ static async Task<int> RunAsync(string[] args)
             }
 
             Console.WriteLine($"Candidate hints: {result.Candidates.Count}");
-            Console.WriteLine($"Diff: {result.BaseRef}...{result.HeadRef}");
+            Console.WriteLine(
+                result.HeadRef == "WORKTREE"
+                    ? $"Diff: {result.BaseRef}..WORKTREE"
+                    : $"Diff: {result.BaseRef}...{result.HeadRef}");
             if (result.Candidates.Count == 0)
             {
                 Console.WriteLine("No changed C# members were found.");
