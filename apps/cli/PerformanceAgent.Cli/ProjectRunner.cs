@@ -4,6 +4,7 @@ using System.Diagnostics;
 namespace PerformanceAgent.Cli;
 
 internal sealed record ProjectRunResult(int ExitCode, string Evidence, string StandardOutput, string StandardError);
+internal sealed record ProjectValidationResult(int ExitCode, string Validation, string StandardOutput, string StandardError);
 
 internal sealed class ProjectRunner
 {
@@ -88,6 +89,78 @@ internal sealed class ProjectRunner
             if (File.Exists(evidencePath))
                 File.Delete(evidencePath);
         }
+    }
+
+
+    public async Task<ProjectValidationResult> ValidateAsync(
+        string projectPath,
+        CancellationToken cancellationToken = default,
+        TimeSpan? validationTimeout = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var fullPath = Path.GetFullPath(projectPath);
+        if (!File.Exists(fullPath) || !string.Equals(Path.GetExtension(fullPath), ".csproj", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"Benchmark project does not exist or is not a .csproj: {projectPath}");
+
+        var targetPathResult = await RunProcessAsync(
+            "dotnet",
+            ["msbuild", fullPath, "-getProperty:TargetPath", "-property:Configuration=Release"],
+            cancellationToken);
+
+        if (targetPathResult.ExitCode != 0)
+            return new ProjectValidationResult(
+                targetPathResult.ExitCode,
+                "",
+                targetPathResult.StandardOutput,
+                targetPathResult.StandardError);
+
+        var assemblyPath = targetPathResult.StandardOutput
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .LastOrDefault();
+
+        if (string.IsNullOrWhiteSpace(assemblyPath))
+            throw new InvalidOperationException("Could not determine the benchmark project's target assembly.");
+
+        if (!Path.IsPathRooted(assemblyPath))
+            assemblyPath = Path.GetFullPath(assemblyPath, Path.GetDirectoryName(fullPath)!);
+
+        var build = await RunProcessAsync(
+            "dotnet",
+            ["build", fullPath, "--configuration", "Release"],
+            cancellationToken);
+
+        if (build.ExitCode != 0)
+            return new ProjectValidationResult(
+                build.ExitCode,
+                "",
+                build.StandardOutput,
+                build.StandardError);
+
+        var timeout = validationTimeout ?? TimeSpan.FromMinutes(2);
+        if (timeout <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(validationTimeout), "Validation timeout must be greater than zero.");
+
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+
+        ProcessResult host;
+        try
+        {
+            host = await RunProcessAsync(
+                "dotnet",
+                [FindBenchmarkHostAssembly(), "--validate", assemblyPath],
+                timeoutSource.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException($"Benchmark validation exceeded the timeout of {timeout}.");
+        }
+
+        return new ProjectValidationResult(
+            host.ExitCode,
+            host.StandardOutput,
+            build.StandardOutput,
+            build.StandardError + host.StandardError);
     }
 
     private static string FindBenchmarkHostAssembly()
