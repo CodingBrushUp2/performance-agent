@@ -7,9 +7,9 @@ namespace PerformanceAgent.BenchmarkDotNet.Tests;
 public sealed class BenchmarkDotNetValidatorTests
 {
     [Fact]
-    public async Task ValidBenchmark_HasNoCriticalDiagnostics()
+    public void ValidBenchmark_HasNoCriticalDiagnostics()
     {
-        var result = await new BenchmarkDotNetValidator().ValidateAsync(typeof(ValidBenchmark));
+        var result = new BenchmarkDotNetValidator().Validate(typeof(ValidBenchmark));
 
         Assert.True(result.IsValid);
         Assert.DoesNotContain(
@@ -18,9 +18,9 @@ public sealed class BenchmarkDotNetValidatorTests
     }
 
     [Fact]
-    public async Task PrivateBenchmarkMethod_IsReportedAsInvalid()
+    public void PrivateBenchmarkMethod_IsReportedAsInvalid()
     {
-        var result = await new BenchmarkDotNetValidator().ValidateAsync(typeof(PrivateBenchmark));
+        var result = new BenchmarkDotNetValidator().Validate(typeof(PrivateBenchmark));
 
         Assert.False(result.IsValid);
         var diagnostic = Assert.Single(result.Diagnostics, item =>
@@ -32,9 +32,9 @@ public sealed class BenchmarkDotNetValidatorTests
     }
 
     [Fact]
-    public async Task ParameterizedBenchmarkWithoutArguments_IsReportedAsInvalid()
+    public void ParameterizedBenchmarkWithoutArguments_IsReportedAsInvalid()
     {
-        var result = await new BenchmarkDotNetValidator().ValidateAsync(typeof(MissingArgumentsBenchmark));
+        var result = new BenchmarkDotNetValidator().Validate(typeof(MissingArgumentsBenchmark));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Diagnostics, item =>
