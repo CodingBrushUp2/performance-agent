@@ -43,6 +43,8 @@ set +e
 broken_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/BrokenBenchmarks/BrokenBenchmarks.csproj 2>&1)"
 broken_validate_code=$?
 set -e
+printf '%s\n' "$broken_validate_output"
+echo "Broken validation exit code: $broken_validate_code"
 test "$broken_validate_code" -eq 2
 grep -F "error CS" <<< "$broken_validate_output"
 
