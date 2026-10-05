@@ -58,6 +58,17 @@ public sealed class BenchmarkDotNetValidatorTests
     }
 
     [Fact]
+    public void ManualTimingAfterBranchesAndLocals_IsStillDetected()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(BranchedManualTimingBenchmark));
+
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Source == "PerformanceAgent.PA1002"
+                          && diagnostic.BenchmarkMethod == nameof(BranchedManualTimingBenchmark.Work));
+    }
+
+    [Fact]
     public void NormalBenchmark_DoesNotProducePA1002()
     {
         var result = new BenchmarkDotNetValidator().Validate(typeof(NonTrivialBenchmark));
@@ -104,6 +115,24 @@ public sealed class BenchmarkDotNetValidatorTests
 
         [Benchmark]
         public int Work() => _value + 1;
+    }
+
+    public class BranchedManualTimingBenchmark
+    {
+        private int _value = 41;
+
+        [Benchmark]
+        public long Work()
+        {
+            var value = _value;
+            if ((value & 1) == 0)
+                value += 2;
+            else
+                value += 1;
+
+            var start = Stopwatch.GetTimestamp();
+            return Stopwatch.GetTimestamp() - start + value;
+        }
     }
 
     public class ManualTimingBenchmark
