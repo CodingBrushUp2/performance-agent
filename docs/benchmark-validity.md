@@ -83,3 +83,14 @@ the benchmark measure a different thing than intended and complicates interpreta
 PA1002 remains a warning because benchmarking Stopwatch itself can be intentional. The
 rule is deliberately limited to direct Stopwatch calls in the benchmark body; it does
 not recursively inspect helper methods.
+
+
+### PA1003: forced garbage collection inside benchmark
+
+PA1003 warns when a benchmark method directly calls `GC.Collect()` inside the measured
+region. Forced collection can distort timing and allocation evidence and should usually
+be moved into setup unless garbage collection itself is the intended subject.
+
+The rule remains warning-only because benchmarking GC behavior can be intentional. It is
+deliberately limited to direct calls from the benchmark workload; calls from
+`GlobalSetup` are not flagged.
