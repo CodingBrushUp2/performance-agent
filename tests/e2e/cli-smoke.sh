@@ -6,11 +6,69 @@ grep -F "Performance Agent" <<< "$help_output"
 grep -F "Commands:" <<< "$help_output"
 grep -F "Typical workflow:" <<< "$help_output"
 
-for command in candidates validate run check analyze; do
+for command in readiness candidates validate run check analyze; do
   command_help="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- "$command" --help)"
   grep -F "Performance Agent - $command" <<< "$command_help"
   grep -F "Usage:" <<< "$command_help"
 done
+
+readiness_repo="$(mktemp -d)"
+cli_project="$PWD/apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj"
+benchmark_project="$PWD/samples/run/PerformanceAgent.SampleBenchmarks.csproj"
+(
+  cd "$readiness_repo"
+  git init -q
+  git config user.email "perfagent@example.invalid"
+  git config user.name "Performance Agent Tests"
+  cat > Sample.cs <<'CS'
+public class Sample
+{
+    public int Work()
+    {
+        return 1;
+    }
+}
+CS
+  git add Sample.cs
+  git commit -q -m baseline
+  readiness_base="$(git rev-parse HEAD)"
+  cat > Sample.cs <<'CS'
+public class Sample
+{
+    public int Work()
+    {
+        return 2;
+    }
+}
+CS
+  git add Sample.cs
+  git commit -q -m candidate
+
+  set +e
+  readiness_output="$(dotnet run --project "$cli_project" --configuration Release --no-build -- readiness --base "$readiness_base" --benchmark "$benchmark_project")"
+  readiness_code=$?
+  set -e
+  test "$readiness_code" -eq 1
+  grep -F "Experiment readiness: NEEDS_INPUT" <<< "$readiness_output"
+  grep -F "Target: Sample.cs::Sample.Work()" <<< "$readiness_output"
+  grep -F "Benchmark: VALID" <<< "$readiness_output"
+  grep -F "Current baseline: Not selected" <<< "$readiness_output"
+  grep -F "Coverage: unverified" <<< "$readiness_output"
+  grep -F "No Current baseline is selected." <<< "$readiness_output"
+
+  set +e
+  readiness_json="$(dotnet run --project "$cli_project" --configuration Release --no-build -- readiness --base "$readiness_base" --benchmark "$benchmark_project" --format json)"
+  readiness_json_code=$?
+  set -e
+  test "$readiness_json_code" -eq 1
+  grep -F '"schemaVersion": "1.0"' <<< "$readiness_json"
+  grep -F '"status": "needsInput"' <<< "$readiness_json"
+  grep -F '"key": "Sample.cs::Sample.Work()"' <<< "$readiness_json"
+  grep -F '"valid": true' <<< "$readiness_json"
+  grep -F '"currentBaselineRunId": null' <<< "$readiness_json"
+  grep -F '"coverageStatus": "unverified"' <<< "$readiness_json"
+)
+rm -rf "$readiness_repo"
 
 validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate samples/run/PerformanceAgent.SampleBenchmarks.csproj)"
 grep -F "Validation: VALID" <<< "$validate_output"
