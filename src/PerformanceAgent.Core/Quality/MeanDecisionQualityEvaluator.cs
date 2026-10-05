@@ -102,7 +102,7 @@ public sealed class MeanDecisionQualityEvaluator
             minimumRegressionPercent,
             maximumRegressionPercent,
             RequiredConfidenceLevelPercent,
-            $"The {ConfidenceLevelPercent:0.0}% confidence range for mean regression crosses the configured budget of {maxMeanRegressionPercent.Value:0.##}%.");
+            $"The {RequiredConfidenceLevelPercent:0.0}% confidence range for mean regression crosses the configured budget of {maxMeanRegressionPercent.Value:0.##}%.");
     }
 
     private static MeanDecisionQuality Inconclusive(string reason) =>
