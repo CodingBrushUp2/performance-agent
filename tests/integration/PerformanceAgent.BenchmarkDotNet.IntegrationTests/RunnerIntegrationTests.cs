@@ -36,6 +36,10 @@ public sealed class RunnerIntegrationTests
         Assert.True(statistics.StandardDeviationNanoseconds is null or >= 0);
         Assert.True(statistics.StandardErrorNanoseconds is null or >= 0);
         Assert.InRange(statistics.OutlierCount, 0, statistics.SampleCount);
+        Assert.NotNull(statistics.ConfidenceIntervalLowerNanoseconds);
+        Assert.NotNull(statistics.ConfidenceIntervalUpperNanoseconds);
+        Assert.True(statistics.ConfidenceIntervalLowerNanoseconds <= measurement.MeanNanoseconds);
+        Assert.True(statistics.ConfidenceIntervalUpperNanoseconds >= measurement.MeanNanoseconds);
     }
 
     [Fact]
