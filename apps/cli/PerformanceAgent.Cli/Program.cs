@@ -410,8 +410,9 @@ static async Task<int> RunAsync(string[] args)
 
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
-        Console.Error.WriteLine(
-            "Usage: perfagent config show | perfagent analyze <candidate-run-id> | perfagent report <candidate-run-id> [--baseline <run-id>] [--budget <budget.json>] | perfagent ui [--no-open] | perfagent storage | perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history [<run-id>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown|html>");
+        Console.Error.WriteLine("Unrecognized command or arguments.");
+        Console.Error.WriteLine();
+        Console.Error.Write(PerformanceAgent.Cli.HelpContent.RenderGeneral());
         return 2;
     }
 
