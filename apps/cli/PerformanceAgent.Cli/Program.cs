@@ -6,6 +6,7 @@ using PerformanceAgent.Core.Measurements;
 using PerformanceAgent.Core.History;
 using PerformanceAgent.Core.Reporting;
 using PerformanceAgent.Core.Verdicts;
+using PerformanceAgent.Cli;
 
 return await RunAsync(args);
 
@@ -513,7 +514,7 @@ static async Task<int> RunCheckAsync(string[] args)
             return 2;
         }
 
-        var outputFormat = options.GetValueOrDefault("--format") ?? "text";
+        var outputFormat = (options.GetValueOrDefault("--format") ?? "text").ToLowerInvariant();
         if (outputFormat is not ("text" or "json"))
         {
             Console.Error.WriteLine("Check format must be 'text' or 'json'.");
