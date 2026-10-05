@@ -74,7 +74,7 @@ grep -F '"status": "comparable"' <<< "$check_json"
 grep -F '"budgetExceeded": false' <<< "$check_json"
 grep -F '"meanDecision":' <<< "$check_json"
 grep -F '"status": "conclusiveWithinBudget"' <<< "$check_json"
-grep -F '"confidenceLevelPercent": 99.9' <<< "$check_json"
+grep -F '"sourceConfidenceLevelPercent": 99.9' <<< "$check_json"
 
 cat > "$candidate_file" <<'JSON'
 {"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":106,"allocatedBytesPerOperation":1070,"statistics":{"sampleCount":15,"medianNanoseconds":106,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":105.9,"confidenceIntervalUpperNanoseconds":106.1,"confidenceLevelPercent":99.9}}]}
@@ -117,7 +117,7 @@ set -e
 test "$uncertain_json_code" -eq 2
 grep -F '"verdict": "inconclusive"' <<< "$uncertain_json"
 grep -F '"status": "inconclusive"' <<< "$uncertain_json"
-grep -F '"confidenceLevelPercent": 99.9' <<< "$uncertain_json"
+grep -F '"sourceConfidenceLevelPercent": 99.9' <<< "$uncertain_json"
 
 cat > "$candidate_file" <<'JSON'
 {"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":null,"statistics":{"sampleCount":15,"medianNanoseconds":104,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":103.9,"confidenceIntervalUpperNanoseconds":104.1,"confidenceLevelPercent":99.9}}]}
