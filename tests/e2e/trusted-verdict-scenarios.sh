@@ -75,11 +75,11 @@ name, expected = sys.argv[1], sys.argv[2]
 document = json.load(sys.stdin)
 actual = document["verdict"]
 if actual != expected:
-    raise SystemExit(f"${name}: expected verdict ${expected}, got ${actual}")
+    raise SystemExit(f"{name}: expected verdict {expected}, got {actual}")
 checks = document["checks"]
 if len(checks) != 1:
-    raise SystemExit(f"${name}: expected one check, got ${len(checks)}")
-print(f"${name}: ${actual.upper()}")
+    raise SystemExit(f"{name}: expected one check, got {len(checks)}")
+print(f"{name}: {actual.upper()}")
 ' "$name" "$expected_verdict" <<< "$output"
 }
 
