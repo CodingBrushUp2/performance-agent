@@ -225,7 +225,7 @@ internal sealed class ExperimentReadinessService
     {
         var actions = new List<string>();
 
-        if (candidates.Count > 1 && selected is null)
+        if (candidates.Count != 0 && selected is null)
             actions.Add("Select one candidate target and rerun readiness with --target <file::member>.");
 
         if (!benchmark.Valid)
