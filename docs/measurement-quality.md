@@ -4,8 +4,10 @@ V0.3 uses measurement uncertainty to decide whether a mean-performance budget ca
 trusted.
 
 Performance Agent preserves BenchmarkDotNet's 99.9% confidence interval for every
-new benchmark measurement. The verdict policy compares the whole possible regression
-range against the configured mean budget.
+new benchmark measurement. The verdict policy derives conservative regression bounds
+from the baseline and candidate intervals and compares those bounds with the configured
+mean budget. These derived bounds are not themselves a 99.9% confidence interval for
+the ratio; 99.9% is the confidence level of each source BenchmarkDotNet interval.
 
 For a baseline confidence interval `[B_low, B_high]` and candidate interval
 `[C_low, C_high]`:
@@ -19,7 +21,7 @@ The decision is:
 
 - `PASS` for mean when the maximum possible regression is at or below the budget.
 - `FAIL` for mean when the minimum possible regression is above the budget.
-- `INCONCLUSIVE` when the confidence range crosses the budget boundary.
+- `INCONCLUSIVE` when the derived regression bounds cross the budget boundary.
 
 This deliberately avoids a separate arbitrary rule such as "standard deviation must
 be below 5%". The relevant question is whether the uncertainty can change the
@@ -64,7 +66,7 @@ The machine-readable check output includes a `meanDecision` object with:
 - decision status
 - minimum possible regression
 - maximum possible regression
-- confidence level
+- source confidence level used by the BenchmarkDotNet intervals
 - reason when inconclusive
 
 The existing `mean.budgetExceeded` field remains the point-estimate budget check.
