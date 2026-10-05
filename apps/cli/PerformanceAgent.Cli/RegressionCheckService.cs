@@ -121,7 +121,7 @@ internal sealed class RegressionCheckService
         if (meanDecisionQuality.IsExceeded)
         {
             reasons.Add(
-                $"{name}: mean regression exceeds the configured budget with a conclusive {MeanDecisionQualityEvaluator.ConfidenceLevelPercent:0.0}% confidence range.");
+                $"{name}: mean regression exceeds the configured budget with a conclusive {MeanDecisionQualityEvaluator.RequiredConfidenceLevelPercent:0.0}% confidence range.");
         }
 
         if (result.AllocationExceeded)
