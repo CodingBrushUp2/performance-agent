@@ -17,6 +17,7 @@ jobs:
       - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
       - run: dotnet test PerformanceAgent.sln --configuration Release --no-build
       - run: bash tests/e2e/cli-smoke.sh
+      - run: bash tests/e2e/trusted-verdict-scenarios.sh
       - run: bash tests/e2e/history-smoke.sh
       - run: bash tests/e2e/discovery-smoke.sh
       - run: python3 tests/e2e/cancellation-smoke.py
