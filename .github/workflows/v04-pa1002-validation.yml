@@ -1,0 +1,29 @@
+name: V0.4 PA1002 Targeted Validation
+
+on:
+  pull_request:
+
+jobs:
+  validate-pa1002:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - run: dotnet restore PerformanceAgent.sln
+      - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
+      - run: dotnet test tests/unit/PerformanceAgent.BenchmarkDotNet.Tests/PerformanceAgent.BenchmarkDotNet.Tests.csproj --configuration Release --no-build
+      - name: Validate PA1002 warning
+        shell: bash
+        run: |
+          output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/ForcedGcBenchmarks/ForcedGcBenchmarks.csproj)"
+          grep -F "Validation: VALID" <<< "$output"
+          grep -F "[WARNING] PerformanceAgent.PA1002" <<< "$output"
+          grep -F "GC.Collect()" <<< "$output"
+      - name: Validate PA1001 still coexists
+        shell: bash
+        run: |
+          output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/SuspiciousBenchmarks/SuspiciousBenchmarks.csproj)"
+          grep -F "Validation: VALID" <<< "$output"
+          grep -F "[WARNING] PerformanceAgent.PA1001" <<< "$output"
