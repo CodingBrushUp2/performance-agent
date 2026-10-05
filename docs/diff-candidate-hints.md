@@ -33,6 +33,18 @@ Each candidate contains:
 
 JSON output uses schema `1.0`.
 
+## Noise filtering
+
+Candidate discovery ignores obvious non-production noise:
+
+- `test` / `tests` path segments;
+- `bin` and `obj`;
+- `*Test.cs` and `*Tests.cs`;
+- common generated names such as `.g.cs`, `.g.i.cs`, and `.Designer.cs`.
+
+Git refs beginning with `-` are rejected so a ref cannot be interpreted as an
+additional Git command-line option.
+
 ## Boundaries
 
 Candidate hints are deliberately not benchmark recommendations.
