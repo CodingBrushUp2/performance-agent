@@ -4,7 +4,7 @@ namespace PerformanceAgent.Core.Quality;
 
 public sealed class MeanDecisionQualityEvaluator
 {
-    public const double ConfidenceLevelPercent = 99.9;
+    public const double RequiredConfidenceLevelPercent = 99.9;
 
     public MeanDecisionQuality Evaluate(
         BenchmarkMeasurement baseline,
@@ -39,11 +39,22 @@ public sealed class MeanDecisionQualityEvaluator
         var baselineUpper = baseline.Statistics.ConfidenceIntervalUpperNanoseconds;
         var candidateLower = candidate.Statistics.ConfidenceIntervalLowerNanoseconds;
         var candidateUpper = candidate.Statistics.ConfidenceIntervalUpperNanoseconds;
+        var baselineConfidenceLevel = baseline.Statistics.ConfidenceLevelPercent;
+        var candidateConfidenceLevel = candidate.Statistics.ConfidenceLevelPercent;
 
         if (baselineLower is null || baselineUpper is null || candidateLower is null || candidateUpper is null)
         {
             return Inconclusive(
                 "Benchmark confidence interval is unavailable. Re-run baseline and candidate with the current Performance Agent before trusting the mean verdict.");
+        }
+
+        if (baselineConfidenceLevel is null
+            || candidateConfidenceLevel is null
+            || Math.Abs(baselineConfidenceLevel.Value - RequiredConfidenceLevelPercent) > 1e-9
+            || Math.Abs(candidateConfidenceLevel.Value - RequiredConfidenceLevelPercent) > 1e-9)
+        {
+            return Inconclusive(
+                $"A {RequiredConfidenceLevelPercent:0.0}% BenchmarkDotNet confidence interval is required for a trusted mean verdict.");
         }
 
         if (baselineLower <= 0
@@ -72,7 +83,7 @@ public sealed class MeanDecisionQualityEvaluator
                 MeanDecisionQualityStatus.ConclusiveExceededBudget,
                 minimumRegressionPercent,
                 maximumRegressionPercent,
-                ConfidenceLevelPercent,
+                RequiredConfidenceLevelPercent,
                 null);
         }
 
@@ -82,7 +93,7 @@ public sealed class MeanDecisionQualityEvaluator
                 MeanDecisionQualityStatus.ConclusiveWithinBudget,
                 minimumRegressionPercent,
                 maximumRegressionPercent,
-                ConfidenceLevelPercent,
+                RequiredConfidenceLevelPercent,
                 null);
         }
 
@@ -90,7 +101,7 @@ public sealed class MeanDecisionQualityEvaluator
             MeanDecisionQualityStatus.Inconclusive,
             minimumRegressionPercent,
             maximumRegressionPercent,
-            ConfidenceLevelPercent,
+            RequiredConfidenceLevelPercent,
             $"The {ConfidenceLevelPercent:0.0}% confidence range for mean regression crosses the configured budget of {maxMeanRegressionPercent.Value:0.##}%.");
     }
 
@@ -99,6 +110,6 @@ public sealed class MeanDecisionQualityEvaluator
             MeanDecisionQualityStatus.Inconclusive,
             null,
             null,
-            ConfidenceLevelPercent,
+            RequiredConfidenceLevelPercent,
             reason);
 }
