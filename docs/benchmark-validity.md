@@ -57,3 +57,13 @@ measurement.
 
 PA1001 is intentionally conservative and narrow. It does not attempt to prove general
 dead-code elimination or constant folding, and it is not an error.
+
+
+### PA1002: forced garbage collection inside measured work
+
+PA1002 warns when a benchmark method directly calls `GC.Collect()` inside the measured
+region. Forced collection can distort timing and allocation evidence and should normally
+be moved into setup unless garbage collection itself is what the benchmark is testing.
+
+The rule is warning-only and best-effort. Calls from `GlobalSetup` are not flagged,
+and IL that cannot be inspected safely does not make validation fail.
