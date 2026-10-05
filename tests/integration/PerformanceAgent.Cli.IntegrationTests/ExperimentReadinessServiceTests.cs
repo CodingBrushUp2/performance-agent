@@ -8,7 +8,7 @@ public sealed class ExperimentReadinessServiceTests
     private static readonly BudgetReadiness Budget = new("Built-in defaults", 5, 5);
 
     [Fact]
-    public void SingleCandidateValidBenchmarkAndBaseline_IsReadyWithUnverifiedCoverage()
+    public void SingleCandidateValidBenchmarkAndBaseline_IsReadyWithUnverifiedAssumptions()
     {
         var result = ExperimentReadinessService.Evaluate(
             Discovery(Candidate("src/Work.cs", "Work.Run()")),
@@ -17,9 +17,10 @@ public sealed class ExperimentReadinessServiceTests
             "run-baseline",
             Budget);
 
-        Assert.Equal(ExperimentReadinessStatus.ReadyWithUnverifiedCoverage, result.Status);
+        Assert.Equal(ExperimentReadinessStatus.ReadyWithUnverifiedAssumptions, result.Status);
         Assert.Equal("src/Work.cs::Work.Run()", result.SelectedTarget!.Key);
         Assert.Equal("unverified", result.CoverageStatus);
+        Assert.Equal("unverified", result.BaselineCompatibilityStatus);
         Assert.Empty(result.Blockers);
         Assert.Contains(result.NextActions, action =>
             action.Contains("Confirm that the benchmark project actually exercises", StringComparison.Ordinal));
@@ -58,7 +59,7 @@ public sealed class ExperimentReadinessServiceTests
             "run-baseline",
             Budget);
 
-        Assert.Equal(ExperimentReadinessStatus.ReadyWithUnverifiedCoverage, result.Status);
+        Assert.Equal(ExperimentReadinessStatus.ReadyWithUnverifiedAssumptions, result.Status);
         Assert.Equal("src/Second.cs", result.SelectedTarget!.FilePath);
     }
 
