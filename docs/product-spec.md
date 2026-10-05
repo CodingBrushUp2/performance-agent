@@ -1,6 +1,6 @@
-# Product Specification v0.3
+# Product Specification v0.4
 
-Status: .NET V0.3 release candidate
+Status: .NET V0.4 release candidate
 
 ## Product
 
@@ -75,6 +75,7 @@ Exact arguments remain implementation details until the first vertical slice pro
 
 ## V1 outputs
 
+- pre-run benchmark declaration/configuration validation plus narrow benchmark-quality warnings;
 - normalized benchmark evidence with timing statistics and environment metadata;
 - stable machine-readable JSON contracts for check and calibration workflows;
 - explicit `PASS`, `FAIL`, and `INCONCLUSIVE` deterministic verdicts;
