@@ -87,20 +87,28 @@ static async Task<int> RunAsync(string[] args)
     {
         try
         {
-            if (args.Length < 3 || args.Length % 2 == 0)
-                throw new ArgumentException("Usage: perfagent candidates --base <git-ref> [--head <git-ref>] [--limit <1-20>] [--format <text|json>]");
-
             string? baseRef = null;
             var headRef = "HEAD";
             var limit = 5;
             var outputFormat = "text";
+            var workingTree = false;
             var seen = new HashSet<string>(StringComparer.Ordinal);
 
-            for (var index = 1; index < args.Length; index += 2)
+            for (var index = 1; index < args.Length;)
             {
                 var option = args[index];
                 if (!seen.Add(option))
                     throw new ArgumentException($"Repeated candidates option '{option}'.");
+
+                if (string.Equals(option, "--working-tree", StringComparison.Ordinal))
+                {
+                    workingTree = true;
+                    index++;
+                    continue;
+                }
+
+                if (index + 1 >= args.Length)
+                    throw new ArgumentException($"Candidates option '{option}' requires a value.");
 
                 var value = args[index + 1];
                 switch (option)
@@ -124,15 +132,20 @@ static async Task<int> RunAsync(string[] args)
                     default:
                         throw new ArgumentException($"Unknown candidates option '{option}'.");
                 }
+
+                index += 2;
             }
 
             if (string.IsNullOrWhiteSpace(baseRef))
                 throw new ArgumentException("--base <git-ref> is required.");
+            if (workingTree && seen.Contains("--head"))
+                throw new ArgumentException("--working-tree cannot be combined with --head.");
 
             var result = await new PerformanceAgent.Cli.GitDiffCandidateService().DiscoverAsync(
                 baseRef,
                 headRef,
-                limit);
+                limit,
+                workingTree: workingTree);
 
             if (outputFormat == "json")
             {
