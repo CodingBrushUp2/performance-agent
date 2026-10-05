@@ -42,7 +42,15 @@ public sealed class BenchmarkDotNetRunner
         return result.BenchmarkTypes;
     }
 
-    public BenchmarkDiscoveryResult DiscoverBenchmarks(Assembly assembly)
+    public BenchmarkDiscoveryResult DiscoverBenchmarks(Assembly assembly) =>
+        DiscoverBenchmarks(assembly, includeNonPublicBenchmarkMethods: false);
+
+    public BenchmarkDiscoveryResult DiscoverBenchmarksForValidation(Assembly assembly) =>
+        DiscoverBenchmarks(assembly, includeNonPublicBenchmarkMethods: true);
+
+    private BenchmarkDiscoveryResult DiscoverBenchmarks(
+        Assembly assembly,
+        bool includeNonPublicBenchmarkMethods)
     {
         ArgumentNullException.ThrowIfNull(assembly);
         var diagnostics = new List<string>();
@@ -67,7 +75,11 @@ public sealed class BenchmarkDotNetRunner
         {
             try
             {
-                if (!type.IsAbstract && type.GetMethods().Any(method =>
+                var methods = includeNonPublicBenchmarkMethods
+                    ? type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                    : type.GetMethods();
+
+                if (!type.IsAbstract && methods.Any(method =>
                         method.IsDefined(typeof(global::BenchmarkDotNet.Attributes.BenchmarkAttribute), inherit: true)))
                     benchmarks.Add(type);
             }
