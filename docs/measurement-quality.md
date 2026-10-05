@@ -25,6 +25,15 @@ This deliberately avoids a separate arbitrary rule such as "standard deviation m
 be below 5%". The relevant question is whether the uncertainty can change the
 PASS/FAIL decision.
 
+## Exact self-comparison
+
+When baseline and candidate are the exact same normalized measurement, the measured
+change is deterministically 0%. Performance Agent returns a conclusive within-budget
+mean decision without treating the same confidence interval as two independent runs.
+
+This matters for workflows such as viewing or analyzing a run that is itself the
+active Current baseline.
+
 ## Required evidence
 
 A trusted mean verdict requires:
