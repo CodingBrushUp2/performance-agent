@@ -93,6 +93,10 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             assert "no-store" in headers["Cache-Control"]
             assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
             assert "Effective configuration" in page
+            assert "Help / Getting Started" in page
+            help_status, help_page, _ = request("/help")
+            assert help_status == 200 and "AI proposes. Measurements decide." in help_page
+            assert "perfagent analyze &lt;candidate-run-id&gt;" in help_page
             config_path = work / "perfagent.json"
             config_before = config_path.read_bytes() if config_path.exists() else None
             for document, source, mean, allocation in [
@@ -155,6 +159,10 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             page = request()[1]
             assert "<strong>run-second</strong>" in page and "<strong>run-first</strong>" in page
             assert "Baseline timeline" in page and "run-first</code> → <code>run-second" in page
+            current_row = page[page.index("<code>run-second</code>"):page.index("</tr>", page.index("<code>run-second</code>"))]
+            anchor_row = page[page.index("<code>run-first</code>"):page.index("</tr>", page.index("<code>run-first</code>"))]
+            assert "Make Current" not in current_row
+            assert "Make Anchor" not in anchor_row
             assert events_path.read_bytes() == before  # Refresh is read-only.
             status, report_page, report_headers = request("/runs/run-second/report")
             assert status == 200 and "<h2>PASS</h2>" in report_page
@@ -220,8 +228,14 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
             # shown, only the AI part fails, and workspace state stays byte-identical.
             state_before = {p: p.read_bytes() for p in state.rglob("*") if p.is_file()}
             status, details, _ = request("/runs/run-regression")
-            assert status == 200 and '<form method="post" action="/runs/run-regression/analyze">' in details
-            assert "Analyze with AI" in details
+            assert status == 200 and '<form method="post" action="/runs/run-regression/analyze" data-analysis-form>' in details
+            assert 'data-analysis-button>Analyze with AI</button>' in details
+            assert "data-analysis-status hidden" in details
+            assert "Analyzing with the configured provider" in details
+            assert 'src="/assets/ui.js"' in details
+            script_status, script_body, _ = request("/assets/ui.js")
+            assert script_status == 200 and "button.disabled = true" in script_body
+            assert 'button.textContent = "Analyzing..."' in script_body
             assert "<dt>Deterministic result</dt><dd><strong>REGRESSION</strong></dd>" in details
             assert request("/runs/run-regression/analyze")[0] == 405
             assert request("/runs/run-regression/analyze", {"x": "y"})[0] == 400

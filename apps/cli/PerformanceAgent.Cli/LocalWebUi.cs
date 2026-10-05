@@ -69,7 +69,7 @@ internal static class LocalWebUi
             }
             context.Response.Headers.CacheControl = "no-store";
             context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-            context.Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
+            context.Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
             try { await next(context); }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
             {
@@ -78,10 +78,49 @@ internal static class LocalWebUi
                 await context.Response.WriteAsync($"Unable to complete the request: {exception.Message}\nReload history to check the active baseline before retrying. No administrator/root privileges are required.");
             }
         });
+        app.MapGet("/assets/ui.js", () => Results.Text("""
+document.addEventListener("submit", function (event) {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches("[data-analysis-form]")) return;
+    event.preventDefault();
+    if (form.dataset.submitting === "true") return;
+    form.dataset.submitting = "true";
+    const button = form.querySelector("[data-analysis-button]");
+    const status = form.querySelector("[data-analysis-status]");
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Analyzing...";
+        button.setAttribute("aria-busy", "true");
+    }
+    if (status) status.hidden = false;
+    window.setTimeout(function () { HTMLFormElement.prototype.submit.call(form); }, 0);
+});
+""", "text/javascript; charset=utf-8"));
+
+        app.MapGet("/help", () =>
+            Results.Content(Page("Help — Performance Agent", HelpContent.RenderWebHelp()), "text/html; charset=utf-8"));
+
         app.MapGet("/configuration", () =>
         {
             var effective = configuration.Inspect();
-            var content = $"<p><a href=\"/\">Back to history</a></p><h1>Effective configuration</h1><dl><dt>Configuration file</dt><dd>{WebUtility.HtmlEncode(effective.Path)}</dd><dt>Budget source</dt><dd>{WebUtility.HtmlEncode(effective.BudgetSource)}</dd><dt>Max mean regression (%)</dt><dd>{effective.Budget.MaxMeanRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd><dt>Max allocation regression (%)</dt><dd>{effective.Budget.MaxAllocationRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd><dt>AI provider</dt><dd>{WebUtility.HtmlEncode(effective.AiProvider)}</dd><dt>AI model</dt><dd>{WebUtility.HtmlEncode(effective.AiModel ?? "Not configured")}</dd></dl><p>Explicit CLI check thresholds or --budget override workspace settings. Do not store secrets in perfagent.json.</p><p class=\"muted\">AI credentials are read only from the environment (OpenAI: OPENAI_API_KEY) and are never displayed here.</p>";
+            var content = $"""
+<p><a href="/">Back to dashboard</a> · <a href="/help">Help</a></p>
+<h1>Effective configuration</h1>
+<dl>
+<dt>Workspace configuration</dt><dd>{WebUtility.HtmlEncode(effective.Path)}</dd>
+<dt>User AI configuration</dt><dd>{WebUtility.HtmlEncode(effective.UserPath)}</dd>
+<dt>Budget source</dt><dd>{WebUtility.HtmlEncode(effective.BudgetSource)}</dd>
+<dt>Max mean regression (%)</dt><dd>{effective.Budget.MaxMeanRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd>
+<dt>Max allocation regression (%)</dt><dd>{effective.Budget.MaxAllocationRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd>
+<dt>AI provider</dt><dd>{WebUtility.HtmlEncode(effective.AiProvider)}</dd>
+<dt>AI provider source</dt><dd>{WebUtility.HtmlEncode(effective.AiProviderSource)}</dd>
+<dt>AI model</dt><dd>{WebUtility.HtmlEncode(effective.AiModel ?? "Not configured")}</dd>
+<dt>AI model source</dt><dd>{WebUtility.HtmlEncode(effective.AiModelSource)}</dd>
+</dl>
+<p>Precedence: built-in defaults &lt; user AI configuration &lt; workspace <code>perfagent.json</code> &lt; explicit CLI overrides where supported.</p>
+<p>Workspace performance budget remains project policy. User-level configuration supplies non-secret AI defaults only.</p>
+<p class="muted">AI credentials are read only from the environment (OpenAI: OPENAI_API_KEY) and are never displayed here or stored in configuration.</p>
+""";
             return Results.Content(Page("Effective configuration — Performance Agent", content), "text/html; charset=utf-8");
         });
         app.MapGet("/", async (HttpContext context) =>
@@ -133,7 +172,7 @@ internal static class LocalWebUi
             if (current is null) return Results.Text("No current baseline is configured.", statusCode: 409);
             var baseline = await archive.ReadAsync(current.RunId, context.RequestAborted);
             var candidate = await archive.ReadAsync(runId, context.RequestAborted);
-            var budget = configuration.Load().Budget!;
+            var budget = configuration.InspectBudget().Budget;
             var check = new RegressionCheckService().Check(baseline.Evidence, candidate.Evidence, budget);
             return Results.Content(RenderCheck(current.RunId, candidate.RunId, check, budget), "text/html; charset=utf-8");
         });
@@ -211,14 +250,15 @@ internal static class LocalWebUi
     private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, IReadOnlyList<BaselineEvent> events, AntiforgeryTokenSet token, WorkspaceStorageStatus storage)
     {
         var rows = string.Join("", runs.OrderByDescending(x => x.Timestamp).Select(run =>
-            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a> · <a href=\"/runs/{Uri.EscapeDataString(run.RunId)}/check-current\">Check Current</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionForm(run.RunId, "current", "Make Current", token) + SelectionForm(run.RunId, "anchor", "Make Anchor", token) : "Storage is not writable")}</td></tr>"));
+            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a> · <a href=\"/runs/{Uri.EscapeDataString(run.RunId)}/check-current\">Check Current</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionActions(run.RunId, current, anchor, token) : "Storage is not writable")}</td></tr>"));
         if (rows.Length == 0) rows = "<tr><td colspan=\"4\">No benchmark runs yet.</td></tr>";
         var eventRows = string.Join("", events.Reverse().Select(item =>
             $"<tr><td>{item.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{item.Kind}</td><td>{item.Type}</td><td><code>{WebUtility.HtmlEncode(item.PreviousRunId ?? "—")}</code> → <code>{WebUtility.HtmlEncode(item.RunId)}</code></td></tr>"));
         if (eventRows.Length == 0) eventRows = "<tr><td colspan=\"4\">No baseline events yet.</td></tr>";
         return Page("Performance Agent", $$"""
 <h1>Performance Agent</h1><p class="muted">Local performance evidence. CLI remains the primary interface.</p>
-<p><a href="/configuration">Effective configuration</a></p>
+<p><a href="/configuration">Effective configuration</a> · <a href="/help">Help / Getting Started</a></p>
+{{HelpContent.RenderGettingStartedHtml()}}
 <section class="card"><h2>Workspace storage</h2><dl>
 <dt>Workspace</dt><dd>{{WebUtility.HtmlEncode(storage.WorkspaceDirectory)}}</dd>
 <dt>Storage</dt><dd>{{WebUtility.HtmlEncode(storage.StateDirectory)}}</dd>
@@ -259,7 +299,8 @@ internal static class LocalWebUi
 <section class="card"><h2>Measured result vs Current</h2><dl>
 <dt>Current baseline</dt><dd>{{(currentRunId is null ? "Not set" : $"<code>{WebUtility.HtmlEncode(currentRunId)}</code>")}}</dd>
 <dt>Deterministic result</dt><dd>{{measuredResult}}</dd></dl>
-<form method="post" action="/runs/{{Uri.EscapeDataString(run.RunId)}}/analyze"><input type="hidden" name="{{WebUtility.HtmlEncode(token.FormFieldName)}}" value="{{WebUtility.HtmlEncode(token.RequestToken)}}"><button type="submit">Analyze with AI</button></form>
+<form method="post" action="/runs/{{Uri.EscapeDataString(run.RunId)}}/analyze" data-analysis-form><input type="hidden" name="{{WebUtility.HtmlEncode(token.FormFieldName)}}" value="{{WebUtility.HtmlEncode(token.RequestToken)}}"><button type="submit" data-analysis-button>Analyze with AI</button><span class="muted analysis-status" data-analysis-status hidden>Analyzing with the configured provider...</span></form>
+<script src="/assets/ui.js" defer></script>
 <p class="muted">Sends this run's and the Current baseline's normalized measurements, the budget and the measured verdicts to the configured AI provider (<a href="/configuration">ai.provider / ai.model</a>). Provider charges may apply. The result is advisory, not saved, and never changes the measured result.</p></section>
 """);
     }
@@ -362,14 +403,26 @@ h1{font-size:28px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16
 .card,table{background:white;border:1px solid #e5e7eb;border-radius:10px}.card{padding:18px}.muted{color:#6b7280}
 table{width:100%;border-collapse:collapse;overflow:hidden}th,td{text-align:left;padding:13px;border-bottom:1px solid #eee}th{background:#fafafa}
 .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;margin-right:5px}code{font-size:13px}
-form{display:inline-block;margin:3px}button{cursor:pointer;padding:6px 10px}
+form{display:inline-block;margin:3px}button{cursor:pointer;padding:6px 10px}button:disabled{cursor:progress;opacity:.65}.analysis-status{margin-left:8px}
 dt{font-weight:600;margin-top:10px}dd{margin:4px 0;overflow-wrap:anywhere}p[role=alert]{color:#991b1b}
 .measured{border-left:5px solid #1f2937;margin:20px 0}.verdict{font-size:26px;font-weight:700;margin:6px 0}
 .ai{border:1px dashed #9ca3af;background:#fbfbfc;margin:20px 0}.ai-text{white-space:pre-wrap;overflow-wrap:anywhere}section[role=alert] h2{color:#991b1b}
+pre{overflow:auto;background:#f3f4f6;border-radius:8px;padding:12px}.help-grid{display:grid;gap:16px;margin-top:16px}.help-command{margin:0}.getting-started{margin:20px 0}.getting-started li{margin:8px 0}
+@media(max-width:700px){main{margin:24px auto;padding:0 14px}.cards{grid-template-columns:1fr}th,td{padding:9px}}
 </style></head><body><main>__CONTENT__</main></body></html>
 """;
         return template.Replace("__TITLE__", WebUtility.HtmlEncode(title), StringComparison.Ordinal)
             .Replace("__CONTENT__", content, StringComparison.Ordinal);
+    }
+
+    private static string SelectionActions(string runId, string? current, string? anchor, AntiforgeryTokenSet token)
+    {
+        var actions = new List<string>();
+        if (!string.Equals(runId, current, StringComparison.Ordinal))
+            actions.Add(SelectionForm(runId, "current", "Make Current", token));
+        if (!string.Equals(runId, anchor, StringComparison.Ordinal))
+            actions.Add(SelectionForm(runId, "anchor", "Make Anchor", token));
+        return actions.Count == 0 ? "—" : string.Join("", actions);
     }
 
     private static string SelectionForm(string runId, string kind, string label, AntiforgeryTokenSet token) =>

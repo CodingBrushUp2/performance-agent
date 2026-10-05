@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+help_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- --help)"
+grep -F "Performance Agent" <<< "$help_output"
+grep -F "Commands:" <<< "$help_output"
+grep -F "Typical workflow:" <<< "$help_output"
+
+for command in run check analyze; do
+  command_help="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- "$command" --help)"
+  grep -F "Performance Agent - $command" <<< "$command_help"
+  grep -F "Usage:" <<< "$command_help"
+done
+
 output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- compare MapOrder 100 80 1000 750 markdown)"
 
 grep -F "| MapOrder | Mean (ns) | 100 | 80 | -20% | Comparable |" <<< "$output"

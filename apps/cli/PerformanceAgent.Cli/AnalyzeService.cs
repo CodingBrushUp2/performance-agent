@@ -38,16 +38,20 @@ internal sealed class AnalyzeService(
     private readonly Func<string, string?, IPerformanceAnalysisProvider> _createProvider =
         createProvider ?? AnalysisProviderFactory.Create;
 
-    /// <summary>The deterministic phase only (no provider is created). Shared by Run Details in the local UI.</summary>
+    /// <summary>
+    /// The deterministic phase only. No provider is created and user-level AI configuration is not read.
+    /// Shared by Run Details in the local UI.
+    /// </summary>
     public async Task<DeterministicAnalysisResult> CheckAsync(string candidateRunId, CancellationToken cancellationToken) =>
         (await PrepareAsync(candidateRunId, cancellationToken)).Deterministic;
 
     public async Task<AnalyzeResult> AnalyzeAsync(string candidateRunId, CancellationToken cancellationToken)
     {
-        var (deterministic, request, configuration) = await PrepareAsync(candidateRunId, cancellationToken);
+        var (deterministic, request) = await PrepareAsync(candidateRunId, cancellationToken);
 
         try
         {
+            var configuration = new WorkspaceConfiguration(storage).Inspect();
             var provider = _createProvider(configuration.AiProvider, configuration.AiModel);
             try
             {
@@ -62,15 +66,16 @@ internal sealed class AnalyzeService(
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or TimeoutException)
         {
             // Provider configuration, credential, rate-limit, outage, timeout, or malformed output.
+            // The deterministic result was already computed from archived evidence and remains authoritative.
             return new(deterministic, null, exception.Message);
         }
     }
 
-    private async Task<(DeterministicAnalysisResult Deterministic, PerformanceAnalysisRequest Request, EffectiveWorkspaceConfiguration Configuration)> PrepareAsync(
+    private async Task<(DeterministicAnalysisResult Deterministic, PerformanceAnalysisRequest Request)> PrepareAsync(
         string candidateRunId,
         CancellationToken cancellationToken)
     {
-        var configuration = new WorkspaceConfiguration(storage).Inspect();
+        var configuration = new WorkspaceConfiguration(storage).InspectBudget();
         var archive = new FileRunArchive(storage.StateDirectory);
         var candidate = await archive.ReadAsync(candidateRunId, cancellationToken);
         var current = await new FileBaselineStore(storage.StateDirectory).GetAsync(BaselineKind.Current, cancellationToken)
@@ -100,6 +105,6 @@ internal sealed class AnalyzeService(
                 .Select(x => new PerformanceRegressionResult(x.Name, x.Result.Passed, x.Result.MeanExceeded, x.Result.AllocationExceeded))
                 .ToArray());
 
-        return (deterministic, request, configuration);
+        return (deterministic, request);
     }
 }

@@ -185,12 +185,14 @@ opened offline. Numeric `compare ... html` has no environment or budget verdict.
 Unavailable and zero-baseline percentage changes remain explicit; a PASS is not proof
 that unavailable metrics are equivalent. Exporting does not change history or baselines.
 
-## Workspace configuration
+## Configuration
 
-`perfagent config show` and the UI's **Effective configuration** link display the
-same read-only budget settings, configuration path and source. Without a configured
-budget, the defaults are 5% mean and 5% allocation regression. Explicit CLI thresholds
-or `--budget` take precedence. A configured null metric threshold is not enforced.
+`perfagent config show` and the UI's **Effective configuration** page display the
+effective read-only settings and where they came from.
+
+Performance budgets are workspace/project policy. Without a configured budget, the
+defaults are 5% mean and 5% allocation regression. Explicit CLI thresholds or
+`--budget` take precedence where supported.
 
 ```json
 {
@@ -201,16 +203,31 @@ or `--budget` take precedence. A configured null metric threshold is not enforce
 }
 ```
 
-Save this as `perfagent.json` in the workspace. Do not put API keys, tokens, passwords
-or other secrets in it. Configuration visibility displays recognized settings only,
-not raw JSON or unknown fields. No settings editor or secret storage is provided.
+Save project policy as `perfagent.json` in the workspace. Non-secret AI defaults may
+instead be configured once per user in `~/.performance-agent/config.json` (on Windows,
+`%USERPROFILE%\.performance-agent\config.json`) and overridden per workspace:
+
+```json
+{
+  "ai": {
+    "provider": "openai",
+    "model": "your-model-name"
+  }
+}
+```
+
+Precedence is built-in defaults < user AI configuration < workspace `perfagent.json`
+< explicit CLI overrides where supported. API keys, tokens, passwords and other secrets
+belong in neither file. Configuration visibility displays recognized settings only,
+not raw JSON or unknown fields.
 
 ## Optional AI analysis (V0.2)
 
 `perfagent analyze <candidate-run-id>` checks an archived run against the Current
-baseline with the workspace budget. It then asks the configured model (`ai.provider`,
-`ai.model` in `perfagent.json`, and `OPENAI_API_KEY` from the environment) for an
-advisory explanation. The measured PASS/REGRESSION result is authoritative and decides
+baseline with the workspace budget. It then asks the effective configured model
+(`ai.provider` / `ai.model`) for an advisory explanation. OpenAI credentials come
+only from the `OPENAI_API_KEY` environment variable. The measured PASS/REGRESSION
+result is authoritative and decides
 the exit code. AI failures only fail the analysis. In the local UI, **Run Details →
 Analyze with AI** runs the same analysis on an explicit click. AI text is shown
 separately from the measured result, HTML-encoded, and not saved. See

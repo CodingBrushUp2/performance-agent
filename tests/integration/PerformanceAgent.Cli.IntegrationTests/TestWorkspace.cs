@@ -15,7 +15,7 @@ internal sealed class TestWorkspace : IDisposable
     {
         Directory = Path.Combine(Path.GetTempPath(), $"perfagent-analyze-{Guid.NewGuid():N}");
         System.IO.Directory.CreateDirectory(Directory);
-        Storage = WorkspaceStorage.Resolve(Directory);
+        Storage = WorkspaceStorage.Resolve(Directory, Path.Combine(Directory, "user-config.json"));
     }
 
     public string Directory { get; }
@@ -34,6 +34,9 @@ internal sealed class TestWorkspace : IDisposable
 
     public void WriteConfiguration(object configuration) =>
         File.WriteAllText(Path.Combine(Directory, "perfagent.json"), JsonSerializer.Serialize(configuration));
+
+    public void WriteUserConfiguration(object configuration) =>
+        File.WriteAllText(Storage.UserConfigurationPath!, JsonSerializer.Serialize(configuration));
 
     /// <summary>Every file under the state directory with its exact bytes, to prove analysis writes nothing.</summary>
     public IReadOnlyDictionary<string, string> SnapshotState() =>

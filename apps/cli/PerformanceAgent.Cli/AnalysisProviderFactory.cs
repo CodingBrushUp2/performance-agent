@@ -15,5 +15,5 @@ internal static class AnalysisProviderFactory
         string.Equals(provider?.Trim(), "openai", StringComparison.OrdinalIgnoreCase)
             ? OpenAIPerformanceAnalysisProvider.Create(model)
             : throw new InvalidOperationException(
-                $"AI provider '{provider}' is not supported. Set \"ai.provider\" in perfagent.json to one of: {SupportedProviders}.");
+                $"AI provider '{provider}' is not supported. Set \"ai.provider\" in the user config or workspace perfagent.json to one of: {SupportedProviders}.");
 }

@@ -10,6 +10,12 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
+    if (PerformanceAgent.Cli.HelpContent.TryRender(args, out var help))
+    {
+        Console.Write(help);
+        return 0;
+    }
+
     if (args.Length > 0 && string.Equals(args[0], "report", StringComparison.OrdinalIgnoreCase))
     {
         try
@@ -39,13 +45,17 @@ static async Task<int> RunAsync(string[] args)
         try
         {
             var configuration = new PerformanceAgent.Cli.WorkspaceConfiguration(PerformanceAgent.Cli.WorkspaceStorage.Resolve()).Inspect();
-            Console.WriteLine($"Configuration: {configuration.Path}");
+            Console.WriteLine($"Workspace configuration: {configuration.Path}");
+            Console.WriteLine($"User AI configuration: {configuration.UserPath}");
             Console.WriteLine($"Budget source: {configuration.BudgetSource}");
             Console.WriteLine($"Max mean regression (%): {configuration.Budget.MaxMeanRegressionPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Not configured"}");
             Console.WriteLine($"Max allocation regression (%): {configuration.Budget.MaxAllocationRegressionPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Not configured"}");
             Console.WriteLine($"AI provider: {configuration.AiProvider}");
+            Console.WriteLine($"AI provider source: {configuration.AiProviderSource}");
             Console.WriteLine($"AI model: {configuration.AiModel ?? "Not configured"}");
-            Console.WriteLine("Explicit check thresholds or --budget override workspace settings. Do not store API keys or other secrets in perfagent.json.");
+            Console.WriteLine($"AI model source: {configuration.AiModelSource}");
+            Console.WriteLine("Precedence: built-in defaults < user AI config < workspace perfagent.json < explicit CLI overrides where supported.");
+            Console.WriteLine("Workspace budget remains project policy. Do not store API keys or other secrets in either configuration file.");
             return 0;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -400,8 +410,9 @@ static async Task<int> RunAsync(string[] args)
 
     if (args.Length != 7 || !string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
     {
-        Console.Error.WriteLine(
-            "Usage: perfagent config show | perfagent analyze <candidate-run-id> | perfagent report <candidate-run-id> [--baseline <run-id>] [--budget <budget.json>] | perfagent ui [--no-open] | perfagent storage | perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] | perfagent run <benchmark.csproj> [--output <evidence.json>] | perfagent baseline <set|anchor> <run-id> | perfagent history [<run-id>] | perfagent check <baseline.json> <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>) | perfagent compare <name> <baseline-ns> <candidate-ns> <baseline-bytes> <candidate-bytes> <json|markdown|html>");
+        Console.Error.WriteLine("Unrecognized command or arguments.");
+        Console.Error.WriteLine();
+        Console.Error.Write(PerformanceAgent.Cli.HelpContent.RenderGeneral());
         return 2;
     }
 
@@ -575,7 +586,7 @@ static async Task<int> RunCheckAsync(string[] args)
         else if (positional.Count == 0)
         {
             budget = new PerformanceAgent.Cli.WorkspaceConfiguration(
-                PerformanceAgent.Cli.WorkspaceStorage.Resolve()).Load().Budget!;
+                PerformanceAgent.Cli.WorkspaceStorage.Resolve()).InspectBudget().Budget;
         }
         else
         {
@@ -664,9 +675,11 @@ static bool CheckEvidence(
     return check.Passed;
 }
 
-static void PrintCheckUsage() =>
-    Console.Error.WriteLine(
-        "Usage: perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
+static void PrintCheckUsage()
+{
+    PerformanceAgent.Cli.HelpContent.TryRender(["check", "--help"], out var help);
+    Console.Error.Write(help);
+}
 
 
 static string FormatBudget(double? threshold, bool exceeded) => PerformanceAgent.Cli.CheckFormatting.FormatBudget(threshold, exceeded);
