@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.4.0
+
+V0.4 focuses on benchmark validity before measurement.
+
+### Added
+
+- `perfagent validate <benchmark.csproj>` for pre-run BenchmarkDotNet validation;
+- text and versioned JSON validation output;
+- validation-only discovery that can surface invalid non-public benchmark declarations
+  without changing normal benchmark discovery;
+- PA1001 warning for trivial benchmark bodies;
+- PA1002 warning for direct manual timing with `Stopwatch` inside the measured workload;
+- PA1003 warning for direct `GC.Collect()` calls inside the measured workload;
+- installed-tool and CLI end-to-end coverage for validation behavior.
+
+### Behavior
+
+- `VALID` returns exit code 0;
+- structurally invalid benchmark declarations return exit code 1;
+- build, input, load, discovery, timeout, or validation-execution failures return exit code 2;
+- PA1001/PA1002/PA1003 remain non-blocking warnings and do not turn a structurally valid benchmark into INVALID.
+
+### Design boundaries
+
+- BenchmarkDotNet remains authoritative for declaration/configuration validation;
+- Performance Agent-specific rules only cover narrow quality gaps not already handled by BenchmarkDotNet;
+- no benchmark generation, target-discovery browser, Java/JMH, AI Monitoring integration,
+  hosted service, or new AI behavior was added in V0.4.
+
 ## 0.3.0
 
 V0.3 focuses on making Performance Agent a trustworthy deterministic performance judge
