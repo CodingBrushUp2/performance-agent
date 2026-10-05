@@ -53,7 +53,7 @@ public sealed class CheckVerdictJsonWriterTests
         Assert.Equal("conclusiveExceededBudget", meanDecision.GetProperty("status").GetString());
         Assert.True(meanDecision.GetProperty("minimumRegressionPercent").GetDouble() > 5);
         Assert.True(meanDecision.GetProperty("maximumRegressionPercent").GetDouble() > 5);
-        Assert.Equal(99.9, meanDecision.GetProperty("confidenceLevelPercent").GetDouble());
+        Assert.Equal(99.9, meanDecision.GetProperty("sourceConfidenceLevelPercent").GetDouble());
         Assert.Equal(JsonValueKind.Null, meanDecision.GetProperty("reason").ValueKind);
 
         var mean = benchmark.GetProperty("mean");
