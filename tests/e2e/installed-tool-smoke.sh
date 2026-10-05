@@ -122,6 +122,26 @@ assert candidate['kind']=='method'
 assert candidate['changedLines'] >= 1
 PY
 
+working_tree_base="$(git rev-parse HEAD)"
+cat > Helper/Work.cs <<'CS'
+namespace ExternalDependency;
+public static class Work
+{
+    public static byte[] Allocate() => new byte[128];
+}
+CS
+
+dotnet tool run perfagent -- candidates --base "$working_tree_base" --working-tree --format json > working-tree-candidates.json
+python3 - <<'PY'
+import json
+with open('working-tree-candidates.json') as f:
+    result=json.load(f)
+assert result['headRef']=='WORKTREE'
+candidate,=result['candidates']
+assert candidate['filePath']=='Helper/Work.cs'
+assert candidate['member']=='Work.Allocate()'
+PY
+
 # Both tool installation and consumer project are outside the Performance Agent tree.
 dotnet tool run perfagent -- validate "$PWD/Benchmarks/Benchmarks.csproj" > validate.stdout
 grep -F 'Validation: VALID' validate.stdout
