@@ -247,6 +247,8 @@ The deterministic [trusted verdict scenario matrix](docs/trusted-verdict-scenari
 
 For V0.4 benchmark-quality work, `perfagent validate <benchmark.csproj>` exposes BenchmarkDotNet's own pre-run validators before measurements are executed. See [Benchmark validity guard](docs/benchmark-validity.md).
 
+V0.5 begins with conservative [diff-based method candidates](docs/diff-candidates.md): `perfagent candidates <base-ref>` returns a small changed-method focus list without claiming performance risk or generating benchmarks.
+
 ## Non-goals for V1
 
 No hosted dashboard, accounts, database, IDE extension, distributed runners, or mandatory cloud service.
