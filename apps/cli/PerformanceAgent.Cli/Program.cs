@@ -109,7 +109,11 @@ static async Task<int> RunAsync(string[] args)
             Console.Error.Write(result.StandardError);
 
             if (result.ExitCode == 2 || string.IsNullOrWhiteSpace(result.Validation))
+            {
+                if (!string.IsNullOrWhiteSpace(result.StandardOutput))
+                    Console.Error.Write(result.StandardOutput);
                 return result.ExitCode;
+            }
 
             if (outputFormat == "json")
             {
