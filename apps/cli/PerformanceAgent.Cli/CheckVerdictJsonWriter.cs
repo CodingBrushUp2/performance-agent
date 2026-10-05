@@ -28,7 +28,7 @@ internal sealed record CheckVerdictMeanDecision(
     MeanDecisionQualityStatus Status,
     double? MinimumRegressionPercent,
     double? MaximumRegressionPercent,
-    double? ConfidenceLevelPercent,
+    double? SourceConfidenceLevelPercent,
     string? Reason);
 
 internal sealed record CheckVerdictBenchmark(
@@ -109,7 +109,7 @@ internal sealed class CheckVerdictJsonWriter
                 item.MeanDecisionQuality.Status,
                 item.MeanDecisionQuality.MinimumRegressionPercent,
                 item.MeanDecisionQuality.MaximumRegressionPercent,
-                item.MeanDecisionQuality.ConfidenceLevelPercent,
+                item.MeanDecisionQuality.SourceConfidenceLevelPercent,
                 item.MeanDecisionQuality.Reason),
             Map(item.Result.Comparison.Mean, item.Result.MeanExceeded),
             Map(item.Result.Comparison.AllocatedBytes, item.Result.AllocationExceeded));
