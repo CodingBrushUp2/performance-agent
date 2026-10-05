@@ -24,6 +24,66 @@ public sealed class BenchmarkEvidenceTests
         Assert.Equal(12.5, measurement.GetProperty("meanNanoseconds").GetDouble());
         Assert.Equal(JsonValueKind.Null, measurement.GetProperty("allocatedBytesPerOperation").ValueKind);
     }
+
+    [Fact]
+    public void JsonWriterAndReader_PreserveOptionalStatistics()
+    {
+        var evidence = new BenchmarkEvidence(
+            "1.0",
+            [
+                new BenchmarkMeasurement(
+                    "Sum",
+                    12.5,
+                    64,
+                    new BenchmarkStatistics(15, 12.1, 0.8, 0.2, 1))
+            ]);
+
+        var json = new JsonBenchmarkEvidenceWriter().Write(evidence);
+        var roundTrip = new JsonBenchmarkEvidenceReader().Read(json);
+
+        var statistics = Assert.IsType<BenchmarkStatistics>(Assert.Single(roundTrip.Measurements).Statistics);
+        Assert.Equal(15, statistics.SampleCount);
+        Assert.Equal(12.1, statistics.MedianNanoseconds);
+        Assert.Equal(0.8, statistics.StandardDeviationNanoseconds);
+        Assert.Equal(0.2, statistics.StandardErrorNanoseconds);
+        Assert.Equal(1, statistics.OutlierCount);
+    }
+
+    [Fact]
+    public void JsonReader_AcceptsLegacyEvidenceWithoutStatistics()
+    {
+        var evidence = new JsonBenchmarkEvidenceReader().Read(
+            """{"schemaVersion":"1.0","measurements":[{"name":"Sum","meanNanoseconds":12.5,"allocatedBytesPerOperation":64}]}""");
+
+        Assert.Null(Assert.Single(evidence.Measurements).Statistics);
+    }
+
+    [Fact]
+    public void JsonReader_RejectsInvalidStatistics()
+    {
+        const string json = """
+        {
+          "schemaVersion": "1.0",
+          "measurements": [
+            {
+              "name": "Sum",
+              "meanNanoseconds": 12.5,
+              "allocatedBytesPerOperation": 64,
+              "statistics": {
+                "sampleCount": 0,
+                "medianNanoseconds": 12.1,
+                "standardDeviationNanoseconds": 0.8,
+                "standardErrorNanoseconds": 0.2,
+                "outlierCount": 1
+              }
+            }
+          ]
+        }
+        """;
+
+        Assert.Throws<InvalidOperationException>(() => new JsonBenchmarkEvidenceReader().Read(json));
+    }
+
     [Fact]
     public void JsonReader_RejectsUnsupportedSchema()
     {
