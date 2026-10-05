@@ -1,4 +1,4 @@
-# Product Specification v0.4
+# Product Specification v0.5
 
 Status: .NET V0.5 release candidate
 
