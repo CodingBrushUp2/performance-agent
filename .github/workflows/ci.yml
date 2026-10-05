@@ -15,6 +15,7 @@ jobs:
           global-json-file: global.json
       - run: dotnet restore PerformanceAgent.sln
       - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
+      # Keep projects isolated in this PR so a benchmark-process failure is attributed precisely.
       - name: Test Core
         timeout-minutes: 5
         run: dotnet test tests/unit/PerformanceAgent.Core.Tests/PerformanceAgent.Core.Tests.csproj --configuration Release --no-build
