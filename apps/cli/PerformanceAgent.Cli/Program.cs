@@ -83,6 +83,94 @@ static async Task<int> RunAsync(string[] args)
         finally { Console.CancelKeyPress -= cancelHandler; }
     }
 
+    if (args.Length >= 1 && string.Equals(args[0], "candidates", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            if (args.Length < 3 || args.Length % 2 == 0)
+                throw new ArgumentException("Usage: perfagent candidates --base <git-ref> [--head <git-ref>] [--limit <1-20>] [--format <text|json>]");
+
+            string? baseRef = null;
+            var headRef = "HEAD";
+            var limit = 5;
+            var outputFormat = "text";
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+
+            for (var index = 1; index < args.Length; index += 2)
+            {
+                var option = args[index];
+                if (!seen.Add(option))
+                    throw new ArgumentException($"Repeated candidates option '{option}'.");
+
+                var value = args[index + 1];
+                switch (option)
+                {
+                    case "--base":
+                        baseRef = value;
+                        break;
+                    case "--head":
+                        headRef = value;
+                        break;
+                    case "--limit":
+                        if (!int.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out limit)
+                            || limit is < 1 or > 20)
+                            throw new ArgumentException("--limit must be an integer between 1 and 20.");
+                        break;
+                    case "--format":
+                        outputFormat = value.ToLowerInvariant();
+                        if (outputFormat is not ("text" or "json"))
+                            throw new ArgumentException("--format must be text or json.");
+                        break;
+                    default:
+                        throw new ArgumentException($"Unknown candidates option '{option}'.");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(baseRef))
+                throw new ArgumentException("--base <git-ref> is required.");
+
+            var result = await new PerformanceAgent.Cli.GitDiffCandidateService().DiscoverAsync(
+                baseRef,
+                headRef,
+                limit);
+
+            if (outputFormat == "json")
+            {
+                Console.Write(System.Text.Json.JsonSerializer.Serialize(
+                    result,
+                    new System.Text.Json.JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                    }));
+                return 0;
+            }
+
+            Console.WriteLine($"Candidate hints: {result.Candidates.Count}");
+            Console.WriteLine($"Diff: {result.BaseRef}...{result.HeadRef}");
+            if (result.Candidates.Count == 0)
+            {
+                Console.WriteLine("No changed C# members were found.");
+                return 0;
+            }
+
+            foreach (var candidate in result.Candidates)
+            {
+                Console.WriteLine($"{candidate.FilePath}:{candidate.StartLine}  {candidate.Member}");
+                Console.WriteLine($"  Kind: {candidate.Kind}; changed lines: {candidate.ChangedLines}");
+                Console.WriteLine($"  Reason: {candidate.Reason}");
+            }
+
+            Console.WriteLine("Candidate hints are not benchmark recommendations; review relevance before writing or running a benchmark.");
+            return 0;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+    }
+
     if (args.Length >= 2 && string.Equals(args[0], "validate", StringComparison.OrdinalIgnoreCase))
     {
         if (args.Length is not (2 or 4)
