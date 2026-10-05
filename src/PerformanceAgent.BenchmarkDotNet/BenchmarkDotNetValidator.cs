@@ -29,6 +29,12 @@ public sealed class BenchmarkDotNetValidator
         }
 
         var diagnostics = new List<BenchmarkValidationDiagnostic>();
+        diagnostics.AddRange(
+            PerformanceAgentBenchmarkLinter.Inspect(
+                benchmarkType,
+                runInfo.BenchmarksCases
+                    .Select(benchmark => benchmark.Descriptor.WorkloadMethod)));
+
         var validationParameters = new ValidationParameters(runInfo.BenchmarksCases, runInfo.Config);
         foreach (var validator in runInfo.Config.GetValidators())
         {
