@@ -115,6 +115,32 @@ public sealed class BenchmarkEvidenceTests
     }
 
     [Fact]
+    public void JsonReader_RejectsInvalidLogicalProcessorCount()
+    {
+        const string json = """
+        {
+          "schemaVersion": "1.0",
+          "environment": {
+            "runtime": ".NET 10",
+            "operatingSystem": "Linux",
+            "architecture": "X64",
+            "logicalProcessorCount": 0,
+            "serverGarbageCollection": false
+          },
+          "measurements": [
+            {
+              "name": "Sum",
+              "meanNanoseconds": 12.5,
+              "allocatedBytesPerOperation": 64
+            }
+          ]
+        }
+        """;
+
+        Assert.Throws<InvalidOperationException>(() => new JsonBenchmarkEvidenceReader().Read(json));
+    }
+
+    [Fact]
     public void JsonReader_RejectsUnsupportedSchema()
     {
         var exception = Assert.Throws<InvalidOperationException>(
