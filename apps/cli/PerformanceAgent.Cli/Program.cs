@@ -479,7 +479,7 @@ static async Task<int> RunCheckAsync(string[] args)
             }
 
             var option = args[index];
-            if (option is not ("--rid" or "--run-id" or "-r" or "--baseline" or "-b" or "--candidate" or "-c" or "--budget" or "-p"))
+            if (option is not ("--rid" or "--run-id" or "-r" or "--baseline" or "-b" or "--candidate" or "-c" or "--budget" or "-p" or "--format"))
             {
                 Console.Error.WriteLine($"Unknown option '{option}'.");
                 return 2;
@@ -510,6 +510,13 @@ static async Task<int> RunCheckAsync(string[] args)
         if (options.ContainsKey("--run-id") && options.ContainsKey("--baseline"))
         {
             Console.Error.WriteLine("Use either --run-id or --baseline, not both.");
+            return 2;
+        }
+
+        var outputFormat = options.GetValueOrDefault("--format") ?? "text";
+        if (outputFormat is not ("text" or "json"))
+        {
+            Console.Error.WriteLine("Check format must be 'text' or 'json'.");
             return 2;
         }
 
@@ -597,18 +604,23 @@ static async Task<int> RunCheckAsync(string[] args)
 
         var reader = new JsonBenchmarkEvidenceReader();
         BenchmarkEvidence baseline;
+        CheckVerdictReference baselineReference;
         if (options.TryGetValue("--run-id", out var runId))
         {
             var root = Path.Combine(Environment.CurrentDirectory, ".performance-agent");
             baseline = (await new FileRunArchive(root).ReadAsync(runId)).Evidence;
+            baselineReference = new CheckVerdictReference("runId", runId);
         }
         else if (options.TryGetValue("--baseline", out var explicitBaseline) || baselinePath is not null)
         {
-            baseline = reader.Read(File.ReadAllText(explicitBaseline ?? baselinePath!));
+            var source = explicitBaseline ?? baselinePath!;
+            baseline = reader.Read(File.ReadAllText(source));
+            baselineReference = new CheckVerdictReference("explicit", source);
         }
         else
         {
             baseline = new BenchmarkEvidence("1.0", []);
+            baselineReference = new CheckVerdictReference("current", null);
         }
 
         var candidate = reader.Read(File.ReadAllText(candidatePath));
@@ -626,30 +638,65 @@ static async Task<int> RunCheckAsync(string[] args)
 
             var archive = new FileRunArchive(root);
             baseline = (await archive.ReadAsync(currentReference.RunId)).Evidence;
+            baselineReference = new CheckVerdictReference("current", currentReference.RunId);
             var anchorReference = await baselineStore.GetAsync(BaselineKind.Anchor);
             if (anchorReference is not null
                 && !string.Equals(anchorReference.RunId, currentReference.RunId, StringComparison.Ordinal))
             {
                 var anchorEvidence = (await archive.ReadAsync(anchorReference.RunId)).Evidence;
-                var currentVerdict = CheckEvidence("Current", baseline, candidate, budget);
-                var anchorVerdict = CheckEvidence("Anchor", anchorEvidence, candidate, budget);
-                var overallVerdict = CombineVerdicts(currentVerdict, anchorVerdict);
-                Console.WriteLine($"Overall: {VerdictLabel(overallVerdict)}");
+                var currentCheck = new PerformanceAgent.Cli.RegressionCheckService().Check(baseline, candidate, budget);
+                var anchorCheck = new PerformanceAgent.Cli.RegressionCheckService().Check(anchorEvidence, candidate, budget);
+                var overallVerdict = CombineVerdicts(currentCheck.Verdict, anchorCheck.Verdict);
+
+                if (outputFormat == "json")
+                {
+                    Console.WriteLine(new PerformanceAgent.Cli.CheckVerdictJsonWriter().Write(
+                        candidatePath,
+                        budget,
+                        overallVerdict,
+                        [
+                            new CheckVerdictInput(
+                                new CheckVerdictReference("current", currentReference.RunId),
+                                currentCheck),
+                            new CheckVerdictInput(
+                                new CheckVerdictReference("anchor", anchorReference.RunId),
+                                anchorCheck)
+                        ]));
+                }
+                else
+                {
+                    WriteCheckEvidence("Current", currentCheck, budget);
+                    WriteCheckEvidence("Anchor", anchorCheck, budget);
+                    Console.WriteLine($"Overall: {VerdictLabel(overallVerdict)}");
+                }
+
                 return VerdictExitCode(overallVerdict);
             }
         }
 
         var check = new PerformanceAgent.Cli.RegressionCheckService().Check(baseline, candidate, budget);
-        foreach (var item in check.Benchmarks)
+        if (outputFormat == "json")
         {
-            var result = item.Result;
-            Console.WriteLine($"{item.Name}: {VerdictLabel(item.Verdict)}");
-            Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
-            Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
+            Console.WriteLine(new PerformanceAgent.Cli.CheckVerdictJsonWriter().Write(
+                candidatePath,
+                budget,
+                check.Verdict,
+                [new CheckVerdictInput(baselineReference, check)]));
+        }
+        else
+        {
+            foreach (var item in check.Benchmarks)
+            {
+                var result = item.Result;
+                Console.WriteLine($"{item.Name}: {VerdictLabel(item.Verdict)}");
+                Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
+                Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
+            }
+
+            WriteInconclusiveReasons(check);
+            Console.WriteLine($"Overall: {VerdictLabel(check.Verdict)}");
         }
 
-        WriteInconclusiveReasons(check);
-        Console.WriteLine($"Overall: {VerdictLabel(check.Verdict)}");
         return VerdictExitCode(check.Verdict);
     }
     catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
@@ -659,13 +706,11 @@ static async Task<int> RunCheckAsync(string[] args)
     }
 }
 
-static PerformanceVerdict CheckEvidence(
+static void WriteCheckEvidence(
     string label,
-    BenchmarkEvidence baseline,
-    BenchmarkEvidence candidate,
+    PerformanceAgent.Cli.EvidenceCheckResult check,
     PerformanceBudget budget)
 {
-    var check = new PerformanceAgent.Cli.RegressionCheckService().Check(baseline, candidate, budget);
     Console.WriteLine($"{label} baseline:");
     foreach (var item in check.Benchmarks)
     {
@@ -676,7 +721,6 @@ static PerformanceVerdict CheckEvidence(
     }
 
     WriteInconclusiveReasons(check);
-    return check.Verdict;
 }
 
 static void WriteInconclusiveReasons(PerformanceAgent.Cli.EvidenceCheckResult check)
