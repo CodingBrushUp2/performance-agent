@@ -41,6 +41,8 @@ public sealed class BenchmarkDotNetValidator
             }
         }
 
+        diagnostics.AddRange(TrivialBenchmarkBodyRule.Analyze(benchmarkType, runInfo));
+
         var ordered = diagnostics
             .Distinct()
             .OrderByDescending(x => x.Severity)
