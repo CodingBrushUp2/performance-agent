@@ -42,8 +42,51 @@ public sealed class BenchmarkDotNetValidatorTests
             && item.Message.Contains("shouldn't have any arguments", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void ForcedGcInsideBenchmark_IsReportedAsWarningButRemainsValid()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(ForcedGcBenchmark));
+
+        Assert.True(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, item =>
+            item.Source == "PerformanceAgent.MeasuredRegionHygiene"
+            && item.Severity == BenchmarkValidationSeverity.Warning);
+
+        Assert.Equal(nameof(ForcedGcBenchmark.Work), diagnostic.BenchmarkMethod);
+        Assert.Contains("GC.Collect()", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ForcedGcInGlobalSetup_IsNotReportedAsMeasuredRegionWarning()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(SetupGcBenchmark));
+
+        Assert.True(result.IsValid);
+        Assert.DoesNotContain(result.Diagnostics, item =>
+            item.Source == "PerformanceAgent.MeasuredRegionHygiene");
+    }
+
     public class ValidBenchmark
     {
+        [Benchmark]
+        public int Work() => 42;
+    }
+
+    public class ForcedGcBenchmark
+    {
+        [Benchmark]
+        public int Work()
+        {
+            GC.Collect();
+            return 42;
+        }
+    }
+
+    public class SetupGcBenchmark
+    {
+        [GlobalSetup]
+        public void Setup() => GC.Collect();
+
         [Benchmark]
         public int Work() => 42;
     }
