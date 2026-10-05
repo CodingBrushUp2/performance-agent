@@ -18,6 +18,11 @@ internal sealed record PerformanceAgentConfiguration(
 internal sealed record UserPerformanceAgentConfiguration(
     AiConfiguration? Ai = null);
 
+internal sealed record EffectiveBudgetConfiguration(
+    string Path,
+    string BudgetSource,
+    PerformanceBudget Budget);
+
 internal sealed record EffectiveWorkspaceConfiguration(
     string Path,
     string UserPath,
@@ -49,6 +54,20 @@ internal sealed class WorkspaceConfiguration
     {
         var effective = Inspect();
         return new(effective.Budget, new AiConfiguration(effective.AiProvider, effective.AiModel));
+    }
+
+    public EffectiveBudgetConfiguration InspectBudget()
+    {
+        var workspacePath = Path.Combine(_storage.WorkspaceDirectory, "perfagent.json");
+        var workspace = ReadWorkspaceConfiguration(workspacePath);
+        var budget = workspace?.Budget ?? PerformanceAgentConfiguration.Default.Budget!;
+        ValidateBudget(budget);
+        var budgetSource = workspace is null
+            ? "Built-in defaults (file absent)"
+            : workspace.Budget is null
+                ? "Built-in defaults (budget absent)"
+                : "perfagent.json";
+        return new(workspacePath, budgetSource, budget);
     }
 
     public EffectiveWorkspaceConfiguration Inspect()
