@@ -9,7 +9,7 @@ using PerformanceAgent.Core.Evidence;
 
 if (args.Length == 2 && string.Equals(args[0], "--validate", StringComparison.Ordinal))
 {
-    return await ValidateAsync(Path.GetFullPath(args[1]));
+    return Validate(Path.GetFullPath(args[1]));
 }
 
 if (args.Length != 2)
@@ -92,7 +92,7 @@ static Assembly LoadBenchmarkAssembly(string assemblyPath)
     return AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
 }
 
-static async Task<int> ValidateAsync(string assemblyPath)
+static int Validate(string assemblyPath)
 {
     if (!File.Exists(assemblyPath))
     {
