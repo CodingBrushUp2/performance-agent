@@ -31,3 +31,29 @@ workflow.
 
 Performance Agent-specific validity rules can be added later only for gaps that
 BenchmarkDotNet does not already cover.
+
+
+## Performance Agent quality warnings
+
+After BenchmarkDotNet's validators pass, Performance Agent can add non-blocking quality
+warnings for suspicious benchmark shapes that are structurally valid but may not
+measure meaningful work.
+
+### PA1001: trivial benchmark body
+
+PA1001 warns when a benchmark method compiles down to an empty body or a direct
+constant/string/null return.
+
+Example:
+
+```csharp
+[Benchmark]
+public int ConstantWork() => 42;
+```
+
+This remains `VALID`; the warning asks the author to verify that the benchmark
+actually exercises the intended code path and has not collapsed into a meaningless
+measurement.
+
+PA1001 is intentionally conservative and narrow. It does not attempt to prove general
+dead-code elimination or constant folding, and it is not an error.
