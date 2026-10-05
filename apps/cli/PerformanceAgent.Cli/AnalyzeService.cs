@@ -2,6 +2,7 @@ using PerformanceAgent.Core.Analysis;
 using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Evidence;
 using PerformanceAgent.Core.History;
+using PerformanceAgent.Core.Verdicts;
 
 namespace PerformanceAgent.Cli;
 
@@ -90,6 +91,10 @@ internal sealed class AnalyzeService(
         var candidateEvidence = reader.Read(writer.Write(candidate.Evidence));
 
         var check = new RegressionCheckService().Check(baselineEvidence, candidateEvidence, configuration.Budget);
+        if (check.Verdict == PerformanceVerdict.Inconclusive)
+            throw new InvalidOperationException(
+                $"Performance verdict is inconclusive: {string.Join("; ", check.Reasons)}");
+
         var deterministic = new DeterministicAnalysisResult(
             candidate.RunId,
             baseline.RunId,
@@ -102,7 +107,12 @@ internal sealed class AnalyzeService(
             candidateEvidence,
             configuration.Budget,
             check.Benchmarks
-                .Select(x => new PerformanceRegressionResult(x.Name, x.Result.Passed, x.Result.MeanExceeded, x.Result.AllocationExceeded))
+                .Where(x => x.Verdict != PerformanceVerdict.Inconclusive)
+                .Select(x => new PerformanceRegressionResult(
+                    x.Name,
+                    x.Verdict == PerformanceVerdict.Pass,
+                    x.Result.MeanExceeded,
+                    x.Result.AllocationExceeded))
                 .ToArray());
 
         return (deterministic, request);
