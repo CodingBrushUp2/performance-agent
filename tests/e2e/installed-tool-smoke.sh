@@ -80,8 +80,9 @@ using ExternalDependency;
 
 BenchmarkSwitcher.FromAssembly(typeof(InstalledBenchmark).Assembly).Run(args);
 
-// Smoke-only configuration. The host continues to use normal BDN defaults.
-[DryJob]
+// Smoke-only configuration: short enough for CI, but with enough target iterations
+// for BenchmarkDotNet to produce a confidence interval used by trusted verdicts.
+[SimpleJob(launchCount: 1, warmupCount: 3, iterationCount: 15)]
 [MemoryDiagnoser]
 public class InstalledBenchmark
 {
@@ -101,6 +102,11 @@ measurement, = evidence['measurements']
 assert measurement['name']=='InstalledBenchmark.Allocate'
 assert math.isfinite(measurement['meanNanoseconds']) and measurement['meanNanoseconds'] > 0
 assert measurement['allocatedBytesPerOperation'] >= 64
+statistics=measurement['statistics']
+assert statistics['sampleCount'] >= 3
+assert statistics['confidenceIntervalLowerNanoseconds'] is not None
+assert statistics['confidenceIntervalUpperNanoseconds'] is not None
+assert statistics['confidenceLevelPercent'] == 99.9
 assert all(evidence['environment'][key] for key in ['runtime','operatingSystem','architecture'])
 archive, = pathlib.Path('.performance-agent/archive').glob('run-*.json')
 with archive.open() as f: archived=json.load(f)
