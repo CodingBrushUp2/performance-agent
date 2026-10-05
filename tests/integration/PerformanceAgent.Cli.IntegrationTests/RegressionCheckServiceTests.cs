@@ -121,7 +121,7 @@ public sealed class RegressionCheckServiceTests
             MeanDecisionQualityStatus.Inconclusive,
             benchmark.MeanDecisionQuality.Status);
         Assert.Contains(result.Reasons, reason =>
-            reason.Contains("confidence range", StringComparison.Ordinal));
+            reason.Contains("regression bounds", StringComparison.Ordinal));
     }
 
     [Fact]
