@@ -30,6 +30,7 @@ jobs:
           $text = $output -join "`n"
           if ($text -notmatch "Validation: INVALID") { throw "Expected INVALID output. Output: $text" }
           if ($text -notmatch "Method must be public") { throw "Expected BenchmarkDotNet declaration diagnostic. Output: $text" }
+          exit 0
       - name: Distinguish build failures from invalid benchmarks
         shell: pwsh
         run: |
@@ -37,3 +38,4 @@ jobs:
           if ($LASTEXITCODE -ne 2) { throw "Expected command-error exit code 2, got $LASTEXITCODE. Output: $output" }
           $text = $output -join "`n"
           if ($text -notmatch "error CS") { throw "Expected compiler diagnostic. Output: $text" }
+          exit 0
