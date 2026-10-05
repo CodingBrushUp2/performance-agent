@@ -24,9 +24,9 @@ public sealed class AnalyzeWebUiTests : IDisposable
         var (status, page, _) = await ui.GetAsync("/runs/run-candidate");
 
         Assert.Equal(HttpStatusCode.OK, status);
-        Assert.Contains("<form method=\"post\" action=\"/runs/run-candidate/analyze\">", page, StringComparison.Ordinal);
+        Assert.Contains("<form method=\"post\" action=\"/runs/run-candidate/analyze\" data-analysis-form>", page, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", page, StringComparison.Ordinal);
-        Assert.Contains("<button type=\"submit\">Analyze with AI</button>", page, StringComparison.Ordinal);
+        Assert.Contains("<button type=\"submit\" data-analysis-button>Analyze with AI</button>", page, StringComparison.Ordinal);
         Assert.Contains("<dt>Current baseline</dt><dd><code>run-current</code></dd>", page, StringComparison.Ordinal);
         Assert.Contains("<dt>Deterministic result</dt><dd><strong>REGRESSION</strong></dd>", page, StringComparison.Ordinal);
         Assert.Empty(ui.Resolutions);
