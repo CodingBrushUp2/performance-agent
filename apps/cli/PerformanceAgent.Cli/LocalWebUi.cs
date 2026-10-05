@@ -10,6 +10,7 @@ using System.Globalization;
 using PerformanceAgent.Core.History;
 using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Analysis;
+using PerformanceAgent.Core.Verdicts;
 
 namespace PerformanceAgent.Cli;
 
@@ -332,8 +333,9 @@ document.addEventListener("submit", function (event) {
 <dt>Current baseline</dt><dd><code>{{WebUtility.HtmlEncode(deterministic.BaselineRunId)}}</code></dd>
 <dt>Budget</dt><dd>mean {{Threshold(budget.MaxMeanRegressionPercent)}}, allocation {{Threshold(budget.MaxAllocationRegressionPercent)}} ({{WebUtility.HtmlEncode(deterministic.BudgetSource)}})</dd></dl>
 <section class="card measured"><h2>Measured result</h2><p class="verdict">{{verdict}}</p><p class="muted">Deterministic and authoritative: computed from archived measurements before any AI analysis.</p>
-<h3>Measured regressions</h3>{{MeasuredTable(deterministic.Check.Benchmarks.Where(x => !x.Result.Passed), budget)}}
-<h3>Measured within budget</h3>{{MeasuredTable(deterministic.Check.Benchmarks.Where(x => x.Result.Passed), budget)}}</section>
+<h3>Measured regressions</h3>{{MeasuredTable(deterministic.Check.Benchmarks.Where(x => x.Verdict == PerformanceVerdict.Fail), budget)}}
+<h3>Measured within budget</h3>{{MeasuredTable(deterministic.Check.Benchmarks.Where(x => x.Verdict == PerformanceVerdict.Pass), budget)}}
+<h3>Measured inconclusive</h3>{{MeasuredTable(deterministic.Check.Benchmarks.Where(x => x.Verdict == PerformanceVerdict.Inconclusive), budget)}}</section>
 {{ai}}
 <p class="muted">Analysis is not saved. Archive, baselines and history were not changed.</p>
 """);
@@ -368,7 +370,7 @@ document.addEventListener("submit", function (event) {
         var rows = string.Join("", items.Select(item =>
         {
             var (mean, allocation) = CheckFormatting.FormatMeasured(item.Result, budget);
-            return $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "FAIL")}</td><td>{WebUtility.HtmlEncode(mean)}</td><td>{WebUtility.HtmlEncode(allocation)}</td></tr>";
+            return $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{BenchmarkVerdictLabel(item.Verdict)}</td><td>{WebUtility.HtmlEncode(mean)}</td><td>{WebUtility.HtmlEncode(allocation)}</td></tr>";
         }));
         return rows.Length == 0
             ? "<p>None.</p>"
@@ -380,9 +382,25 @@ document.addEventListener("submit", function (event) {
 
     private static string RenderCheck(string baselineRunId, string candidateRunId, EvidenceCheckResult check, PerformanceBudget budget)
     {
-        var rows = string.Join("", check.Benchmarks.Select(item => $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{(item.Result.Passed ? "PASS" : "REGRESSION")}</td><td>{FormatMetric(item.Result.Comparison.Mean.Baseline)}</td><td>{FormatMetric(item.Result.Comparison.Mean.Candidate)}</td><td>{FormatPercent(item.Result.Comparison.Mean.PercentChange)}</td><td>{FormatMetric(item.Result.Comparison.AllocatedBytes.Baseline)}</td><td>{FormatMetric(item.Result.Comparison.AllocatedBytes.Candidate)}</td><td>{FormatPercent(item.Result.Comparison.AllocatedBytes.PercentChange)}</td></tr>"));
-        return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{(check.Passed ? "PASS" : "REGRESSION")}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">Budget: mean +{budget.MaxMeanRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}%, allocation +{budget.MaxAllocationRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}% (perfagent.json or defaults).</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean baseline (ns)</th><th>Mean candidate (ns)</th><th>Mean change</th><th>Allocation baseline (B/op)</th><th>Allocation candidate (B/op)</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
+        var rows = string.Join("", check.Benchmarks.Select(item => $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{CheckVerdictLabel(item.Verdict)}</td><td>{FormatMetric(item.Result.Comparison.Mean.Baseline)}</td><td>{FormatMetric(item.Result.Comparison.Mean.Candidate)}</td><td>{FormatPercent(item.Result.Comparison.Mean.PercentChange)}</td><td>{FormatMetric(item.Result.Comparison.AllocatedBytes.Baseline)}</td><td>{FormatMetric(item.Result.Comparison.AllocatedBytes.Candidate)}</td><td>{FormatPercent(item.Result.Comparison.AllocatedBytes.PercentChange)}</td></tr>"));
+        return Page("Regression check — Performance Agent", $"<p><a href=\"/\">Back to history</a></p><h1>{CheckVerdictLabel(check.Verdict)}</h1><p>Candidate <code>{WebUtility.HtmlEncode(candidateRunId)}</code> vs Current <code>{WebUtility.HtmlEncode(baselineRunId)}</code></p><p class=\"muted\">Budget: mean +{budget.MaxMeanRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}%, allocation +{budget.MaxAllocationRegressionPercent?.ToString("0.##", CultureInfo.InvariantCulture) ?? "not configured"}% (perfagent.json or defaults).</p><table><thead><tr><th>Benchmark</th><th>Status</th><th>Mean baseline (ns)</th><th>Mean candidate (ns)</th><th>Mean change</th><th>Allocation baseline (B/op)</th><th>Allocation candidate (B/op)</th><th>Allocation change</th></tr></thead><tbody>{rows}</tbody></table>");
     }
+
+    private static string BenchmarkVerdictLabel(PerformanceVerdict verdict) => verdict switch
+    {
+        PerformanceVerdict.Pass => "PASS",
+        PerformanceVerdict.Fail => "FAIL",
+        PerformanceVerdict.Inconclusive => "INCONCLUSIVE",
+        _ => "INCONCLUSIVE"
+    };
+
+    private static string CheckVerdictLabel(PerformanceVerdict verdict) => verdict switch
+    {
+        PerformanceVerdict.Pass => "PASS",
+        PerformanceVerdict.Fail => "REGRESSION",
+        PerformanceVerdict.Inconclusive => "INCONCLUSIVE",
+        _ => "INCONCLUSIVE"
+    };
 
     private static string FormatMetric(double? value) =>
         value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "Unavailable";
