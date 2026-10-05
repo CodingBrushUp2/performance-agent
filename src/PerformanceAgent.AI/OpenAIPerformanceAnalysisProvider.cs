@@ -52,13 +52,13 @@ public sealed class OpenAIPerformanceAnalysisProvider : IPerformanceAnalysisProv
     {
         if (string.IsNullOrWhiteSpace(model))
             throw new InvalidOperationException(
-                "AI analysis requires a model. Set \"ai.model\" in perfagent.json; no default model is assumed.");
+                "AI analysis requires a model. Set \"ai.model\" in the user config or workspace perfagent.json; no default model is assumed.");
 
         var apiKey = getEnvironmentVariable(ApiKeyEnvironmentVariable);
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException(
                 $"AI analysis with provider 'openai' requires the {ApiKeyEnvironmentVariable} environment variable. " +
-                "API keys are never read from perfagent.json.");
+                "API keys are never read from Performance Agent configuration files.");
 
         model = model.Trim();
         return new(createChatClient(model, apiKey), model, DefaultTimeout);
@@ -116,7 +116,7 @@ public sealed class OpenAIPerformanceAnalysisProvider : IPerformanceAnalysisProv
     internal static string DescribeFailure(int status) => status switch
     {
         401 or 403 => $"OpenAI rejected the credential (HTTP {status}). Check the {ApiKeyEnvironmentVariable} environment variable.",
-        404 => "OpenAI did not find the configured model (HTTP 404). Check \"ai.model\" in perfagent.json.",
+        404 => "OpenAI did not find the configured model (HTTP 404). Check \"ai.model\" in the user config or workspace perfagent.json.",
         429 => "OpenAI rate limit or quota exceeded (HTTP 429). Retry later.",
         400 => "OpenAI rejected the analysis request (HTTP 400). The configured model may not support structured output.",
         0 => "OpenAI could not be reached. Check network connectivity and retry.",
