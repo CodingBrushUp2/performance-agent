@@ -2,6 +2,7 @@ using System.Text.Json;
 using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Evidence;
 using PerformanceAgent.Core.Measurements;
+using PerformanceAgent.Core.Quality;
 using PerformanceAgent.Core.Verdicts;
 using Xunit;
 
@@ -47,6 +48,13 @@ public sealed class CheckVerdictJsonWriterTests
         var benchmark = Assert.Single(checkJson.GetProperty("benchmarks").EnumerateArray());
         Assert.Equal("Sample.Work", benchmark.GetProperty("name").GetString());
         Assert.Equal("fail", benchmark.GetProperty("verdict").GetString());
+
+        var meanDecision = benchmark.GetProperty("meanDecision");
+        Assert.Equal("conclusiveExceededBudget", meanDecision.GetProperty("status").GetString());
+        Assert.True(meanDecision.GetProperty("minimumRegressionPercent").GetDouble() > 5);
+        Assert.True(meanDecision.GetProperty("maximumRegressionPercent").GetDouble() > 5);
+        Assert.Equal(99.9, meanDecision.GetProperty("confidenceLevelPercent").GetDouble());
+        Assert.Equal(JsonValueKind.Null, meanDecision.GetProperty("reason").ValueKind);
 
         var mean = benchmark.GetProperty("mean");
         Assert.Equal(100, mean.GetProperty("baseline").GetDouble());
@@ -131,6 +139,19 @@ public sealed class CheckVerdictJsonWriterTests
     private static BenchmarkEvidence Evidence(double meanNanoseconds, long? allocatedBytes) =>
         new(
             "1.0",
-            [new BenchmarkMeasurement("Sample.Work", meanNanoseconds, allocatedBytes)],
+            [
+                new BenchmarkMeasurement(
+                    "Sample.Work",
+                    meanNanoseconds,
+                    allocatedBytes,
+                    new BenchmarkStatistics(
+                        15,
+                        meanNanoseconds,
+                        0.1,
+                        0.03,
+                        0,
+                        Math.Max(0, meanNanoseconds - 0.1),
+                        meanNanoseconds + 0.1))
+            ],
             Environment);
 }
