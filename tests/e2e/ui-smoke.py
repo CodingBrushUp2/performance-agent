@@ -50,7 +50,8 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
                          "standardErrorNanoseconds": 0.03,
                          "outlierCount": 0,
                          "confidenceIntervalLowerNanoseconds": 250.15 if run_id == "run-regression" else 100.025,
-                         "confidenceIntervalUpperNanoseconds": 250.35 if run_id == "run-regression" else 100.225
+                         "confidenceIntervalUpperNanoseconds": 250.35 if run_id == "run-regression" else 100.225,
+                         "confidenceLevelPercent": 99.9
                      }}]}
         }))
     original_archive = {p.name: p.read_bytes() for p in archive.iterdir()}
