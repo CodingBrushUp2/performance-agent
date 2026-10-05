@@ -675,9 +675,11 @@ static bool CheckEvidence(
     return check.Passed;
 }
 
-static void PrintCheckUsage() =>
-    Console.Error.WriteLine(
-        "Usage: perfagent check [-b|--baseline <baseline.json> | -r|--run-id <run-id>] --candidate <candidate.json> (--budget <budget.json> | <max-mean-regression-%> <max-allocation-regression-%>)");
+static void PrintCheckUsage()
+{
+    PerformanceAgent.Cli.HelpContent.TryRender(["check", "--help"], out var help);
+    Console.Error.Write(help);
+}
 
 
 static string FormatBudget(double? threshold, bool exceeded) => PerformanceAgent.Cli.CheckFormatting.FormatBudget(threshold, exceeded);
