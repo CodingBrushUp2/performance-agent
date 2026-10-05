@@ -1,0 +1,41 @@
+name: V0.4 PA1001 Targeted Validation
+
+on:
+  pull_request:
+
+jobs:
+  validate-pa1001:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - run: dotnet restore PerformanceAgent.sln
+      - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
+      - run: dotnet test tests/unit/PerformanceAgent.BenchmarkDotNet.Tests/PerformanceAgent.BenchmarkDotNet.Tests.csproj --configuration Release --no-build
+      - name: Validate PA1001 warning
+        shell: bash
+        run: |
+          output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/SuspiciousBenchmarks/SuspiciousBenchmarks.csproj)"
+          grep -F "Validation: VALID" <<< "$output"
+          grep -F "[WARNING] PerformanceAgent.PA1001" <<< "$output"
+      - name: Validate invalid declaration
+        shell: bash
+        run: |
+          set +e
+          output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/InvalidBenchmarks/InvalidBenchmarks.csproj 2>&1)"
+          code=$?
+          set -e
+          test "$code" -eq 1
+          grep -F "Validation: INVALID" <<< "$output"
+          grep -F "Method must be public" <<< "$output"
+      - name: Validate build-error diagnostics
+        shell: bash
+        run: |
+          set +e
+          output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/BrokenBenchmarks/BrokenBenchmarks.csproj 2>&1)"
+          code=$?
+          set -e
+          test "$code" -eq 2
+          grep -F "error CS" <<< "$output"
