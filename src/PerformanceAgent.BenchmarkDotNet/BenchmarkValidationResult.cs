@@ -15,4 +15,5 @@ public sealed record BenchmarkValidationDiagnostic(
 
 public sealed record BenchmarkValidationResult(
     bool IsValid,
-    IReadOnlyList<BenchmarkValidationDiagnostic> Diagnostics);
+    IReadOnlyList<BenchmarkValidationDiagnostic> Diagnostics,
+    IReadOnlyList<string> BenchmarkNames);
