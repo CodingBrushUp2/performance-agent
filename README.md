@@ -237,6 +237,8 @@ separately from the measured result, HTML-encoded, and not saved. See
 
 A deterministic GitHub Actions example is included in `.github/workflows/performance-gate-demo.yml`. It demonstrates a version-controlled baseline, candidate evidence, and performance budget without depending on benchmark timing noise. See [GitHub performance regression gate](docs/github-performance-gate.md).
 
+For coding agents and CI consumers, `perfagent check ... --format json` emits the versioned deterministic PASS/FAIL/INCONCLUSIVE contract. See [Check verdict JSON contract](docs/check-verdict-json.md).
+
 ## Non-goals for V1
 
 No hosted dashboard, accounts, database, IDE extension, distributed runners, or mandatory cloud service.
