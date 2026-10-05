@@ -104,7 +104,7 @@ static async Task<int> ValidateAsync(string assemblyPath)
     try
     {
         var assembly = LoadBenchmarkAssembly(assemblyPath);
-        discovery = new BenchmarkDotNetRunner().DiscoverBenchmarks(assembly);
+        discovery = new BenchmarkDotNetRunner().DiscoverBenchmarksForValidation(assembly);
     }
     catch (Exception exception) when (exception is IOException or BadImageFormatException or TypeLoadException or InvalidOperationException)
     {
