@@ -7,7 +7,7 @@ cd "$repo_root"
 rm -rf ./.tools ./artifacts
 dotnet build PerformanceAgent.sln -c Release
 dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release --no-build -o artifacts
-dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.2.0 --add-source ./artifacts
+dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.3.0 --add-source ./artifacts
 
 echo
 echo "== Calibrating quick-start benchmark =="

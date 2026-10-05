@@ -25,7 +25,7 @@ jobs:
       - name: Pack and smoke-test dotnet tool
         run: |
           dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj --configuration Release --no-build --output artifacts
-          dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.2.0 --add-source ./artifacts
+          dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.3.0 --add-source ./artifacts
           ./.tools/perfagent --help | grep -F "Commands:"
           ./.tools/perfagent check --help | grep -F "The candidate is an evidence JSON file."
           ./.tools/perfagent compare ToolSmoke 100 90 1000 900 markdown | grep -F "| ToolSmoke | Mean (ns) | 100 | 90 | -10% | Comparable |"
