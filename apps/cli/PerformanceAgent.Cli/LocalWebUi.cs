@@ -103,7 +103,24 @@ document.addEventListener("submit", function (event) {
         app.MapGet("/configuration", () =>
         {
             var effective = configuration.Inspect();
-            var content = $"<p><a href=\"/\">Back to history</a></p><h1>Effective configuration</h1><dl><dt>Configuration file</dt><dd>{WebUtility.HtmlEncode(effective.Path)}</dd><dt>Budget source</dt><dd>{WebUtility.HtmlEncode(effective.BudgetSource)}</dd><dt>Max mean regression (%)</dt><dd>{effective.Budget.MaxMeanRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd><dt>Max allocation regression (%)</dt><dd>{effective.Budget.MaxAllocationRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}</dd><dt>AI provider</dt><dd>{WebUtility.HtmlEncode(effective.AiProvider)}</dd><dt>AI model</dt><dd>{WebUtility.HtmlEncode(effective.AiModel ?? "Not configured")}</dd></dl><p>Explicit CLI check thresholds or --budget override workspace settings. Do not store secrets in perfagent.json.</p><p class=\"muted\">AI credentials are read only from the environment (OpenAI: OPENAI_API_KEY) and are never displayed here.</p>";
+            var content = $"""
+<p><a href="/">Back to dashboard</a> · <a href="/help">Help</a></p>
+<h1>Effective configuration</h1>
+<dl>
+<dt>Workspace configuration</dt><dd>{{WebUtility.HtmlEncode(effective.Path)}}</dd>
+<dt>User AI configuration</dt><dd>{{WebUtility.HtmlEncode(effective.UserPath)}}</dd>
+<dt>Budget source</dt><dd>{{WebUtility.HtmlEncode(effective.BudgetSource)}}</dd>
+<dt>Max mean regression (%)</dt><dd>{{effective.Budget.MaxMeanRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}}</dd>
+<dt>Max allocation regression (%)</dt><dd>{{effective.Budget.MaxAllocationRegressionPercent?.ToString(CultureInfo.InvariantCulture) ?? "Not configured"}}</dd>
+<dt>AI provider</dt><dd>{{WebUtility.HtmlEncode(effective.AiProvider)}}</dd>
+<dt>AI provider source</dt><dd>{{WebUtility.HtmlEncode(effective.AiProviderSource)}}</dd>
+<dt>AI model</dt><dd>{{WebUtility.HtmlEncode(effective.AiModel ?? "Not configured")}}</dd>
+<dt>AI model source</dt><dd>{{WebUtility.HtmlEncode(effective.AiModelSource)}}</dd>
+</dl>
+<p>Precedence: built-in defaults &lt; user AI configuration &lt; workspace <code>perfagent.json</code> &lt; explicit CLI overrides where supported.</p>
+<p>Workspace performance budget remains project policy. User-level configuration supplies non-secret AI defaults only.</p>
+<p class="muted">AI credentials are read only from the environment (OpenAI: OPENAI_API_KEY) and are never displayed here or stored in configuration.</p>
+""";
             return Results.Content(Page("Effective configuration — Performance Agent", content), "text/html; charset=utf-8");
         });
         app.MapGet("/", async (HttpContext context) =>
