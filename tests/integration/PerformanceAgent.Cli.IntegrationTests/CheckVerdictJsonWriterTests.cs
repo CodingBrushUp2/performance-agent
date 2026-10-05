@@ -151,7 +151,8 @@ public sealed class CheckVerdictJsonWriterTests
                         0.03,
                         0,
                         Math.Max(0, meanNanoseconds - 0.1),
-                        meanNanoseconds + 0.1))
+                        meanNanoseconds + 0.1,
+                        99.9))
             ],
             Environment);
 }
