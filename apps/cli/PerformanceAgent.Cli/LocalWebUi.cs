@@ -78,6 +78,28 @@ internal static class LocalWebUi
                 await context.Response.WriteAsync($"Unable to complete the request: {exception.Message}\nReload history to check the active baseline before retrying. No administrator/root privileges are required.");
             }
         });
+        app.MapGet("/assets/ui.js", () => Results.Text("""
+document.addEventListener("submit", function (event) {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches("[data-analysis-form]")) return;
+    event.preventDefault();
+    if (form.dataset.submitting === "true") return;
+    form.dataset.submitting = "true";
+    const button = form.querySelector("[data-analysis-button]");
+    const status = form.querySelector("[data-analysis-status]");
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Analyzing...";
+        button.setAttribute("aria-busy", "true");
+    }
+    if (status) status.hidden = false;
+    window.setTimeout(function () { HTMLFormElement.prototype.submit.call(form); }, 0);
+});
+""", "text/javascript; charset=utf-8"));
+
+        app.MapGet("/help", () =>
+            Results.Content(Page("Help — Performance Agent", HelpContent.RenderWebHelp()), "text/html; charset=utf-8"));
+
         app.MapGet("/configuration", () =>
         {
             var effective = configuration.Inspect();
