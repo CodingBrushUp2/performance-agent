@@ -35,7 +35,7 @@ public sealed class BenchmarkEvidenceTests
                     "Sum",
                     12.5,
                     64,
-                    new BenchmarkStatistics(15, 12.1, 0.8, 0.2, 1, 11.8, 13.2))
+                    new BenchmarkStatistics(15, 12.1, 0.8, 0.2, 1, 11.8, 13.2, 99.9))
             ]);
 
         var json = new JsonBenchmarkEvidenceWriter().Write(evidence);
@@ -49,6 +49,7 @@ public sealed class BenchmarkEvidenceTests
         Assert.Equal(1, statistics.OutlierCount);
         Assert.Equal(11.8, statistics.ConfidenceIntervalLowerNanoseconds);
         Assert.Equal(13.2, statistics.ConfidenceIntervalUpperNanoseconds);
+        Assert.Equal(99.9, statistics.ConfidenceLevelPercent);
     }
 
     [Fact]
