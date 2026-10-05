@@ -250,14 +250,15 @@ document.addEventListener("submit", function (event) {
     private static string Render(IReadOnlyList<ArchivedBenchmarkRun> runs, string? current, string? anchor, IReadOnlyList<BaselineEvent> events, AntiforgeryTokenSet token, WorkspaceStorageStatus storage)
     {
         var rows = string.Join("", runs.OrderByDescending(x => x.Timestamp).Select(run =>
-            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a> · <a href=\"/runs/{Uri.EscapeDataString(run.RunId)}/check-current\">Check Current</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionForm(run.RunId, "current", "Make Current", token) + SelectionForm(run.RunId, "anchor", "Make Anchor", token) : "Storage is not writable")}</td></tr>"));
+            $"<tr><td><code>{WebUtility.HtmlEncode(run.RunId)}</code><br><a href=\"/runs/{Uri.EscapeDataString(run.RunId)}\">View Details</a> · <a href=\"/runs/{Uri.EscapeDataString(run.RunId)}/check-current\">Check Current</a></td><td>{run.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{Label(run.RunId, current, anchor)}</td><td>{(storage.Writable ? SelectionActions(run.RunId, current, anchor, token) : "Storage is not writable")}</td></tr>"));
         if (rows.Length == 0) rows = "<tr><td colspan=\"4\">No benchmark runs yet.</td></tr>";
         var eventRows = string.Join("", events.Reverse().Select(item =>
             $"<tr><td>{item.Timestamp.ToString("O", CultureInfo.InvariantCulture)}</td><td>{item.Kind}</td><td>{item.Type}</td><td><code>{WebUtility.HtmlEncode(item.PreviousRunId ?? "—")}</code> → <code>{WebUtility.HtmlEncode(item.RunId)}</code></td></tr>"));
         if (eventRows.Length == 0) eventRows = "<tr><td colspan=\"4\">No baseline events yet.</td></tr>";
         return Page("Performance Agent", $$"""
 <h1>Performance Agent</h1><p class="muted">Local performance evidence. CLI remains the primary interface.</p>
-<p><a href="/configuration">Effective configuration</a></p>
+<p><a href="/configuration">Effective configuration</a> · <a href="/help">Help / Getting Started</a></p>
+{{HelpContent.RenderGettingStartedHtml()}}
 <section class="card"><h2>Workspace storage</h2><dl>
 <dt>Workspace</dt><dd>{{WebUtility.HtmlEncode(storage.WorkspaceDirectory)}}</dd>
 <dt>Storage</dt><dd>{{WebUtility.HtmlEncode(storage.StateDirectory)}}</dd>
@@ -409,6 +410,16 @@ dt{font-weight:600;margin-top:10px}dd{margin:4px 0;overflow-wrap:anywhere}p[role
 """;
         return template.Replace("__TITLE__", WebUtility.HtmlEncode(title), StringComparison.Ordinal)
             .Replace("__CONTENT__", content, StringComparison.Ordinal);
+    }
+
+    private static string SelectionActions(string runId, string? current, string? anchor, AntiforgeryTokenSet token)
+    {
+        var actions = new List<string>();
+        if (!string.Equals(runId, current, StringComparison.Ordinal))
+            actions.Add(SelectionForm(runId, "current", "Make Current", token));
+        if (!string.Equals(runId, anchor, StringComparison.Ordinal))
+            actions.Add(SelectionForm(runId, "anchor", "Make Anchor", token));
+        return actions.Count == 0 ? "—" : string.Join("", actions);
     }
 
     private static string SelectionForm(string runId, string kind, string label, AntiforgeryTokenSet token) =>
