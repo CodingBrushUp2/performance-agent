@@ -7,4 +7,5 @@ public sealed record BenchmarkStatistics(
     double? StandardErrorNanoseconds,
     int OutlierCount,
     double? ConfidenceIntervalLowerNanoseconds = null,
-    double? ConfidenceIntervalUpperNanoseconds = null);
+    double? ConfidenceIntervalUpperNanoseconds = null,
+    double? ConfidenceLevelPercent = null);
