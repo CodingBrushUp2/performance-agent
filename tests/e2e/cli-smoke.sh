@@ -51,6 +51,15 @@ check_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configurati
 grep -F "MapOrder: PASS" <<< "$check_output"
 grep -F "Overall: PASS" <<< "$check_output"
 
+check_json="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10 --format json)"
+grep -F '"schemaVersion": "1.0"' <<< "$check_json"
+grep -F '"verdict": "pass"' <<< "$check_json"
+grep -F '"candidate":' <<< "$check_json"
+grep -F '"kind": "explicit"' <<< "$check_json"
+grep -F '"name": "MapOrder"' <<< "$check_json"
+grep -F '"status": "comparable"' <<< "$check_json"
+grep -F '"budgetExceeded": false' <<< "$check_json"
+
 cat > "$candidate_file" <<'JSON'
 {"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":106,"allocatedBytesPerOperation":1070}]}
 JSON
@@ -62,6 +71,14 @@ set -e
 test "$failure_code" -eq 1
 grep -F "MapOrder: FAIL" <<< "$failure_output"
 grep -F "Overall: FAIL" <<< "$failure_output"
+
+set +e
+failure_json="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10 --format json)"
+failure_json_code=$?
+set -e
+test "$failure_json_code" -eq 1
+grep -F '"verdict": "fail"' <<< "$failure_json"
+grep -F '"budgetExceeded": true' <<< "$failure_json"
 
 cat > "$candidate_file" <<'JSON'
 {"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":null}]}
