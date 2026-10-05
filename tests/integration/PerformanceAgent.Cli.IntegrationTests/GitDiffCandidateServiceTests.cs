@@ -62,6 +62,30 @@ public sealed class GitDiffCandidateServiceTests
         Assert.Equal(1, second.ChangedLines);
     }
 
+    [Theory]
+    [InlineData("src/OrderService.cs", true)]
+    [InlineData("tests/OrderServiceTests.cs", false)]
+    [InlineData("test/OrderService.cs", false)]
+    [InlineData("src/Generated.g.cs", false)]
+    [InlineData("src/Generated.g.i.cs", false)]
+    [InlineData("src/Form.Designer.cs", false)]
+    [InlineData("src/obj/Generated.cs", false)]
+    [InlineData("src/bin/Generated.cs", false)]
+    [InlineData("src/OrderServiceTest.cs", false)]
+    public void IsEligiblePath_FiltersObviousNonProductionNoise(string path, bool expected)
+    {
+        Assert.Equal(expected, GitDiffCandidateService.IsEligiblePath(path));
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_RejectsGitRefsThatLookLikeOptions()
+    {
+        var error = await Assert.ThrowsAsync<ArgumentException>(() =>
+            new GitDiffCandidateService().DiscoverAsync("--help"));
+
+        Assert.Contains("beginning with '-'", error.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task DiscoverAsync_UsesRealGitDiffAndRanksTouchedMembers()
     {
