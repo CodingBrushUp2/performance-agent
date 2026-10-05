@@ -25,10 +25,13 @@ warning_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --
 grep -F "Validation: VALID" <<< "$warning_validate_output"
 grep -F "[WARNING] PerformanceAgent.PA1001" <<< "$warning_validate_output"
 grep -F "ConstantWork" <<< "$warning_validate_output"
+grep -F "[WARNING] PerformanceAgent.PA1002" <<< "$warning_validate_output"
+grep -F "ManualTiming" <<< "$warning_validate_output"
 
 warning_validate_json="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/SuspiciousBenchmarks/SuspiciousBenchmarks.csproj --format json)"
 grep -F '"valid": true' <<< "$warning_validate_json"
 grep -F '"source": "PerformanceAgent.PA1001"' <<< "$warning_validate_json"
+grep -F '"source": "PerformanceAgent.PA1002"' <<< "$warning_validate_json"
 grep -F '"severity": "warning"' <<< "$warning_validate_json"
 
 set +e

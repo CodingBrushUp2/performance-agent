@@ -57,3 +57,29 @@ measurement.
 
 PA1001 is intentionally conservative and narrow. It does not attempt to prove general
 dead-code elimination or constant folding, and it is not an error.
+
+
+### PA1002: manual timing inside benchmark
+
+PA1002 warns when a benchmark method directly calls timing APIs on
+`System.Diagnostics.Stopwatch`, such as `Start`, `Restart`, `StartNew`, or
+`GetTimestamp`.
+
+Example:
+
+```csharp
+[Benchmark]
+public long Work()
+{
+    var start = Stopwatch.GetTimestamp();
+    DoWork();
+    return Stopwatch.GetTimestamp() - start;
+}
+```
+
+BenchmarkDotNet already owns the measurement clock. Nested/manual timing usually makes
+the benchmark measure a different thing than intended and complicates interpretation.
+
+PA1002 remains a warning because benchmarking Stopwatch itself can be intentional. The
+rule is deliberately limited to direct Stopwatch calls in the benchmark body; it does
+not recursively inspect helper methods.

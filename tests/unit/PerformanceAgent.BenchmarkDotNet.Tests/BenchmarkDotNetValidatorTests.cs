@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BenchmarkDotNet.Attributes;
 using PerformanceAgent.BenchmarkDotNet;
 using Xunit;
@@ -43,6 +44,41 @@ public sealed class BenchmarkDotNetValidatorTests
     }
 
     [Fact]
+    public void ManualStopwatchTiming_ProducesPA1002WithoutInvalidatingBenchmark()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(ManualTimingBenchmark));
+
+        Assert.True(result.IsValid);
+        var warning = Assert.Single(result.Diagnostics, diagnostic =>
+            diagnostic.Source == "PerformanceAgent.PA1002");
+
+        Assert.Equal(BenchmarkValidationSeverity.Warning, warning.Severity);
+        Assert.Equal(nameof(ManualTimingBenchmark.Work), warning.BenchmarkMethod);
+        Assert.Contains("Stopwatch", warning.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ManualTimingAfterBranchesAndLocals_IsStillDetected()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(BranchedManualTimingBenchmark));
+
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Source == "PerformanceAgent.PA1002"
+                          && diagnostic.BenchmarkMethod == nameof(BranchedManualTimingBenchmark.Work));
+    }
+
+    [Fact]
+    public void NormalBenchmark_DoesNotProducePA1002()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(NonTrivialBenchmark));
+
+        Assert.DoesNotContain(
+            result.Diagnostics,
+            diagnostic => diagnostic.Source == "PerformanceAgent.PA1002");
+    }
+
+    [Fact]
     public void PrivateBenchmarkMethod_IsReportedAsInvalid()
     {
         var result = new BenchmarkDotNetValidator().Validate(typeof(PrivateBenchmark));
@@ -79,6 +115,37 @@ public sealed class BenchmarkDotNetValidatorTests
 
         [Benchmark]
         public int Work() => _value + 1;
+    }
+
+    public class BranchedManualTimingBenchmark
+    {
+        private int _value = 41;
+
+        [Benchmark]
+        public long Work()
+        {
+            var value = _value;
+            if ((value & 1) == 0)
+                value += 2;
+            else
+                value += 1;
+
+            var start = Stopwatch.GetTimestamp();
+            return Stopwatch.GetTimestamp() - start + value;
+        }
+    }
+
+    public class ManualTimingBenchmark
+    {
+        private int _value = 41;
+
+        [Benchmark]
+        public long Work()
+        {
+            var start = Stopwatch.GetTimestamp();
+            var value = _value + 1;
+            return Stopwatch.GetTimestamp() - start + value;
+        }
     }
 
     public class PrivateBenchmark
