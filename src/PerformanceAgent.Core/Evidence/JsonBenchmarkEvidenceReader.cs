@@ -82,11 +82,9 @@ public sealed class JsonBenchmarkEvidenceReader
                 var upper = statistics.ConfidenceIntervalUpperNanoseconds;
                 if ((lower is null) != (upper is null))
                     throw new InvalidOperationException($"Benchmark '{measurement.Name}' must provide both confidence interval bounds or neither.");
-                if (lower is { } lowerValue
-                    && (!double.IsFinite(lowerValue) || lowerValue < 0))
+                if (lower is { } lowerValue && !double.IsFinite(lowerValue))
                     throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid confidence interval lower bound.");
-                if (upper is { } upperValue
-                    && (!double.IsFinite(upperValue) || upperValue < 0))
+                if (upper is { } upperValue && !double.IsFinite(upperValue))
                     throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid confidence interval upper bound.");
                 if (lower is { } validLower && upper is { } validUpper && validLower > validUpper)
                     throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid confidence interval range.");
