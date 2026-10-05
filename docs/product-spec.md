@@ -1,6 +1,6 @@
-# Product Specification v0.1
+# Product Specification v0.3
 
-Status: .NET V0.1 release candidate
+Status: .NET V0.3 release candidate
 
 ## Product
 
@@ -32,7 +32,9 @@ Compare two benchmarkable .NET implementations and report timing and allocation 
 
 ### Detect regression
 
-Compare a candidate result with a baseline and determine whether the configured performance budget is exceeded.
+Compare a candidate result with a baseline and return a trusted `PASS`, `FAIL`, or
+`INCONCLUSIVE` verdict. Mean timing decisions account for BenchmarkDotNet measurement
+uncertainty, and incompatible environments do not silently pass.
 
 ### Produce portable evidence
 
@@ -73,10 +75,11 @@ Exact arguments remain implementation details until the first vertical slice pro
 
 ## V1 outputs
 
-- JSON evidence/result document.
-- Markdown report suitable for terminals, CI artifacts, and pull requests.
-- Explicit environment and validation information.
-- Clear distinction between measured facts and AI interpretation.
+- normalized benchmark evidence with timing statistics and environment metadata;
+- stable machine-readable JSON contracts for check and calibration workflows;
+- explicit `PASS`, `FAIL`, and `INCONCLUSIVE` deterministic verdicts;
+- Markdown/HTML human-readable reports;
+- clear distinction between measured facts and AI interpretation.
 
 ## Out of scope for V1
 
