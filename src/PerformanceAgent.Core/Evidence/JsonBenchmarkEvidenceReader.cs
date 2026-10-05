@@ -92,6 +92,9 @@ public sealed class JsonBenchmarkEvidenceReader
                     && upper is { } intervalUpper
                     && (measurement.MeanNanoseconds < intervalLower || measurement.MeanNanoseconds > intervalUpper))
                     throw new InvalidOperationException($"Benchmark '{measurement.Name}' mean must fall inside its confidence interval.");
+                if (statistics.ConfidenceLevelPercent is { } confidenceLevel
+                    && (!double.IsFinite(confidenceLevel) || confidenceLevel <= 0 || confidenceLevel >= 100))
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid confidence level.");
             }
         }
     }
