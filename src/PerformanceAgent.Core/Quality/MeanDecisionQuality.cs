@@ -12,7 +12,7 @@ public sealed record MeanDecisionQuality(
     MeanDecisionQualityStatus Status,
     double? MinimumRegressionPercent,
     double? MaximumRegressionPercent,
-    double? ConfidenceLevelPercent,
+    double? SourceConfidenceLevelPercent,
     string? Reason)
 {
     public bool IsInconclusive => Status == MeanDecisionQualityStatus.Inconclusive;
