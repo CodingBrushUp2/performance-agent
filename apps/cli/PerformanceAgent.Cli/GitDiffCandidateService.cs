@@ -36,10 +36,9 @@ internal sealed class GitDiffCandidateService
         string? repositoryPath = null,
         bool workingTree = false)
     {
-        if (string.IsNullOrWhiteSpace(baseRef))
-            throw new ArgumentException("A non-empty git base ref is required.", nameof(baseRef));
-        if (!workingTree && string.IsNullOrWhiteSpace(headRef))
-            throw new ArgumentException("A non-empty git head ref is required.", nameof(headRef));
+        ValidateGitRef(baseRef, nameof(baseRef));
+        if (!workingTree)
+            ValidateGitRef(headRef, nameof(headRef));
         if (limit is < 1 or > 20)
             throw new ArgumentOutOfRangeException(nameof(limit), "Candidate limit must be between 1 and 20.");
 
@@ -83,6 +82,9 @@ internal sealed class GitDiffCandidateService
         foreach (var file in changedFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!IsEligiblePath(file.Path))
+                continue;
+
             var fullPath = Path.GetFullPath(
                 file.Path.Replace('/', Path.DirectorySeparatorChar),
                 repositoryRoot);
@@ -122,6 +124,37 @@ internal sealed class GitDiffCandidateService
             workingTree ? "WORKTREE" : headRef,
             limit,
             ranked);
+    }
+
+    internal static bool IsEligiblePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        var normalized = path.Replace('\\', '/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Any(segment =>
+                segment.Equals("test", StringComparison.OrdinalIgnoreCase)
+                || segment.Equals("tests", StringComparison.OrdinalIgnoreCase)
+                || segment.Equals("bin", StringComparison.OrdinalIgnoreCase)
+                || segment.Equals("obj", StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        var fileName = Path.GetFileName(normalized);
+        return fileName.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+            && !fileName.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase)
+            && !fileName.EndsWith(".g.i.cs", StringComparison.OrdinalIgnoreCase)
+            && !fileName.EndsWith(".designer.cs", StringComparison.OrdinalIgnoreCase)
+            && !fileName.EndsWith("Tests.cs", StringComparison.OrdinalIgnoreCase)
+            && !fileName.EndsWith("Test.cs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ValidateGitRef(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("A non-empty git ref is required.", parameterName);
+        if (value.StartsWith("-", StringComparison.Ordinal))
+            throw new ArgumentException("Git refs beginning with '-' are not accepted.", parameterName);
     }
 
     internal static IReadOnlyList<ChangedFile> ParseUnifiedDiff(string diff)
