@@ -109,7 +109,7 @@ internal sealed class ProjectRunner
 
         if (targetPathResult.ExitCode != 0)
             return new ProjectValidationResult(
-                targetPathResult.ExitCode,
+                2,
                 "",
                 targetPathResult.StandardOutput,
                 targetPathResult.StandardError);
@@ -131,7 +131,7 @@ internal sealed class ProjectRunner
 
         if (build.ExitCode != 0)
             return new ProjectValidationResult(
-                build.ExitCode,
+                2,
                 "",
                 build.StandardOutput,
                 build.StandardError);
