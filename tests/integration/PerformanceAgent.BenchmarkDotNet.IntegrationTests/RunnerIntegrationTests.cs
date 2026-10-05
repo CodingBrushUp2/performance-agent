@@ -30,6 +30,12 @@ public sealed class RunnerIntegrationTests
         Assert.Equal($"{typeof(SampleBenchmark).FullName}.{nameof(SampleBenchmark.Sum)}", measurement.Name);
         Assert.True(measurement.MeanNanoseconds >= 0);
         Assert.True(measurement.AllocatedBytesPerOperation is null or >= 0);
+        var statistics = Assert.IsType<PerformanceAgent.Core.Measurements.BenchmarkStatistics>(measurement.Statistics);
+        Assert.True(statistics.SampleCount > 0);
+        Assert.True(statistics.MedianNanoseconds >= 0);
+        Assert.True(statistics.StandardDeviationNanoseconds is null or >= 0);
+        Assert.True(statistics.StandardErrorNanoseconds is null or >= 0);
+        Assert.InRange(statistics.OutlierCount, 0, statistics.SampleCount);
     }
 
     [Fact]
