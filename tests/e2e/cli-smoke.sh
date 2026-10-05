@@ -29,6 +29,12 @@ grep -F '"environment":' <<< "$run_output"
 grep -F '"runtime":' <<< "$run_output"
 grep -F '"operatingSystem":' <<< "$run_output"
 grep -F '"architecture":' <<< "$run_output"
+grep -F '"statistics":' <<< "$run_output"
+grep -F '"sampleCount":' <<< "$run_output"
+grep -F '"medianNanoseconds":' <<< "$run_output"
+grep -F '"standardDeviationNanoseconds":' <<< "$run_output"
+grep -F '"standardErrorNanoseconds":' <<< "$run_output"
+grep -F '"outlierCount":' <<< "$run_output"
 
 if grep -Fq '// BenchmarkDotNet' <<< "$run_output"; then
   echo "BenchmarkDotNet diagnostic output leaked into normalized evidence" >&2
