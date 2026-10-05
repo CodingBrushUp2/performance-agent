@@ -5,35 +5,33 @@ namespace PerformanceAgent.BenchmarkDotNet;
 
 public sealed class BenchmarkDotNetValidator
 {
-    public async Task<BenchmarkValidationResult> ValidateAsync(
-        Type benchmarkType,
-        CancellationToken cancellationToken = default)
+    public BenchmarkValidationResult Validate(Type benchmarkType)
     {
         ArgumentNullException.ThrowIfNull(benchmarkType);
-        cancellationToken.ThrowIfCancellationRequested();
 
-        await using var runInfo = await BenchmarkConverter.TypeToBenchmarksAsync(
-            benchmarkType,
-            cancellationToken: cancellationToken);
-
-        var diagnostics = new List<BenchmarkValidationDiagnostic>();
-
-        foreach (var error in runInfo.DeclarationErrors)
+        BenchmarkRunInfo runInfo;
+        try
         {
-            diagnostics.Add(Map(
-                source: "BenchmarkDeclaration",
-                benchmarkType,
-                error));
+            runInfo = BenchmarkConverter.TypeToBenchmarks(benchmarkType);
+        }
+        catch (InvalidBenchmarkDeclarationException exception)
+        {
+            return new BenchmarkValidationResult(
+                false,
+                [
+                    new BenchmarkValidationDiagnostic(
+                        "BenchmarkDeclaration",
+                        BenchmarkValidationSeverity.Error,
+                        benchmarkType.FullName ?? benchmarkType.Name,
+                        null,
+                        exception.Message)
+                ]);
         }
 
+        var diagnostics = new List<BenchmarkValidationDiagnostic>();
         foreach (var validator in runInfo.Config.GetValidators())
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            await foreach (var error in validator
-                               .ValidateAsync(runInfo)
-                               .WithCancellation(cancellationToken)
-                               .ConfigureAwait(false))
+            foreach (var error in validator.Validate(runInfo))
             {
                 diagnostics.Add(Map(
                     validator.GetType().Name,
