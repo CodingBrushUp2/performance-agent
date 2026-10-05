@@ -7,7 +7,7 @@ namespace PerformanceAgent.Cli;
 internal enum ExperimentReadinessStatus
 {
     NeedsInput,
-    ReadyWithUnverifiedCoverage
+    ReadyWithUnverifiedAssumptions
 }
 
 internal sealed record ExperimentTarget(
@@ -41,6 +41,7 @@ internal sealed record ExperimentReadinessResult(
     string? CurrentBaselineRunId,
     BudgetReadiness Budget,
     string CoverageStatus,
+    string BaselineCompatibilityStatus,
     IReadOnlyList<string> Blockers,
     IReadOnlyList<string> NextActions);
 
@@ -180,7 +181,7 @@ internal sealed class ExperimentReadinessService
         return new ExperimentReadinessResult(
             "1.0",
             blockers.Count == 0
-                ? ExperimentReadinessStatus.ReadyWithUnverifiedCoverage
+                ? ExperimentReadinessStatus.ReadyWithUnverifiedAssumptions
                 : ExperimentReadinessStatus.NeedsInput,
             discovery.BaseRef,
             discovery.HeadRef,
@@ -190,6 +191,7 @@ internal sealed class ExperimentReadinessService
             currentBaselineRunId,
             budget,
             selected is null ? "not-assessed" : "unverified",
+            string.IsNullOrWhiteSpace(currentBaselineRunId) ? "not-assessed" : "unverified",
             blockers,
             nextActions);
     }
@@ -237,6 +239,7 @@ internal sealed class ExperimentReadinessService
         if (blockers.Count == 0)
         {
             actions.Add("Confirm that the benchmark project actually exercises the selected target; coverage is not verified by Performance Agent.");
+            actions.Add("Confirm that the selected Current baseline represents the same benchmark scenario; compatibility is not verified by readiness.");
             actions.Add($"Run 'perfagent run {benchmark.ProjectPath}', then check the archived candidate against Current.");
         }
 
