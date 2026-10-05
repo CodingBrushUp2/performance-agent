@@ -299,7 +299,8 @@ document.addEventListener("submit", function (event) {
 <section class="card"><h2>Measured result vs Current</h2><dl>
 <dt>Current baseline</dt><dd>{{(currentRunId is null ? "Not set" : $"<code>{WebUtility.HtmlEncode(currentRunId)}</code>")}}</dd>
 <dt>Deterministic result</dt><dd>{{measuredResult}}</dd></dl>
-<form method="post" action="/runs/{{Uri.EscapeDataString(run.RunId)}}/analyze"><input type="hidden" name="{{WebUtility.HtmlEncode(token.FormFieldName)}}" value="{{WebUtility.HtmlEncode(token.RequestToken)}}"><button type="submit">Analyze with AI</button></form>
+<form method="post" action="/runs/{{Uri.EscapeDataString(run.RunId)}}/analyze" data-analysis-form><input type="hidden" name="{{WebUtility.HtmlEncode(token.FormFieldName)}}" value="{{WebUtility.HtmlEncode(token.RequestToken)}}"><button type="submit" data-analysis-button>Analyze with AI</button><span class="muted analysis-status" data-analysis-status hidden>Analyzing with the configured provider...</span></form>
+<script src="/assets/ui.js" defer></script>
 <p class="muted">Sends this run's and the Current baseline's normalized measurements, the budget and the measured verdicts to the configured AI provider (<a href="/configuration">ai.provider / ai.model</a>). Provider charges may apply. The result is advisory, not saved, and never changes the measured result.</p></section>
 """);
     }
@@ -402,10 +403,12 @@ h1{font-size:28px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16
 .card,table{background:white;border:1px solid #e5e7eb;border-radius:10px}.card{padding:18px}.muted{color:#6b7280}
 table{width:100%;border-collapse:collapse;overflow:hidden}th,td{text-align:left;padding:13px;border-bottom:1px solid #eee}th{background:#fafafa}
 .badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef2ff;margin-right:5px}code{font-size:13px}
-form{display:inline-block;margin:3px}button{cursor:pointer;padding:6px 10px}
+form{display:inline-block;margin:3px}button{cursor:pointer;padding:6px 10px}button:disabled{cursor:progress;opacity:.65}.analysis-status{margin-left:8px}
 dt{font-weight:600;margin-top:10px}dd{margin:4px 0;overflow-wrap:anywhere}p[role=alert]{color:#991b1b}
 .measured{border-left:5px solid #1f2937;margin:20px 0}.verdict{font-size:26px;font-weight:700;margin:6px 0}
 .ai{border:1px dashed #9ca3af;background:#fbfbfc;margin:20px 0}.ai-text{white-space:pre-wrap;overflow-wrap:anywhere}section[role=alert] h2{color:#991b1b}
+pre{overflow:auto;background:#f3f4f6;border-radius:8px;padding:12px}.help-grid{display:grid;gap:16px;margin-top:16px}.help-command{margin:0}.getting-started{margin:20px 0}.getting-started li{margin:8px 0}
+@media(max-width:700px){main{margin:24px auto;padding:0 14px}.cards{grid-template-columns:1fr}th,td{padding:9px}}
 </style></head><body><main>__CONTENT__</main></body></html>
 """;
         return template.Replace("__TITLE__", WebUtility.HtmlEncode(title), StringComparison.Ordinal)
