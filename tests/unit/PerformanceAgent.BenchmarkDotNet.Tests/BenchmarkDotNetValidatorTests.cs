@@ -18,6 +18,31 @@ public sealed class BenchmarkDotNetValidatorTests
     }
 
     [Fact]
+    public void ConstantBenchmark_IsWarningButRemainsValid()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(ConstantBenchmark));
+
+        Assert.True(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, item =>
+            item.Source == "PerformanceAgentValidityGuard"
+            && item.Severity == BenchmarkValidationSeverity.Warning);
+
+        Assert.Equal(nameof(ConstantBenchmark.Work), diagnostic.BenchmarkMethod);
+        Assert.Contains("trivial constant or no-op", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FieldBackedBenchmark_DoesNotTriggerTrivialBodyWarning()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(FieldBackedBenchmark));
+
+        Assert.True(result.IsValid);
+        Assert.DoesNotContain(
+            result.Diagnostics,
+            item => item.Source == "PerformanceAgentValidityGuard");
+    }
+
+    [Fact]
     public void PrivateBenchmarkMethod_IsReportedAsInvalid()
     {
         var result = new BenchmarkDotNetValidator().Validate(typeof(PrivateBenchmark));
@@ -46,6 +71,20 @@ public sealed class BenchmarkDotNetValidatorTests
     {
         [Benchmark]
         public int Work() => 42;
+    }
+
+    public class ConstantBenchmark
+    {
+        [Benchmark]
+        public int Work() => 42;
+    }
+
+    public class FieldBackedBenchmark
+    {
+        private int _value = 42;
+
+        [Benchmark]
+        public int Work() => _value;
     }
 
     public class PrivateBenchmark
