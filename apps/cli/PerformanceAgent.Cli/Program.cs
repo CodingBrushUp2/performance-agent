@@ -45,13 +45,17 @@ static async Task<int> RunAsync(string[] args)
         try
         {
             var configuration = new PerformanceAgent.Cli.WorkspaceConfiguration(PerformanceAgent.Cli.WorkspaceStorage.Resolve()).Inspect();
-            Console.WriteLine($"Configuration: {configuration.Path}");
+            Console.WriteLine($"Workspace configuration: {configuration.Path}");
+            Console.WriteLine($"User AI configuration: {configuration.UserPath}");
             Console.WriteLine($"Budget source: {configuration.BudgetSource}");
             Console.WriteLine($"Max mean regression (%): {configuration.Budget.MaxMeanRegressionPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Not configured"}");
             Console.WriteLine($"Max allocation regression (%): {configuration.Budget.MaxAllocationRegressionPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "Not configured"}");
             Console.WriteLine($"AI provider: {configuration.AiProvider}");
+            Console.WriteLine($"AI provider source: {configuration.AiProviderSource}");
             Console.WriteLine($"AI model: {configuration.AiModel ?? "Not configured"}");
-            Console.WriteLine("Explicit check thresholds or --budget override workspace settings. Do not store API keys or other secrets in perfagent.json.");
+            Console.WriteLine($"AI model source: {configuration.AiModelSource}");
+            Console.WriteLine("Precedence: built-in defaults < user AI config < workspace perfagent.json < explicit CLI overrides where supported.");
+            Console.WriteLine("Workspace budget remains project policy. Do not store API keys or other secrets in either configuration file.");
             return 0;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
