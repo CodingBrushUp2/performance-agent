@@ -172,7 +172,7 @@ document.addEventListener("submit", function (event) {
             if (current is null) return Results.Text("No current baseline is configured.", statusCode: 409);
             var baseline = await archive.ReadAsync(current.RunId, context.RequestAborted);
             var candidate = await archive.ReadAsync(runId, context.RequestAborted);
-            var budget = configuration.Load().Budget!;
+            var budget = configuration.InspectBudget().Budget;
             var check = new RegressionCheckService().Check(baseline.Evidence, candidate.Evidence, budget);
             return Results.Content(RenderCheck(current.RunId, candidate.RunId, check, budget), "text/html; charset=utf-8");
         });
