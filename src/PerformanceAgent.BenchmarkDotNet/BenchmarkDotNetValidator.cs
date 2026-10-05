@@ -29,9 +29,10 @@ public sealed class BenchmarkDotNetValidator
         }
 
         var diagnostics = new List<BenchmarkValidationDiagnostic>();
+        var validationParameters = new ValidationParameters(runInfo.BenchmarksCases, runInfo.Config);
         foreach (var validator in runInfo.Config.GetValidators())
         {
-            foreach (var error in validator.Validate(runInfo))
+            foreach (var error in validator.Validate(validationParameters))
             {
                 diagnostics.Add(Map(
                     validator.GetType().Name,
