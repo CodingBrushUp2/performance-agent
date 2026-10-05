@@ -14,6 +14,14 @@ internal static class HelpContent
 {
     private static readonly CommandHelp[] Commands =
     [
+        new("candidates", "Find a small set of changed production methods from a committed Git diff.",
+            "perfagent candidates <base-ref> [--head <ref>] [--max <1-20>] [--format <text|json>]",
+            [
+                "perfagent candidates origin/main",
+                "perfagent candidates HEAD~1 --max 3",
+                "perfagent candidates origin/main --head HEAD --format json"
+            ],
+            "Uses committed C# diff hunks only. Tests and generated files are excluded. Ranking is based on changed-line overlap; candidates are focus hints, not performance-risk verdicts."),
         new("validate", "Validate BenchmarkDotNet declarations and configuration without running benchmarks.",
             "perfagent validate <benchmark.csproj> [--format <text|json>]",
             [
@@ -120,6 +128,7 @@ internal static class HelpContent
         builder.AppendLine("  validate -> run -> baseline -> change code -> run -> check -> analyze -> report");
         builder.AppendLine();
         builder.AppendLine("Examples:");
+        builder.AppendLine("  perfagent candidates origin/main");
         builder.AppendLine("  perfagent validate MyBenchmarks.csproj");
         builder.AppendLine("  perfagent run MyBenchmarks.csproj");
         builder.AppendLine("  perfagent history");
