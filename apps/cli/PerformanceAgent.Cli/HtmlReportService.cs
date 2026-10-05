@@ -2,6 +2,7 @@ using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Evidence;
 using PerformanceAgent.Core.History;
 using PerformanceAgent.Core.Reporting;
+using PerformanceAgent.Core.Verdicts;
 
 namespace PerformanceAgent.Cli;
 
@@ -40,6 +41,10 @@ internal sealed class HtmlReportService(WorkspaceStorage storage)
             budget = new JsonPerformanceBudgetReader().Read(await File.ReadAllTextAsync(source, cancellationToken));
         }
         var check = new RegressionCheckService().Check(baselineEvidence, candidateEvidence, budget);
+        if (check.Verdict == PerformanceVerdict.Inconclusive)
+            throw new InvalidOperationException(
+                $"Performance verdict is inconclusive: {string.Join("; ", check.Reasons)}");
+
         var report = new PerformanceReport("1.0", DateTimeOffset.UtcNow, check.Benchmarks.Select(x => x.Result.Comparison).ToArray());
         return new(new HtmlPerformanceReportWriter().Write(report,
             new PerformanceReportContext(baseline, candidate, budget, source, check.Passed)), check.Passed);

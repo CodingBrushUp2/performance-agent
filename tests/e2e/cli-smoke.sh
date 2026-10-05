@@ -63,6 +63,19 @@ test "$failure_code" -eq 1
 grep -F "MapOrder: FAIL" <<< "$failure_output"
 grep -F "Overall: FAIL" <<< "$failure_output"
 
+cat > "$candidate_file" <<'JSON'
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":null}]}
+JSON
+
+set +e
+inconclusive_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10)"
+inconclusive_code=$?
+set -e
+test "$inconclusive_code" -eq 2
+grep -F "MapOrder: INCONCLUSIVE" <<< "$inconclusive_output"
+grep -F "required allocation metric is not comparable (Unavailable)" <<< "$inconclusive_output"
+grep -F "Overall: INCONCLUSIVE" <<< "$inconclusive_output"
+
 
 budget_file="$(mktemp)"
 cat > "$budget_file" <<'JSON'
