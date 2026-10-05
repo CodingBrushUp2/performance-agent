@@ -1,9 +1,12 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace PerformanceAgent.Core.History;
 
 public sealed class FileRunArchive
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> AppendLocks =
+        new(StringComparer.Ordinal);
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -27,31 +30,43 @@ public sealed class FileRunArchive
 
         Directory.CreateDirectory(_archiveDirectory);
         var path = Path.Combine(_archiveDirectory, $"{run.RunId}.json");
-        if (File.Exists(path))
-            throw new InvalidOperationException($"Archived benchmark run '{run.RunId}' already exists.");
 
-        var json = JsonSerializer.Serialize(run, Options);
-        var temporaryPath = Path.Combine(_archiveDirectory, $".{run.RunId}.{Guid.NewGuid():N}.tmp");
+        // Serialize publishers for the same archive root inside this process. The final
+        // no-overwrite move remains the cross-process collision boundary, but this avoids
+        // filesystem-specific races where two in-process publishers can both appear to win.
+        var appendLock = AppendLocks.GetOrAdd(_archiveDirectory, _ => new SemaphoreSlim(1, 1));
+        await appendLock.WaitAsync(cancellationToken);
         try
         {
-            await File.WriteAllTextAsync(temporaryPath, json, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            File.Move(temporaryPath, path, overwrite: false);
-        }
-        catch (IOException exception)
-        {
-            // File.Move(..., overwrite: false) is the atomic collision boundary. On some
-            // filesystems a losing concurrent move can observe the destination slightly
-            // later, so do not depend on a follow-up File.Exists check to classify it.
-            throw new InvalidOperationException($"Could not publish archived benchmark run '{run.RunId}'. The RunId may already exist.", exception);
+            if (File.Exists(path))
+                throw new InvalidOperationException($"Archived benchmark run '{run.RunId}' already exists.");
+
+            var json = JsonSerializer.Serialize(run, Options);
+            var temporaryPath = Path.Combine(_archiveDirectory, $".{run.RunId}.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                await File.WriteAllTextAsync(temporaryPath, json, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                File.Move(temporaryPath, path, overwrite: false);
+            }
+            catch (IOException exception)
+            {
+                // File.Move(..., overwrite: false) is the atomic cross-process collision
+                // boundary. Do not depend on a follow-up File.Exists check to classify it.
+                throw new InvalidOperationException($"Could not publish archived benchmark run '{run.RunId}'. The RunId may already exist.", exception);
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                    File.Delete(temporaryPath);
+            }
+
+            return path;
         }
         finally
         {
-            if (File.Exists(temporaryPath))
-                File.Delete(temporaryPath);
+            appendLock.Release();
         }
-
-        return path;
     }
 
     public async Task<IReadOnlyList<ArchivedBenchmarkRun>> ListAsync(
