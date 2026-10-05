@@ -5,6 +5,7 @@ using PerformanceAgent.Core.Evidence;
 using PerformanceAgent.Core.Measurements;
 using PerformanceAgent.Core.History;
 using PerformanceAgent.Core.Reporting;
+using PerformanceAgent.Core.Verdicts;
 
 return await RunAsync(args);
 
@@ -630,10 +631,11 @@ static async Task<int> RunCheckAsync(string[] args)
                 && !string.Equals(anchorReference.RunId, currentReference.RunId, StringComparison.Ordinal))
             {
                 var anchorEvidence = (await archive.ReadAsync(anchorReference.RunId)).Evidence;
-                var currentPassed = CheckEvidence("Current", baseline, candidate, budget);
-                var anchorPassed = CheckEvidence("Anchor", anchorEvidence, candidate, budget);
-                Console.WriteLine($"Overall: {(currentPassed && anchorPassed ? "PASS" : "FAIL")}");
-                return currentPassed && anchorPassed ? 0 : 1;
+                var currentVerdict = CheckEvidence("Current", baseline, candidate, budget);
+                var anchorVerdict = CheckEvidence("Anchor", anchorEvidence, candidate, budget);
+                var overallVerdict = CombineVerdicts(currentVerdict, anchorVerdict);
+                Console.WriteLine($"Overall: {VerdictLabel(overallVerdict)}");
+                return VerdictExitCode(overallVerdict);
             }
         }
 
@@ -641,13 +643,14 @@ static async Task<int> RunCheckAsync(string[] args)
         foreach (var item in check.Benchmarks)
         {
             var result = item.Result;
-            Console.WriteLine($"{item.Name}: {(result.Passed ? "PASS" : "FAIL")}");
+            Console.WriteLine($"{item.Name}: {VerdictLabel(item.Verdict)}");
             Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
             Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
         }
 
-        Console.WriteLine($"Overall: {(check.Passed ? "PASS" : "FAIL")}");
-        return check.Passed ? 0 : 1;
+        WriteInconclusiveReasons(check);
+        Console.WriteLine($"Overall: {VerdictLabel(check.Verdict)}");
+        return VerdictExitCode(check.Verdict);
     }
     catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
     {
@@ -656,7 +659,7 @@ static async Task<int> RunCheckAsync(string[] args)
     }
 }
 
-static bool CheckEvidence(
+static PerformanceVerdict CheckEvidence(
     string label,
     BenchmarkEvidence baseline,
     BenchmarkEvidence candidate,
@@ -667,13 +670,46 @@ static bool CheckEvidence(
     foreach (var item in check.Benchmarks)
     {
         var result = item.Result;
-        Console.WriteLine($"{item.Name}: {(result.Passed ? "PASS" : "FAIL")}");
+        Console.WriteLine($"{item.Name}: {VerdictLabel(item.Verdict)}");
         Console.WriteLine($"  Mean: {FormatChange(result.Comparison.Mean)}{FormatBudget(budget.MaxMeanRegressionPercent, result.MeanExceeded)}");
         Console.WriteLine($"  Allocation: {FormatChange(result.Comparison.AllocatedBytes)}{FormatBudget(budget.MaxAllocationRegressionPercent, result.AllocationExceeded)}");
     }
 
-    return check.Passed;
+    WriteInconclusiveReasons(check);
+    return check.Verdict;
 }
+
+static void WriteInconclusiveReasons(PerformanceAgent.Cli.EvidenceCheckResult check)
+{
+    if (check.Verdict != PerformanceVerdict.Inconclusive)
+        return;
+
+    foreach (var reason in check.Reasons)
+        Console.WriteLine($"  Reason: {reason}");
+}
+
+static PerformanceVerdict CombineVerdicts(params PerformanceVerdict[] verdicts) =>
+    verdicts.Any(x => x == PerformanceVerdict.Fail)
+        ? PerformanceVerdict.Fail
+        : verdicts.Any(x => x == PerformanceVerdict.Inconclusive)
+            ? PerformanceVerdict.Inconclusive
+            : PerformanceVerdict.Pass;
+
+static int VerdictExitCode(PerformanceVerdict verdict) => verdict switch
+{
+    PerformanceVerdict.Pass => 0,
+    PerformanceVerdict.Fail => 1,
+    PerformanceVerdict.Inconclusive => 2,
+    _ => 2
+};
+
+static string VerdictLabel(PerformanceVerdict verdict) => verdict switch
+{
+    PerformanceVerdict.Pass => "PASS",
+    PerformanceVerdict.Fail => "FAIL",
+    PerformanceVerdict.Inconclusive => "INCONCLUSIVE",
+    _ => "INCONCLUSIVE"
+};
 
 static void PrintCheckUsage()
 {
