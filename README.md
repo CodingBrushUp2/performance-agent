@@ -32,7 +32,7 @@ Until a public package is published, build and install the CLI from a local pack
 
 ```bash
 dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release -o artifacts
-dotnet tool install --global PerformanceAgent.Cli --version 0.1.0 --add-source ./artifacts
+dotnet tool install --global PerformanceAgent.Cli --version 0.2.0 --add-source ./artifacts
 ```
 
 The package includes BenchmarkHost and its runtime dependencies. A stable .NET 10 SDK
@@ -81,7 +81,7 @@ A small benchmark project is included so the current product can be exercised im
 ```bash
 dotnet build PerformanceAgent.sln -c Release
 dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release --no-build -o artifacts
-dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.1.0 --add-source ./artifacts
+dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.2.0 --add-source ./artifacts
 
 ./.tools/perfagent calibrate samples/QuickStartBenchmarks/QuickStartBenchmarks.csproj
 ./.tools/perfagent history
