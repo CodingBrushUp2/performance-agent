@@ -95,7 +95,8 @@ public sealed class MeanDecisionQualityEvaluatorTests
                 0.03,
                 0,
                 lower,
-                upper));
+                upper,
+                99.9));
 
     private static BenchmarkMeasurement MeasurementWithoutInterval(double mean) =>
         new(
