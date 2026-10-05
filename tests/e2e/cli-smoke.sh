@@ -34,6 +34,16 @@ grep -F '"source": "PerformanceAgent.PA1001"' <<< "$warning_validate_json"
 grep -F '"source": "PerformanceAgent.PA1002"' <<< "$warning_validate_json"
 grep -F '"severity": "warning"' <<< "$warning_validate_json"
 
+forced_gc_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/ForcedGcBenchmarks/ForcedGcBenchmarks.csproj)"
+grep -F "Validation: VALID" <<< "$forced_gc_output"
+grep -F "[WARNING] PerformanceAgent.PA1003" <<< "$forced_gc_output"
+grep -F "GC.Collect()" <<< "$forced_gc_output"
+
+forced_gc_json="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/ForcedGcBenchmarks/ForcedGcBenchmarks.csproj --format json)"
+grep -F '"valid": true' <<< "$forced_gc_json"
+grep -F '"source": "PerformanceAgent.PA1003"' <<< "$forced_gc_json"
+grep -F '"severity": "warning"' <<< "$forced_gc_json"
+
 set +e
 invalid_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/InvalidBenchmarks/InvalidBenchmarks.csproj 2>&1)"
 invalid_validate_code=$?
