@@ -39,16 +39,6 @@ public sealed class MeanDecisionQualityEvaluator
             return Inconclusive("Baseline mean must be greater than zero to evaluate statistical decision quality.");
         }
 
-        if (baseline == candidate)
-        {
-            return new MeanDecisionQuality(
-                MeanDecisionQualityStatus.ConclusiveWithinBudget,
-                0,
-                0,
-                baseline.Statistics?.ConfidenceLevelPercent,
-                null);
-        }
-
         if (baseline.Statistics is null || candidate.Statistics is null)
         {
             return Inconclusive(
@@ -122,7 +112,7 @@ public sealed class MeanDecisionQualityEvaluator
             minimumRegressionPercent,
             maximumRegressionPercent,
             RequiredConfidenceLevelPercent,
-            $"The {RequiredConfidenceLevelPercent:0.0}% confidence range for mean regression crosses the configured budget of {maxMeanRegressionPercent.Value:0.##}%.");
+            $"The regression bounds derived from BenchmarkDotNet {RequiredConfidenceLevelPercent:0.0}% confidence intervals cross the configured budget of {maxMeanRegressionPercent.Value:0.##}%.");
     }
 
     private static MeanDecisionQuality Inconclusive(string reason) =>
