@@ -153,6 +153,7 @@ internal static class HelpContent
 <li><strong>Generate a portable report</strong><br><code>perfagent report &lt;candidate-run-id&gt; &gt; report.html</code></li>
 </ol>
 <p><strong>Current</strong> is the normal regression baseline. <strong>Anchor</strong> is a longer-lived reference.</p>
+<p><strong>AI proposes. Measurements decide.</strong></p>
 <p><strong>Deterministic results are authoritative.</strong> AI analysis is optional, advisory, and never changes measured benchmark results.</p>
 <p><a href="/help">Open full command help</a></p>
 </section>
