@@ -21,7 +21,7 @@ internal static class HelpContent
                 "perfagent candidates --base HEAD --working-tree",
                 "perfagent candidates --base main --head HEAD --limit 5 --format json"
             ],
-            "Uses git diff plus C# syntax mapping. Results are deterministic candidate hints, not benchmark recommendations. The default head is HEAD; --working-tree includes committed, staged, and unstaged changes since the base and cannot be combined with --head. The default limit is 5."),
+            "Uses git diff plus C# syntax mapping. Results are deterministic candidate hints, not benchmark recommendations. Tests, bin/obj, and common generated C# files are excluded. The default head is HEAD; --working-tree includes committed, staged, and unstaged changes since the base and cannot be combined with --head. The default limit is 5."),
         new("validate", "Validate BenchmarkDotNet declarations and configuration without running benchmarks.",
             "perfagent validate <benchmark.csproj> [--format <text|json>]",
             [

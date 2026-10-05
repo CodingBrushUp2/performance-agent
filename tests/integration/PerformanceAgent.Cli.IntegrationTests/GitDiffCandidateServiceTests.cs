@@ -62,6 +62,30 @@ public sealed class GitDiffCandidateServiceTests
         Assert.Equal(1, second.ChangedLines);
     }
 
+    [Theory]
+    [InlineData("src/OrderService.cs", true)]
+    [InlineData("tests/OrderServiceTests.cs", false)]
+    [InlineData("test/OrderService.cs", false)]
+    [InlineData("src/Generated.g.cs", false)]
+    [InlineData("src/Generated.g.i.cs", false)]
+    [InlineData("src/Form.Designer.cs", false)]
+    [InlineData("src/obj/Generated.cs", false)]
+    [InlineData("src/bin/Generated.cs", false)]
+    [InlineData("src/OrderServiceTest.cs", false)]
+    public void IsEligiblePath_FiltersObviousNonProductionNoise(string path, bool expected)
+    {
+        Assert.Equal(expected, GitDiffCandidateService.IsEligiblePath(path));
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_RejectsGitRefsThatLookLikeOptions()
+    {
+        var error = await Assert.ThrowsAsync<ArgumentException>(() =>
+            new GitDiffCandidateService().DiscoverAsync("--help"));
+
+        Assert.Contains("beginning with '-'", error.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task DiscoverAsync_UsesRealGitDiffAndRanksTouchedMembers()
     {
@@ -124,6 +148,56 @@ public sealed class GitDiffCandidateServiceTests
         Assert.Equal("Sample.Second()", result.Candidates[1].Member);
         Assert.All(result.Candidates, item =>
             Assert.Contains("changed line(s)", item.Reason, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_ExcludesChangedTestFiles()
+    {
+        using var workspace = new TemporaryDirectory();
+        RunGit(workspace.Path, "init");
+        RunGit(workspace.Path, "config", "user.email", "perfagent@example.invalid");
+        RunGit(workspace.Path, "config", "user.name", "Performance Agent Tests");
+
+        Directory.CreateDirectory(Path.Combine(workspace.Path, "src"));
+        Directory.CreateDirectory(Path.Combine(workspace.Path, "tests"));
+        await File.WriteAllTextAsync(Path.Combine(workspace.Path, "src", "Work.cs"), """
+        public class Work
+        {
+            public int Run() => 1;
+        }
+        """);
+        await File.WriteAllTextAsync(Path.Combine(workspace.Path, "tests", "WorkTests.cs"), """
+        public class WorkTests
+        {
+            public int Test() => 1;
+        }
+        """);
+        RunGit(workspace.Path, "add", ".");
+        RunGit(workspace.Path, "commit", "-m", "baseline");
+        var baseRef = RunGit(workspace.Path, "rev-parse", "HEAD").Trim();
+
+        await File.WriteAllTextAsync(Path.Combine(workspace.Path, "src", "Work.cs"), """
+        public class Work
+        {
+            public int Run() => 2;
+        }
+        """);
+        await File.WriteAllTextAsync(Path.Combine(workspace.Path, "tests", "WorkTests.cs"), """
+        public class WorkTests
+        {
+            public int Test() => 2;
+        }
+        """);
+        RunGit(workspace.Path, "add", ".");
+        RunGit(workspace.Path, "commit", "-m", "candidate");
+
+        var result = await new GitDiffCandidateService().DiscoverAsync(
+            baseRef,
+            repositoryPath: workspace.Path);
+
+        var candidate = Assert.Single(result.Candidates);
+        Assert.Equal("src/Work.cs", candidate.FilePath);
+        Assert.Equal("Work.Run()", candidate.Member);
     }
 
     [Fact]
