@@ -23,7 +23,7 @@ trap cleanup EXIT
 dotnet pack "$repo_root/apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj" \
   --configuration Release --no-build --output "$work/feed"
 
-python3 - "$work/feed/PerformanceAgent.Cli.0.1.0.nupkg" <<'PY'
+python3 - "$work/feed/PerformanceAgent.Cli.0.2.0.nupkg" <<'PY'
 import sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as package:
     names=set(package.namelist())
@@ -35,7 +35,7 @@ with zipfile.ZipFile(sys.argv[1]) as package:
     assert not any(name.endswith('.csproj') for name in names)
 PY
 
-# An isolated manifest and package cache prevent a previously installed 0.1.0 masking defects.
+# An isolated manifest and package cache prevent a previously installed 0.2.0 masking defects.
 export DOTNET_CLI_HOME="$work/cli-home"
 export NUGET_PACKAGES="$work/packages"
 export DOTNET_NOLOGO=1
@@ -46,7 +46,7 @@ dotnet new tool-manifest
 cat > "$work/tool-feed.config" <<XML
 <configuration><packageSources><clear /><add key="local" value="$work/feed" /></packageSources></configuration>
 XML
-dotnet tool install PerformanceAgent.Cli --local --version 0.1.0 --configfile "$work/tool-feed.config"
+dotnet tool install PerformanceAgent.Cli --local --version 0.2.0 --configfile "$work/tool-feed.config"
 dotnet tool run perfagent -- compare ToolSmoke 100 90 1000 900 markdown | grep -F '| ToolSmoke | Mean (ns) | 100 | 90 | -10% | Comparable |'
 
 cat > Helper/Helper.csproj <<'XML'
@@ -200,7 +200,7 @@ grep -F "Archived benchmark run 'run-does-not-exist' was not found." analyze-mis
 find .performance-agent -type f -print0 | sort -z | xargs -0 sha256sum | cmp - state-before.sha
 
 # A damaged installation fails clearly; it must not search for a source-tree host.
-rm "$NUGET_PACKAGES/performanceagent.cli/0.1.0/tools/net10.0/any/benchmark-host/PerformanceAgent.BenchmarkHost.dll"
+rm "$NUGET_PACKAGES/performanceagent.cli/0.2.0/tools/net10.0/any/benchmark-host/PerformanceAgent.BenchmarkHost.dll"
 if dotnet tool run perfagent -- run "$PWD/Benchmarks/Benchmarks.csproj" --output missing.json > missing.stdout 2> missing.stderr; then
   echo 'Run unexpectedly succeeded without its bundled host.' >&2
   exit 1
