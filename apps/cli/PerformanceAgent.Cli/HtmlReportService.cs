@@ -30,7 +30,7 @@ internal sealed class HtmlReportService(WorkspaceStorage storage)
         string source;
         if (budgetPath is null)
         {
-            var configuration = new WorkspaceConfiguration(storage).Inspect();
+            var configuration = new WorkspaceConfiguration(storage).InspectBudget();
             budget = configuration.Budget;
             source = configuration.BudgetSource == "perfagent.json" ? configuration.Path : configuration.BudgetSource;
         }
