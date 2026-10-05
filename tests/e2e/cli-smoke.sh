@@ -21,6 +21,16 @@ grep -F '"schemaVersion": "1.0"' <<< "$validate_json"
 grep -F '"valid": true' <<< "$validate_json"
 grep -F '"benchmarkTypeCount": 1' <<< "$validate_json"
 
+warning_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/SuspiciousBenchmarks/SuspiciousBenchmarks.csproj)"
+grep -F "Validation: VALID" <<< "$warning_validate_output"
+grep -F "[WARNING] PerformanceAgent.PA1001" <<< "$warning_validate_output"
+grep -F "ConstantWork" <<< "$warning_validate_output"
+
+warning_validate_json="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/SuspiciousBenchmarks/SuspiciousBenchmarks.csproj --format json)"
+grep -F '"valid": true' <<< "$warning_validate_json"
+grep -F '"source": "PerformanceAgent.PA1001"' <<< "$warning_validate_json"
+grep -F '"severity": "warning"' <<< "$warning_validate_json"
+
 set +e
 invalid_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/InvalidBenchmarks/InvalidBenchmarks.csproj 2>&1)"
 invalid_validate_code=$?
