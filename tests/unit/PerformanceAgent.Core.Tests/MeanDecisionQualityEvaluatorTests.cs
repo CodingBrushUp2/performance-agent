@@ -70,7 +70,8 @@ public sealed class MeanDecisionQualityEvaluatorTests
         Assert.True(result.IsInconclusive);
         Assert.True(result.MinimumRegressionPercent < 5);
         Assert.True(result.MaximumRegressionPercent > 5);
-        Assert.Contains("crosses", result.Reason);
+        Assert.Contains("regression bounds", result.Reason);
+        Assert.Contains("cross", result.Reason);
     }
 
     [Fact]
