@@ -1,6 +1,7 @@
 using System.Globalization;
 using PerformanceAgent.Core.Analysis;
 using PerformanceAgent.Core.Budgets;
+using PerformanceAgent.Core.Verdicts;
 
 namespace PerformanceAgent.Cli;
 
@@ -25,19 +26,30 @@ internal static class AnalysisConsoleWriter
         output.WriteLine($"Deterministic result: {verdict}");
         output.WriteLine();
 
-        var regressions = deterministic.Check.Benchmarks.Where(x => !x.Result.Passed).ToArray();
+        var regressions = deterministic.Check.Benchmarks.Where(x => x.Verdict == PerformanceVerdict.Fail).ToArray();
         output.WriteLine("Measured regressions:");
         if (regressions.Length == 0)
             output.WriteLine("  (none)");
         foreach (var item in regressions)
             WriteMeasured(output, item, budget);
 
-        var passed = deterministic.Check.Benchmarks.Where(x => x.Result.Passed).ToArray();
+        var passed = deterministic.Check.Benchmarks.Where(x => x.Verdict == PerformanceVerdict.Pass).ToArray();
         if (passed.Length > 0)
         {
             output.WriteLine();
             output.WriteLine("Measured within budget:");
             foreach (var item in passed)
+                WriteMeasured(output, item, budget);
+        }
+
+        var inconclusive = deterministic.Check.Benchmarks
+            .Where(x => x.Verdict == PerformanceVerdict.Inconclusive)
+            .ToArray();
+        if (inconclusive.Length > 0)
+        {
+            output.WriteLine();
+            output.WriteLine("Measured inconclusive:");
+            foreach (var item in inconclusive)
                 WriteMeasured(output, item, budget);
         }
 
@@ -64,13 +76,13 @@ internal static class AnalysisConsoleWriter
     }
 
     public static string Verdict(DeterministicAnalysisResult deterministic) =>
-        deterministic.Check.Passed ? "PASS" : "REGRESSION";
+        VerdictLabel(deterministic.Check.Verdict);
 
     private static void WriteMeasured(TextWriter output, BenchmarkCheckResult item, PerformanceBudget budget)
     {
         var (mean, allocation) = CheckFormatting.FormatMeasured(item.Result, budget);
         // Benchmark names come from evidence files and may contain control characters; keep them on one line.
-        output.WriteLine($"  {SingleLine(item.Name)}: {(item.Result.Passed ? "PASS" : "FAIL")}");
+        output.WriteLine($"  {SingleLine(item.Name)}: {VerdictLabel(item.Verdict)}");
         output.WriteLine($"    Mean: {mean}");
         output.WriteLine($"    Allocation: {allocation}");
     }
@@ -111,6 +123,14 @@ internal static class AnalysisConsoleWriter
     /// <summary><see cref="Sanitize"/> plus line breaks collapsed to spaces.</summary>
     internal static string SingleLine(string text) =>
         string.Join(' ', Sanitize(text).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+    private static string VerdictLabel(PerformanceVerdict verdict) => verdict switch
+    {
+        PerformanceVerdict.Pass => "PASS",
+        PerformanceVerdict.Fail => "REGRESSION",
+        PerformanceVerdict.Inconclusive => "INCONCLUSIVE",
+        _ => "INCONCLUSIVE"
+    };
 
     private static string Threshold(double? percent) =>
         percent is null ? "not configured" : $"+{percent.Value.ToString("0.##", CultureInfo.InvariantCulture)}%";
