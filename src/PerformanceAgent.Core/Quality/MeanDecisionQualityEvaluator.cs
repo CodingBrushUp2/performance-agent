@@ -24,6 +24,16 @@ public sealed class MeanDecisionQualityEvaluator
                 null);
         }
 
+        if (baseline == candidate)
+        {
+            return new MeanDecisionQuality(
+                MeanDecisionQualityStatus.ConclusiveWithinBudget,
+                0,
+                0,
+                baseline.Statistics?.ConfidenceLevelPercent,
+                null);
+        }
+
         if (baseline.MeanNanoseconds <= 0)
         {
             return Inconclusive("Baseline mean must be greater than zero to evaluate statistical decision quality.");
