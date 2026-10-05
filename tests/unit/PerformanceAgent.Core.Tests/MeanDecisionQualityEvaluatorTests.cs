@@ -72,6 +72,26 @@ public sealed class MeanDecisionQualityEvaluatorTests
     }
 
     [Fact]
+    public void Nonstandard_confidence_level_is_inconclusive()
+    {
+        var baseline = Measurement(100, 99.9, 100.1) with
+        {
+            Statistics = Measurement(100, 99.9, 100.1).Statistics! with
+            {
+                ConfidenceLevelPercent = 95
+            }
+        };
+
+        var result = _sut.Evaluate(
+            baseline,
+            Measurement(104, 103.9, 104.1),
+            5);
+
+        Assert.Equal(MeanDecisionQualityStatus.Inconclusive, result.Status);
+        Assert.Contains("99.9%", result.Reason);
+    }
+
+    [Fact]
     public void Missing_confidence_interval_is_inconclusive()
     {
         var result = _sut.Evaluate(
