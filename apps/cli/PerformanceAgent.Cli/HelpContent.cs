@@ -21,7 +21,7 @@ internal static class HelpContent
                 "perfagent readiness --base HEAD --working-tree --benchmark Benchmarks/Benchmarks.csproj",
                 "perfagent readiness --base main --benchmark Benchmarks/Benchmarks.csproj --target src/Checkout.cs::Checkout.Process(Order) --format json"
             ],
-            "Combines deterministic changed-member hints, BenchmarkDotNet validation, Current baseline availability, and effective budget policy. A successful result is READY_WITH_UNVERIFIED_COVERAGE: Performance Agent does not claim that the benchmark actually exercises the selected target."),
+            "Combines deterministic changed-member hints, BenchmarkDotNet validation, Current baseline availability, and effective budget policy. A successful result is READY_WITH_UNVERIFIED_ASSUMPTIONS: Performance Agent does not claim that the benchmark covers the selected target or that Current is scenario-compatible."),
         new("candidates", "List changed C# members that may deserve a benchmark review.",
             "perfagent candidates --base <git-ref> [--head <git-ref> | --working-tree] [--limit <1-20>] [--format <text|json>]",
             [
