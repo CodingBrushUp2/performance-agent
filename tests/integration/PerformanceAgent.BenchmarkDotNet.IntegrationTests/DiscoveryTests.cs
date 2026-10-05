@@ -79,6 +79,34 @@ public sealed class DiscoveryTests
     }
 
     [Fact]
+    public void ValidationDiscovery_FindsTypesWithNonPublicBenchmarkMethods()
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName("PrivateBenchmarkValidation"),
+            AssemblyBuilderAccess.Run);
+        var builder = assembly.DefineDynamicModule("Benchmarks")
+            .DefineType("PrivateBenchmark", TypeAttributes.Public);
+        var method = builder.DefineMethod(
+            "Work",
+            MethodAttributes.Private,
+            typeof(int),
+            Type.EmptyTypes);
+        var benchmarkAttribute = typeof(ABenchmark).GetMethod(nameof(ABenchmark.Work))!.CustomAttributes
+            .Single(attribute => attribute.AttributeType == typeof(BenchmarkAttribute));
+        method.SetCustomAttribute(new CustomAttributeBuilder(
+            benchmarkAttribute.Constructor,
+            benchmarkAttribute.ConstructorArguments.Select(argument => argument.Value).ToArray()));
+        method.GetILGenerator().Emit(OpCodes.Ldc_I4_3);
+        method.GetILGenerator().Emit(OpCodes.Ret);
+        var type = builder.CreateType()!;
+
+        var result = new BenchmarkDotNetRunner().DiscoverBenchmarksForValidation(
+            new TestAssembly(() => [type]));
+
+        Assert.Equal(type, Assert.Single(result.BenchmarkTypes));
+    }
+
+    [Fact]
     public void UnexpectedErrors_AreNotMisclassifiedAsLoaderFailures()
     {
         Assert.Throws<InvalidOperationException>(() => new BenchmarkDotNetRunner().DiscoverBenchmarks(

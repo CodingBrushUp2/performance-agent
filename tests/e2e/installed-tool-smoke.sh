@@ -92,6 +92,10 @@ public class InstalledBenchmark
 CS
 
 # Both tool installation and consumer project are outside the Performance Agent tree.
+dotnet tool run perfagent -- validate "$PWD/Benchmarks/Benchmarks.csproj" > validate.stdout
+grep -F 'Validation: VALID' validate.stdout
+grep -F 'Benchmark types: 1' validate.stdout
+
 timeout 180s dotnet tool run perfagent -- run "$PWD/Benchmarks/Benchmarks.csproj" \
   --output "$PWD/evidence.json" > run.stdout 2> run.stderr
 python3 - <<'PY'

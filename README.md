@@ -244,6 +244,8 @@ BenchmarkDotNet evidence preserves timing statistics and the 99.9% confidence in
 
 The deterministic [trusted verdict scenario matrix](docs/trusted-verdict-scenarios.md) locks the PASS/FAIL/INCONCLUSIVE behavior in CI, including uncertainty and environment-mismatch cases.
 
+For V0.4 benchmark-quality work, `perfagent validate <benchmark.csproj>` exposes BenchmarkDotNet's own pre-run validators before measurements are executed. See [Benchmark validity guard](docs/benchmark-validity.md).
+
 ## Non-goals for V1
 
 No hosted dashboard, accounts, database, IDE extension, distributed runners, or mandatory cloud service.

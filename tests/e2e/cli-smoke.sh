@@ -6,11 +6,35 @@ grep -F "Performance Agent" <<< "$help_output"
 grep -F "Commands:" <<< "$help_output"
 grep -F "Typical workflow:" <<< "$help_output"
 
-for command in run check analyze; do
+for command in validate run check analyze; do
   command_help="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- "$command" --help)"
   grep -F "Performance Agent - $command" <<< "$command_help"
   grep -F "Usage:" <<< "$command_help"
 done
+
+validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate samples/run/PerformanceAgent.SampleBenchmarks.csproj)"
+grep -F "Validation: VALID" <<< "$validate_output"
+grep -F "Benchmark types: 1" <<< "$validate_output"
+
+validate_json="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate samples/run/PerformanceAgent.SampleBenchmarks.csproj --format json)"
+grep -F '"schemaVersion": "1.0"' <<< "$validate_json"
+grep -F '"valid": true' <<< "$validate_json"
+grep -F '"benchmarkTypeCount": 1' <<< "$validate_json"
+
+set +e
+invalid_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/InvalidBenchmarks/InvalidBenchmarks.csproj 2>&1)"
+invalid_validate_code=$?
+set -e
+test "$invalid_validate_code" -eq 1
+grep -F "Validation: INVALID" <<< "$invalid_validate_output"
+grep -F "Method must be public" <<< "$invalid_validate_output"
+
+set +e
+broken_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/BrokenBenchmarks/BrokenBenchmarks.csproj 2>&1)"
+broken_validate_code=$?
+set -e
+test "$broken_validate_code" -eq 2
+grep -F "error CS" <<< "$broken_validate_output"
 
 output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- compare MapOrder 100 80 1000 750 markdown)"
 

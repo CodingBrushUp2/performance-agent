@@ -14,6 +14,13 @@ internal static class HelpContent
 {
     private static readonly CommandHelp[] Commands =
     [
+        new("validate", "Validate BenchmarkDotNet declarations and configuration without running benchmarks.",
+            "perfagent validate <benchmark.csproj> [--format <text|json>]",
+            [
+                "perfagent validate MyBenchmarks.csproj",
+                "perfagent validate MyBenchmarks.csproj --format json"
+            ],
+            "Uses BenchmarkDotNet's own declaration/config validators. Exit code 0 means VALID, 1 means INVALID, and 2 means input/build/load/validation execution failure."),
         new("run", "Run BenchmarkDotNet benchmarks and archive measured evidence.",
             "perfagent run <benchmark.csproj> [--output <evidence.json>]",
             ["perfagent run MyBenchmarks.csproj", "perfagent run MyBenchmarks.csproj --output evidence.json"]),
@@ -110,9 +117,10 @@ internal static class HelpContent
             builder.AppendLine($"  {command.Name,-11} {command.Summary}");
         builder.AppendLine();
         builder.AppendLine("Typical workflow:");
-        builder.AppendLine("  run -> baseline -> change code -> run -> check -> analyze -> report");
+        builder.AppendLine("  validate -> run -> baseline -> change code -> run -> check -> analyze -> report");
         builder.AppendLine();
         builder.AppendLine("Examples:");
+        builder.AppendLine("  perfagent validate MyBenchmarks.csproj");
         builder.AppendLine("  perfagent run MyBenchmarks.csproj");
         builder.AppendLine("  perfagent history");
         builder.AppendLine("  perfagent baseline set <run-id>");
