@@ -83,6 +83,103 @@ static async Task<int> RunAsync(string[] args)
         finally { Console.CancelKeyPress -= cancelHandler; }
     }
 
+    if (args.Length >= 2 && string.Equals(args[0], "candidates", StringComparison.OrdinalIgnoreCase))
+    {
+        var baseRef = args[1];
+        var headRef = "HEAD";
+        var maxCandidates = 5;
+        var outputFormat = "text";
+
+        if ((args.Length - 2) % 2 != 0)
+        {
+            Console.Error.WriteLine("Usage: perfagent candidates <base-ref> [--head <ref>] [--max <1-20>] [--format <text|json>]");
+            return 2;
+        }
+
+        for (var index = 2; index < args.Length; index += 2)
+        {
+            var option = args[index];
+            var value = args[index + 1];
+
+            if (string.Equals(option, "--head", StringComparison.OrdinalIgnoreCase))
+            {
+                headRef = value;
+            }
+            else if (string.Equals(option, "--max", StringComparison.OrdinalIgnoreCase)
+                     && int.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsedMax)
+                     && parsedMax is >= 1 and <= 20)
+            {
+                maxCandidates = parsedMax;
+            }
+            else if (string.Equals(option, "--format", StringComparison.OrdinalIgnoreCase)
+                     && value.ToLowerInvariant() is "text" or "json")
+            {
+                outputFormat = value.ToLowerInvariant();
+            }
+            else
+            {
+                Console.Error.WriteLine($"Invalid candidates option '{option}'.");
+                return 2;
+            }
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, signal) =>
+        {
+            signal.Cancel = true;
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+
+        try
+        {
+            var result = await new PerformanceAgent.Cli.GitCandidateService()
+                .AnalyzeAsync(baseRef, headRef, maxCandidates, cancellation.Token);
+
+            if (outputFormat == "json")
+            {
+                Console.WriteLine(new PerformanceAgent.Cli.CandidateJsonWriter().Write(result));
+                return 0;
+            }
+
+            Console.WriteLine($"Changed C# files: {result.ChangedCSharpFileCount}");
+            Console.WriteLine($"Eligible production C# files: {result.EligibleCSharpFileCount}");
+            Console.WriteLine($"Candidates: {result.Candidates.Count}");
+
+            if (result.Candidates.Count == 0)
+            {
+                Console.WriteLine("No changed production methods were found in the requested committed diff.");
+            }
+            else
+            {
+                for (var index = 0; index < result.Candidates.Count; index++)
+                {
+                    var candidate = result.Candidates[index];
+                    Console.WriteLine($"{index + 1}. {candidate.TypeName}.{candidate.MemberName}");
+                    Console.WriteLine($"   {candidate.FilePath}:{candidate.StartLine}-{candidate.EndLine}");
+                    Console.WriteLine($"   {candidate.Reason}");
+                }
+            }
+
+            Console.WriteLine("Candidates are changed-method focus hints, not performance-risk verdicts.");
+            return 0;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("Candidate discovery cancelled.");
+            return 130;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
+    }
+
     if (args.Length >= 2 && string.Equals(args[0], "validate", StringComparison.OrdinalIgnoreCase))
     {
         if (args.Length is not (2 or 4)
