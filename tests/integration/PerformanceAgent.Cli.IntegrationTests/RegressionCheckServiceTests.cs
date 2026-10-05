@@ -90,6 +90,23 @@ public sealed class RegressionCheckServiceTests
     }
 
     [Fact]
+    public void Exact_same_measurement_passes_even_when_its_interval_is_wider_than_the_budget()
+    {
+        var measurement = Measurement(100, 64, 90, 110);
+
+        var result = Check(
+            measurement,
+            measurement,
+            new PerformanceBudget(5, 10));
+
+        var benchmark = Assert.Single(result.Benchmarks);
+        Assert.Equal(PerformanceVerdict.Pass, result.Verdict);
+        Assert.Equal(PerformanceVerdict.Pass, benchmark.Verdict);
+        Assert.Equal(0, benchmark.MeanDecisionQuality.MinimumRegressionPercent);
+        Assert.Equal(0, benchmark.MeanDecisionQuality.MaximumRegressionPercent);
+    }
+
+    [Fact]
     public void Mean_budget_crossed_by_confidence_range_is_inconclusive()
     {
         var result = Check(
