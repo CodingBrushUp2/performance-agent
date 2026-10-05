@@ -27,9 +27,10 @@ The effective workspace budget and its source are also reported.
 
 ## Status
 
-- `READY_WITH_UNVERIFIED_COVERAGE` / exit 0 means the mechanical prerequisites are
+- `READY_WITH_UNVERIFIED_ASSUMPTIONS` / exit 0 means the mechanical prerequisites are
   present, but Performance Agent has **not** proven that the benchmark exercises the
-  selected changed member.
+  selected changed member or that the selected Current baseline represents the same
+  benchmark scenario.
 - `NEEDS_INPUT` / exit 1 means one or more prerequisites are missing.
 - command, Git, build, configuration, archive, or validation execution failures use
   exit 2.
@@ -40,8 +41,9 @@ next actions.
 
 ## Deliberate boundary
 
-Benchmark coverage remains `unverified` in this slice. A developer or coding agent
-must confirm that the benchmark scenario actually exercises the selected target.
+Benchmark coverage and Current-baseline scenario compatibility remain `unverified`
+in this slice. A developer or coding agent must confirm both before trusting a new
+measurement comparison.
 
 V0.6 does not generate benchmark code, infer production hot paths, invent realistic
 inputs, or claim that a changed method is performance-sensitive.
