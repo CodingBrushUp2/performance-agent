@@ -76,13 +76,13 @@ internal static class AnalysisConsoleWriter
     }
 
     public static string Verdict(DeterministicAnalysisResult deterministic) =>
-        VerdictLabel(deterministic.Check.Verdict);
+        OverallVerdictLabel(deterministic.Check.Verdict);
 
     private static void WriteMeasured(TextWriter output, BenchmarkCheckResult item, PerformanceBudget budget)
     {
         var (mean, allocation) = CheckFormatting.FormatMeasured(item.Result, budget);
         // Benchmark names come from evidence files and may contain control characters; keep them on one line.
-        output.WriteLine($"  {SingleLine(item.Name)}: {VerdictLabel(item.Verdict)}");
+        output.WriteLine($"  {SingleLine(item.Name)}: {BenchmarkVerdictLabel(item.Verdict)}");
         output.WriteLine($"    Mean: {mean}");
         output.WriteLine($"    Allocation: {allocation}");
     }
@@ -124,10 +124,18 @@ internal static class AnalysisConsoleWriter
     internal static string SingleLine(string text) =>
         string.Join(' ', Sanitize(text).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
-    private static string VerdictLabel(PerformanceVerdict verdict) => verdict switch
+    private static string OverallVerdictLabel(PerformanceVerdict verdict) => verdict switch
     {
         PerformanceVerdict.Pass => "PASS",
         PerformanceVerdict.Fail => "REGRESSION",
+        PerformanceVerdict.Inconclusive => "INCONCLUSIVE",
+        _ => "INCONCLUSIVE"
+    };
+
+    private static string BenchmarkVerdictLabel(PerformanceVerdict verdict) => verdict switch
+    {
+        PerformanceVerdict.Pass => "PASS",
+        PerformanceVerdict.Fail => "FAIL",
         PerformanceVerdict.Inconclusive => "INCONCLUSIVE",
         _ => "INCONCLUSIVE"
     };
