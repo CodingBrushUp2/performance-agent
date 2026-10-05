@@ -126,6 +126,51 @@ public sealed class GitDiffCandidateServiceTests
             Assert.Contains("changed line(s)", item.Reason, StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task DiscoverAsync_WorkingTreeIncludesUncommittedChanges()
+    {
+        using var workspace = new TemporaryDirectory();
+        RunGit(workspace.Path, "init");
+        RunGit(workspace.Path, "config", "user.email", "perfagent@example.invalid");
+        RunGit(workspace.Path, "config", "user.name", "Performance Agent Tests");
+
+        var sourcePath = Path.Combine(workspace.Path, "Sample.cs");
+        await File.WriteAllTextAsync(sourcePath, """
+        public class Sample
+        {
+            public int Work()
+            {
+                return 1;
+            }
+        }
+        """);
+        RunGit(workspace.Path, "add", "Sample.cs");
+        RunGit(workspace.Path, "commit", "-m", "baseline");
+        var baseRef = RunGit(workspace.Path, "rev-parse", "HEAD").Trim();
+
+        await File.WriteAllTextAsync(sourcePath, """
+        public class Sample
+        {
+            public int Work()
+            {
+                var value = 2;
+                return value;
+            }
+        }
+        """);
+
+        var result = await new GitDiffCandidateService().DiscoverAsync(
+            baseRef,
+            limit: 5,
+            repositoryPath: workspace.Path,
+            workingTree: true);
+
+        Assert.Equal("WORKTREE", result.HeadRef);
+        var candidate = Assert.Single(result.Candidates);
+        Assert.Equal("Sample.Work()", candidate.Member);
+        Assert.True(candidate.ChangedLines >= 1);
+    }
+
     private static string RunGit(string workingDirectory, params string[] arguments)
     {
         var startInfo = new ProcessStartInfo
