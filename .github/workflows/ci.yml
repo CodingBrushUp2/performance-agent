@@ -27,7 +27,7 @@ jobs:
         run: dotnet test tests/integration/PerformanceAgent.BenchmarkDotNet.IntegrationTests/PerformanceAgent.BenchmarkDotNet.IntegrationTests.csproj --configuration Release --no-build
       - name: Test CLI integration
         timeout-minutes: 5
-        run: dotnet test tests/integration/PerformanceAgent.Cli.IntegrationTests/PerformanceAgent.Cli.IntegrationTests.csproj --configuration Release --no-build
+        run: dotnet test tests/integration/PerformanceAgent.Cli.IntegrationTests/PerformanceAgent.Cli.IntegrationTests.csproj --configuration Release --no-build --blame-hang-timeout 30s --blame-hang-dump-type none
       - run: bash tests/e2e/cli-smoke.sh
       - run: bash tests/e2e/history-smoke.sh
       - run: bash tests/e2e/discovery-smoke.sh
