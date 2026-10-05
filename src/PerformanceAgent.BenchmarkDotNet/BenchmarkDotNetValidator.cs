@@ -43,6 +43,7 @@ public sealed class BenchmarkDotNetValidator
 
         diagnostics.AddRange(TrivialBenchmarkBodyRule.Analyze(benchmarkType, runInfo));
         diagnostics.AddRange(ManualTimingRule.Analyze(benchmarkType, runInfo));
+        diagnostics.AddRange(ForcedGcRule.Analyze(benchmarkType, runInfo));
 
         var ordered = diagnostics
             .Distinct()
