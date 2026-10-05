@@ -20,6 +20,20 @@ public sealed class BenchmarkDotNetMeasurementMapper
             : workloadName;
         var allocatedBytes = report.GcStats.GetBytesAllocatedPerOperation(report.BenchmarkCase);
 
-        return new BenchmarkMeasurement(name, statistics.Mean, allocatedBytes);
+        var normalizedStatistics = new BenchmarkStatistics(
+            statistics.N,
+            statistics.Median,
+            FiniteOrNull(statistics.StandardDeviation),
+            FiniteOrNull(statistics.StandardError),
+            statistics.AllOutliers.Length);
+
+        return new BenchmarkMeasurement(
+            name,
+            statistics.Mean,
+            allocatedBytes,
+            normalizedStatistics);
     }
+
+    private static double? FiniteOrNull(double value) =>
+        double.IsFinite(value) ? value : null;
 }
