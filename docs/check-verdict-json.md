@@ -47,7 +47,7 @@ and the raw mean/allocation comparison.
 - `status`: `notConfigured`, `conclusiveWithinBudget`,
   `conclusiveExceededBudget`, or `inconclusive`
 - minimum and maximum regression permitted by the measured confidence intervals
-- the confidence level used for the decision
+- `sourceConfidenceLevelPercent`: the confidence level of each source BenchmarkDotNet interval
 - an explanatory reason when the decision is inconclusive
 
 The raw metric objects still contain:
@@ -59,7 +59,10 @@ The raw metric objects still contain:
 - whether the point estimate exceeds the configured budget
 
 For mean timing, `budgetExceeded` is not by itself authoritative. The benchmark
-verdict and `meanDecision` account for measurement uncertainty.
+verdict and `meanDecision` account for measurement uncertainty. The minimum and
+maximum regression values are conservative bounds derived from the two source
+BenchmarkDotNet intervals; they are not themselves advertised as a 99.9% confidence
+interval for the ratio.
 
 Unavailable values remain explicit JSON `null`; they are never converted to zero.
 
@@ -98,7 +101,7 @@ Unavailable values remain explicit JSON `null`; they are never converted to zero
             "status": "conclusiveExceededBudget",
             "minimumRegressionPercent": 9.78,
             "maximumRegressionPercent": 10.22,
-            "confidenceLevelPercent": 99.9,
+            "sourceConfidenceLevelPercent": 99.9,
             "reason": null
           },
           "mean": {
