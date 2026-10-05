@@ -183,6 +183,40 @@ public sealed class AnalyzeCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Malformed_user_ai_configuration_does_not_block_deterministic_check()
+    {
+        await ArrangeRegressionOf25PercentAsync();
+        File.WriteAllText(_workspace.Storage.UserConfigurationPath!, "{ broken user ai config");
+
+        var deterministic = await new AnalyzeService(_workspace.Storage, (_, _) => RecordingProvider.Returning(Analyses.Claiming("x")))
+            .CheckAsync("run-candidate", CancellationToken.None);
+
+        Assert.False(deterministic.Check.Passed);
+        Assert.Equal(new PerformanceBudget(5, 5), deterministic.Budget);
+    }
+
+    [Fact]
+    public async Task Malformed_user_ai_configuration_fails_only_the_ai_phase()
+    {
+        await ArrangeRegressionOf25PercentAsync();
+        File.WriteAllText(_workspace.Storage.UserConfigurationPath!, "{ broken user ai config");
+        var created = false;
+
+        var result = await new AnalyzeService(_workspace.Storage, (_, _) =>
+            {
+                created = true;
+                return RecordingProvider.Returning(Analyses.Claiming("x"));
+            })
+            .AnalyzeAsync("run-candidate", CancellationToken.None);
+
+        Assert.False(result.Deterministic.Check.Passed);
+        Assert.Equal(2, result.ExitCode);
+        Assert.Null(result.Analysis);
+        Assert.Contains("User Performance Agent configuration is not valid JSON", result.AnalysisError, StringComparison.Ordinal);
+        Assert.False(created);
+    }
+
+    [Fact]
     public async Task Missing_model_fails_only_the_analysis_with_the_real_provider_factory()
     {
         await ArrangeRegressionOf25PercentAsync();
