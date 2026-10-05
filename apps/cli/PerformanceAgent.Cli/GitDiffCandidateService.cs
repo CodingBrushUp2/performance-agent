@@ -33,11 +33,12 @@ internal sealed class GitDiffCandidateService
         string headRef = "HEAD",
         int limit = 5,
         CancellationToken cancellationToken = default,
-        string? repositoryPath = null)
+        string? repositoryPath = null,
+        bool workingTree = false)
     {
         if (string.IsNullOrWhiteSpace(baseRef))
             throw new ArgumentException("A non-empty git base ref is required.", nameof(baseRef));
-        if (string.IsNullOrWhiteSpace(headRef))
+        if (!workingTree && string.IsNullOrWhiteSpace(headRef))
             throw new ArgumentException("A non-empty git head ref is required.", nameof(headRef));
         if (limit is < 1 or > 20)
             throw new ArgumentOutOfRangeException(nameof(limit), "Candidate limit must be between 1 and 20.");
@@ -53,21 +54,28 @@ internal sealed class GitDiffCandidateService
         if (repositoryRoot.Length == 0)
             throw new InvalidOperationException("Git returned an empty repository root.");
 
+        var diffArguments = new List<string>
+        {
+            "-c", "core.quotepath=false",
+            "diff",
+            "--unified=0",
+            "--no-color",
+            "--find-renames"
+        };
+        diffArguments.Add(workingTree ? baseRef : $"{baseRef}...{headRef}");
+        diffArguments.Add("--");
+        diffArguments.Add(":(glob)**/*.cs");
+
         var diffResult = await RunGitAsync(
             repositoryRoot,
-            [
-                "-c", "core.quotepath=false",
-                "diff",
-                "--unified=0",
-                "--no-color",
-                "--find-renames",
-                $"{baseRef}...{headRef}",
-                "--",
-                ":(glob)**/*.cs"
-            ],
+            diffArguments,
             cancellationToken);
         if (diffResult.ExitCode != 0)
-            throw GitFailure($"Cannot read git diff for '{baseRef}...{headRef}'.", diffResult);
+            throw GitFailure(
+                workingTree
+                    ? $"Cannot read git diff for '{baseRef}..WORKTREE'."
+                    : $"Cannot read git diff for '{baseRef}...{headRef}'.",
+                diffResult);
 
         var changedFiles = ParseUnifiedDiff(diffResult.StandardOutput);
         var candidates = new List<CandidateHint>();
@@ -108,7 +116,12 @@ internal sealed class GitDiffCandidateService
             .Take(limit)
             .ToArray();
 
-        return new CandidateDiscoveryResult("1.0", baseRef, headRef, limit, ranked);
+        return new CandidateDiscoveryResult(
+            "1.0",
+            baseRef,
+            workingTree ? "WORKTREE" : headRef,
+            limit,
+            ranked);
     }
 
     internal static IReadOnlyList<ChangedFile> ParseUnifiedDiff(string diff)
