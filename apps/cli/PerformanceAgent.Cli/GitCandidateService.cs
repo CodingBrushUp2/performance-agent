@@ -68,7 +68,7 @@ internal sealed class GitCandidateService
     private static void ValidateRef(string value, string parameterName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
-        if (value.StartsWith('-', StringComparison.Ordinal))
+        if (value.StartsWith("-", StringComparison.Ordinal))
             throw new ArgumentException("Git refs beginning with '-' are not accepted.", parameterName);
     }
 
