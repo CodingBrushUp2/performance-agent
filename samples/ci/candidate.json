@@ -4,7 +4,16 @@
     {
       "name": "SampleBenchmark.Sum",
       "meanNanoseconds": 104,
-      "allocatedBytesPerOperation": 0
+      "allocatedBytesPerOperation": 0,
+      "statistics": {
+        "sampleCount": 15,
+        "medianNanoseconds": 104,
+        "standardDeviationNanoseconds": 0.1,
+        "standardErrorNanoseconds": 0.03,
+        "outlierCount": 0,
+        "confidenceIntervalLowerNanoseconds": 103.9,
+        "confidenceIntervalUpperNanoseconds": 104.1
+      }
     }
   ],
   "environment": {
