@@ -2,7 +2,7 @@ namespace PerformanceAgent.Cli;
 
 internal sealed record WorkspaceStorageStatus(string WorkspaceDirectory, string StateDirectory, bool Writable, string? Error);
 
-internal sealed record WorkspaceStorage(string WorkspaceDirectory, string StateDirectory)
+internal sealed record WorkspaceStorage(string WorkspaceDirectory, string StateDirectory, string? UserConfigurationPath = null)
 {
     public WorkspaceStorageStatus Inspect()
     {
@@ -17,10 +17,10 @@ internal sealed record WorkspaceStorage(string WorkspaceDirectory, string StateD
         }
     }
 
-    public static WorkspaceStorage Resolve(string? workspaceDirectory = null)
+    public static WorkspaceStorage Resolve(string? workspaceDirectory = null, string? userConfigurationPath = null)
     {
         var workspace = Path.GetFullPath(workspaceDirectory ?? Environment.CurrentDirectory);
-        return new WorkspaceStorage(workspace, Path.Combine(workspace, ".performance-agent"));
+        return new WorkspaceStorage(workspace, Path.Combine(workspace, ".performance-agent"), userConfigurationPath);
     }
 
     public void EnsureWritable()
