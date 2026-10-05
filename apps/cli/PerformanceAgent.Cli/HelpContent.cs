@@ -15,12 +15,13 @@ internal static class HelpContent
     private static readonly CommandHelp[] Commands =
     [
         new("candidates", "List changed C# members that may deserve a benchmark review.",
-            "perfagent candidates --base <git-ref> [--head <git-ref>] [--limit <1-20>] [--format <text|json>]",
+            "perfagent candidates --base <git-ref> [--head <git-ref> | --working-tree] [--limit <1-20>] [--format <text|json>]",
             [
                 "perfagent candidates --base origin/main",
+                "perfagent candidates --base HEAD --working-tree",
                 "perfagent candidates --base main --head HEAD --limit 5 --format json"
             ],
-            "Uses git diff plus C# syntax mapping. Results are deterministic candidate hints, not benchmark recommendations. The default head is HEAD and the default limit is 5."),
+            "Uses git diff plus C# syntax mapping. Results are deterministic candidate hints, not benchmark recommendations. The default head is HEAD; --working-tree includes committed, staged, and unstaged changes since the base and cannot be combined with --head. The default limit is 5."),
         new("validate", "Validate BenchmarkDotNet declarations and configuration without running benchmarks.",
             "perfagent validate <benchmark.csproj> [--format <text|json>]",
             [
