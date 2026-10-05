@@ -79,6 +79,31 @@ public sealed class BenchmarkDotNetValidatorTests
     }
 
     [Fact]
+    public void ForcedGcInsideBenchmark_ProducesPA1003WithoutInvalidatingBenchmark()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(ForcedGcBenchmark));
+
+        Assert.True(result.IsValid);
+        var warning = Assert.Single(result.Diagnostics, diagnostic =>
+            diagnostic.Source == "PerformanceAgent.PA1003");
+
+        Assert.Equal(BenchmarkValidationSeverity.Warning, warning.Severity);
+        Assert.Equal(nameof(ForcedGcBenchmark.Work), warning.BenchmarkMethod);
+        Assert.Contains("GC.Collect()", warning.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ForcedGcInGlobalSetup_DoesNotProducePA1003()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(SetupGcBenchmark));
+
+        Assert.True(result.IsValid);
+        Assert.DoesNotContain(
+            result.Diagnostics,
+            diagnostic => diagnostic.Source == "PerformanceAgent.PA1003");
+    }
+
+    [Fact]
     public void PrivateBenchmarkMethod_IsReportedAsInvalid()
     {
         var result = new BenchmarkDotNetValidator().Validate(typeof(PrivateBenchmark));
@@ -146,6 +171,33 @@ public sealed class BenchmarkDotNetValidatorTests
             var value = _value + 1;
             return Stopwatch.GetTimestamp() - start + value;
         }
+    }
+
+    public class ForcedGcBenchmark
+    {
+        private int _value = 41;
+
+        [Benchmark]
+        public int Work()
+        {
+            GC.Collect();
+            return _value + 1;
+        }
+    }
+
+    public class SetupGcBenchmark
+    {
+        private int _value;
+
+        [GlobalSetup]
+        public void Setup()
+        {
+            GC.Collect();
+            _value = 41;
+        }
+
+        [Benchmark]
+        public int Work() => _value + 1;
     }
 
     public class PrivateBenchmark
