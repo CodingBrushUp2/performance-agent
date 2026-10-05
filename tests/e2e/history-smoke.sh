@@ -14,7 +14,7 @@ mkdir -p .performance-agent/archive
 python3 - <<'PY'
 import json
 for name in ['run-first', 'run-second']:
-    evidence = {'schemaVersion':'1.0','environment':{'runtime':'.NET 10','operatingSystem':'Linux','architecture':'X64'},'measurements':[{'name':'Smoke','meanNanoseconds':100,'allocatedBytesPerOperation':0}]}
+    evidence = {'schemaVersion':'1.0','environment':{'runtime':'.NET 10','operatingSystem':'Linux','architecture':'X64'},'measurements':[{'name':'Smoke','meanNanoseconds':100,'allocatedBytesPerOperation':0,'statistics':{'sampleCount':15,'medianNanoseconds':100,'standardDeviationNanoseconds':0.1,'standardErrorNanoseconds':0.03,'outlierCount':0,'confidenceIntervalLowerNanoseconds':99.9,'confidenceIntervalUpperNanoseconds':100.1}}]}
     with open('.performance-agent/archive/' + name + '.json', 'w') as f:
         json.dump({'runId':name,'timestamp':'2026-09-30T12:00:00+00:00','commitSha':None,'evidence':evidence}, f)
 with open('candidate.json','w') as f: json.dump(evidence,f)
