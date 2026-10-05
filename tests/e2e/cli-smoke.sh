@@ -36,6 +36,11 @@ set -e
 test "$broken_validate_code" -eq 2
 grep -F "error CS" <<< "$broken_validate_output"
 
+hygiene_validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate tests/fixtures/HygieneWarningBenchmarks/HygieneWarningBenchmarks.csproj)"
+grep -F "Validation: VALID" <<< "$hygiene_validate_output"
+grep -F "[WARNING] PerformanceAgent.MeasuredRegionHygiene" <<< "$hygiene_validate_output"
+grep -F "GC.Collect()" <<< "$hygiene_validate_output"
+
 output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- compare MapOrder 100 80 1000 750 markdown)"
 
 grep -F "| MapOrder | Mean (ns) | 100 | 80 | -20% | Comparable |" <<< "$output"
