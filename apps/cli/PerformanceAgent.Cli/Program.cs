@@ -83,6 +83,80 @@ static async Task<int> RunAsync(string[] args)
         finally { Console.CancelKeyPress -= cancelHandler; }
     }
 
+    if (args.Length >= 2 && string.Equals(args[0], "validate", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length is not (2 or 4)
+            || (args.Length == 4
+                && (!string.Equals(args[2], "--format", StringComparison.OrdinalIgnoreCase)
+                    || args[3].ToLowerInvariant() is not ("text" or "json"))))
+        {
+            Console.Error.WriteLine("Usage: perfagent validate <benchmark.csproj> [--format <text|json>]");
+            return 2;
+        }
+
+        var outputFormat = args.Length == 4 ? args[3].ToLowerInvariant() : "text";
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, signal) =>
+        {
+            signal.Cancel = true;
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+
+        try
+        {
+            var result = await new PerformanceAgent.Cli.ProjectRunner().ValidateAsync(args[1], cancellation.Token);
+            Console.Error.Write(result.StandardError);
+
+            if (result.ExitCode == 2 || string.IsNullOrWhiteSpace(result.Validation))
+                return result.ExitCode;
+
+            if (outputFormat == "json")
+            {
+                Console.Write(result.Validation);
+                return result.ExitCode;
+            }
+
+            using var document = System.Text.Json.JsonDocument.Parse(result.Validation);
+            var root = document.RootElement;
+            var valid = root.GetProperty("valid").GetBoolean();
+            Console.WriteLine($"Validation: {(valid ? "VALID" : "INVALID")}");
+            Console.WriteLine($"Benchmark types: {root.GetProperty("benchmarkTypeCount").GetInt32()}");
+
+            foreach (var diagnostic in root.GetProperty("diagnostics").EnumerateArray())
+            {
+                var severity = diagnostic.GetProperty("severity").GetString()?.ToUpperInvariant() ?? "UNKNOWN";
+                var source = diagnostic.GetProperty("source").GetString() ?? "Unknown";
+                var benchmarkType = diagnostic.GetProperty("benchmarkType").GetString() ?? "Unknown";
+                var benchmarkMethod = diagnostic.GetProperty("benchmarkMethod").ValueKind == System.Text.Json.JsonValueKind.Null
+                    ? null
+                    : diagnostic.GetProperty("benchmarkMethod").GetString();
+                var target = benchmarkMethod is null ? benchmarkType : $"{benchmarkType}.{benchmarkMethod}";
+                var message = (diagnostic.GetProperty("message").GetString() ?? string.Empty)
+                    .Replace('\r', ' ')
+                    .Replace('\n', ' ');
+
+                Console.WriteLine($"[{severity}] {source} {target}: {message}");
+            }
+
+            return result.ExitCode;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("Benchmark validation cancelled.");
+            return 130;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or TimeoutException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
+    }
+
     if (args.Length >= 2 && string.Equals(args[0], "calibrate", StringComparison.OrdinalIgnoreCase))
     {
         const int defaultRuns = 3;
