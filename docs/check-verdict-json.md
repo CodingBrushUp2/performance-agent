@@ -39,13 +39,30 @@ A check contains:
 - `reasons`
 - `benchmarks`
 
-Each benchmark contains its verdict, reasons, and mean/allocation comparison:
+Each benchmark contains its verdict, reasons, a confidence-aware `meanDecision`,
+and the raw mean/allocation comparison.
+
+`meanDecision` contains:
+
+- `status`: `notConfigured`, `conclusiveWithinBudget`,
+  `conclusiveExceededBudget`, or `inconclusive`
+- minimum and maximum regression permitted by the measured confidence intervals
+- `sourceConfidenceLevelPercent`: the confidence level of each source BenchmarkDotNet interval
+- an explanatory reason when the decision is inconclusive
+
+The raw metric objects still contain:
 
 - measured baseline value
 - measured candidate value
-- derived percentage change
+- point-estimate percentage change
 - comparison status
-- whether the configured budget was exceeded
+- whether the point estimate exceeds the configured budget
+
+For mean timing, `budgetExceeded` is not by itself authoritative. The benchmark
+verdict and `meanDecision` account for measurement uncertainty. The minimum and
+maximum regression values are conservative bounds derived from the two source
+BenchmarkDotNet intervals; they are not themselves advertised as a 99.9% confidence
+interval for the ratio.
 
 Unavailable values remain explicit JSON `null`; they are never converted to zero.
 
@@ -80,6 +97,13 @@ Unavailable values remain explicit JSON `null`; they are never converted to zero
           "reasons": [
             "Sample.Work: mean regression exceeds the configured budget."
           ],
+          "meanDecision": {
+            "status": "conclusiveExceededBudget",
+            "minimumRegressionPercent": 9.78,
+            "maximumRegressionPercent": 10.22,
+            "sourceConfidenceLevelPercent": 99.9,
+            "reason": null
+          },
           "mean": {
             "baseline": 100,
             "candidate": 110,

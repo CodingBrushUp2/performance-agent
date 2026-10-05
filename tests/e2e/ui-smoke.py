@@ -40,8 +40,19 @@ with tempfile.TemporaryDirectory(prefix="perfagent-ui-") as directory:
                 "environment": None if run_id == "run-first" else {
                     "runtime": "Runtime <script>runtime</script>", "operatingSystem": "OS & test", "architecture": "X64"},
                 "measurements": [
-                    {"name": "Smoke <script>name</script>", "meanNanoseconds": 250.25 if run_id == "run-regression" else 100.125,
-                     "allocatedBytesPerOperation": None if run_id == "run-first" else 0}]}
+                    {"name": "Smoke <script>name</script>",
+                     "meanNanoseconds": 250.25 if run_id == "run-regression" else 100.125,
+                     "allocatedBytesPerOperation": None if run_id == "run-first" else 0,
+                     "statistics": {
+                         "sampleCount": 15,
+                         "medianNanoseconds": 250.25 if run_id == "run-regression" else 100.125,
+                         "standardDeviationNanoseconds": 0.1,
+                         "standardErrorNanoseconds": 0.03,
+                         "outlierCount": 0,
+                         "confidenceIntervalLowerNanoseconds": 250.15 if run_id == "run-regression" else 100.025,
+                         "confidenceIntervalUpperNanoseconds": 250.35 if run_id == "run-regression" else 100.225,
+                         "confidenceLevelPercent": 99.9
+                     }}]}
         }))
     original_archive = {p.name: p.read_bytes() for p in archive.iterdir()}
     # Workspace applications and inherited ASP.NET settings cannot widen UI binding.

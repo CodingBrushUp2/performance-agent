@@ -35,7 +35,7 @@ public sealed class BenchmarkEvidenceTests
                     "Sum",
                     12.5,
                     64,
-                    new BenchmarkStatistics(15, 12.1, 0.8, 0.2, 1))
+                    new BenchmarkStatistics(15, 12.1, 0.8, 0.2, 1, 11.8, 13.2, 99.9))
             ]);
 
         var json = new JsonBenchmarkEvidenceWriter().Write(evidence);
@@ -47,6 +47,36 @@ public sealed class BenchmarkEvidenceTests
         Assert.Equal(0.8, statistics.StandardDeviationNanoseconds);
         Assert.Equal(0.2, statistics.StandardErrorNanoseconds);
         Assert.Equal(1, statistics.OutlierCount);
+        Assert.Equal(11.8, statistics.ConfidenceIntervalLowerNanoseconds);
+        Assert.Equal(13.2, statistics.ConfidenceIntervalUpperNanoseconds);
+        Assert.Equal(99.9, statistics.ConfidenceLevelPercent);
+    }
+
+    [Fact]
+    public void JsonReader_Rejects_partial_confidence_interval()
+    {
+        const string json = """
+        {
+          "schemaVersion": "1.0",
+          "measurements": [
+            {
+              "name": "Sum",
+              "meanNanoseconds": 12.5,
+              "allocatedBytesPerOperation": 64,
+              "statistics": {
+                "sampleCount": 15,
+                "medianNanoseconds": 12.1,
+                "standardDeviationNanoseconds": 0.8,
+                "standardErrorNanoseconds": 0.2,
+                "outlierCount": 1,
+                "confidenceIntervalLowerNanoseconds": 11.8
+              }
+            }
+          ]
+        }
+        """;
+
+        Assert.Throws<InvalidOperationException>(() => new JsonBenchmarkEvidenceReader().Read(json));
     }
 
     [Fact]

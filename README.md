@@ -239,7 +239,7 @@ A deterministic GitHub Actions example is included in `.github/workflows/perform
 
 For coding agents and CI consumers, `perfagent check ... --format json` emits the versioned deterministic PASS/FAIL/INCONCLUSIVE contract. See [Check verdict JSON contract](docs/check-verdict-json.md).
 
-BenchmarkDotNet evidence also preserves timing statistics needed for the V0.3 measurement-quality work. See [Measurement quality evidence](docs/measurement-quality.md).
+BenchmarkDotNet evidence preserves timing statistics and the 99.9% confidence interval used by the V0.3 trusted-verdict policy. Mean PASS/FAIL is only conclusive when the full confidence-derived regression range stays on one side of the configured budget; otherwise the verdict is INCONCLUSIVE. See [Measurement quality policy](docs/measurement-quality.md).
 
 ## Non-goals for V1
 

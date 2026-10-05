@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Comparison;
+using PerformanceAgent.Core.Quality;
 using PerformanceAgent.Core.Verdicts;
 
 namespace PerformanceAgent.Cli;
@@ -23,10 +24,18 @@ internal sealed record CheckVerdictMetric(
     ComparisonStatus Status,
     bool BudgetExceeded);
 
+internal sealed record CheckVerdictMeanDecision(
+    MeanDecisionQualityStatus Status,
+    double? MinimumRegressionPercent,
+    double? MaximumRegressionPercent,
+    double? SourceConfidenceLevelPercent,
+    string? Reason);
+
 internal sealed record CheckVerdictBenchmark(
     string Name,
     PerformanceVerdict Verdict,
     IReadOnlyList<string> Reasons,
+    CheckVerdictMeanDecision MeanDecision,
     CheckVerdictMetric Mean,
     CheckVerdictMetric Allocation);
 
@@ -96,6 +105,12 @@ internal sealed class CheckVerdictJsonWriter
             item.Name,
             item.Verdict,
             item.Reasons,
+            new CheckVerdictMeanDecision(
+                item.MeanDecisionQuality.Status,
+                item.MeanDecisionQuality.MinimumRegressionPercent,
+                item.MeanDecisionQuality.MaximumRegressionPercent,
+                item.MeanDecisionQuality.SourceConfidenceLevelPercent,
+                item.MeanDecisionQuality.Reason),
             Map(item.Result.Comparison.Mean, item.Result.MeanExceeded),
             Map(item.Result.Comparison.AllocatedBytes, item.Result.AllocationExceeded));
 

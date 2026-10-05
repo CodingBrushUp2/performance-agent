@@ -35,6 +35,13 @@ grep -F '"medianNanoseconds":' <<< "$run_output"
 grep -F '"standardDeviationNanoseconds":' <<< "$run_output"
 grep -F '"standardErrorNanoseconds":' <<< "$run_output"
 grep -F '"outlierCount":' <<< "$run_output"
+grep -F '"confidenceIntervalLowerNanoseconds":' <<< "$run_output"
+grep -F '"confidenceIntervalUpperNanoseconds":' <<< "$run_output"
+grep -F '"confidenceLevelPercent": 99.9' <<< "$run_output"
+if grep -Fq '"confidenceIntervalLowerNanoseconds": null' <<< "$run_output" || grep -Fq '"confidenceIntervalUpperNanoseconds": null' <<< "$run_output"; then
+  echo "Normal BenchmarkDotNet run did not produce a usable confidence interval" >&2
+  exit 1
+fi
 
 if grep -Fq '// BenchmarkDotNet' <<< "$run_output"; then
   echo "BenchmarkDotNet diagnostic output leaked into normalized evidence" >&2
@@ -47,10 +54,10 @@ candidate_file="$(mktemp)"
 trap 'rm -f "$baseline_file" "$candidate_file"' EXIT
 
 cat > "$baseline_file" <<'JSON'
-{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000,"statistics":{"sampleCount":15,"medianNanoseconds":100,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":99.9,"confidenceIntervalUpperNanoseconds":100.1,"confidenceLevelPercent":99.9}}]}
 JSON
 cat > "$candidate_file" <<'JSON'
-{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080,"statistics":{"sampleCount":15,"medianNanoseconds":104,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":103.9,"confidenceIntervalUpperNanoseconds":104.1,"confidenceLevelPercent":99.9}}]}
 JSON
 
 check_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10)"
@@ -65,9 +72,12 @@ grep -F '"kind": "explicit"' <<< "$check_json"
 grep -F '"name": "MapOrder"' <<< "$check_json"
 grep -F '"status": "comparable"' <<< "$check_json"
 grep -F '"budgetExceeded": false' <<< "$check_json"
+grep -F '"meanDecision":' <<< "$check_json"
+grep -F '"status": "conclusiveWithinBudget"' <<< "$check_json"
+grep -F '"sourceConfidenceLevelPercent": 99.9' <<< "$check_json"
 
 cat > "$candidate_file" <<'JSON'
-{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":106,"allocatedBytesPerOperation":1070}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":106,"allocatedBytesPerOperation":1070,"statistics":{"sampleCount":15,"medianNanoseconds":106,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":105.9,"confidenceIntervalUpperNanoseconds":106.1,"confidenceLevelPercent":99.9}}]}
 JSON
 
 set +e
@@ -85,9 +95,32 @@ set -e
 test "$failure_json_code" -eq 1
 grep -F '"verdict": "fail"' <<< "$failure_json"
 grep -F '"budgetExceeded": true' <<< "$failure_json"
+grep -F '"status": "conclusiveExceededBudget"' <<< "$failure_json"
 
 cat > "$candidate_file" <<'JSON'
-{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":null}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":106,"allocatedBytesPerOperation":1070,"statistics":{"sampleCount":15,"medianNanoseconds":106,"standardDeviationNanoseconds":2,"standardErrorNanoseconds":0.6,"outlierCount":1,"confidenceIntervalLowerNanoseconds":104,"confidenceIntervalUpperNanoseconds":108,"confidenceLevelPercent":99.9}}]}
+JSON
+
+set +e
+uncertain_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10)"
+uncertain_code=$?
+set -e
+test "$uncertain_code" -eq 2
+grep -F "MapOrder: INCONCLUSIVE" <<< "$uncertain_output"
+grep -F "regression bounds derived from BenchmarkDotNet 99.9% confidence intervals cross the configured budget of 5%" <<< "$uncertain_output"
+grep -F "Overall: INCONCLUSIVE" <<< "$uncertain_output"
+
+set +e
+uncertain_json="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10 --format json)"
+uncertain_json_code=$?
+set -e
+test "$uncertain_json_code" -eq 2
+grep -F '"verdict": "inconclusive"' <<< "$uncertain_json"
+grep -F '"status": "inconclusive"' <<< "$uncertain_json"
+grep -F '"sourceConfidenceLevelPercent": 99.9' <<< "$uncertain_json"
+
+cat > "$candidate_file" <<'JSON'
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":null,"statistics":{"sampleCount":15,"medianNanoseconds":104,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":103.9,"confidenceIntervalUpperNanoseconds":104.1,"confidenceLevelPercent":99.9}}]}
 JSON
 
 set +e
@@ -107,7 +140,7 @@ JSON
 trap 'rm -f "$baseline_file" "$candidate_file" "$budget_file"' EXIT
 
 cat > "$candidate_file" <<'JSON'
-{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080,"statistics":{"sampleCount":15,"medianNanoseconds":104,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":103.9,"confidenceIntervalUpperNanoseconds":104.1,"confidenceLevelPercent":99.9}}]}
 JSON
 
 budget_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" --budget "$budget_file")"
@@ -128,10 +161,10 @@ temp_root="$(mktemp -d)"
 temp_candidate="$temp_root/candidate.json"
 mkdir -p "$temp_root/.performance-agent/archive"
 cat > "$temp_root/.performance-agent/archive/run-temp.json" <<'JSON'
-{"runId":"run-temp","timestamp":"2026-09-30T12:00:00+00:00","commitSha":"abc123","evidence":{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000}]}}
+{"runId":"run-temp","timestamp":"2026-09-30T12:00:00+00:00","commitSha":"abc123","evidence":{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000,"statistics":{"sampleCount":15,"medianNanoseconds":100,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":99.9,"confidenceIntervalUpperNanoseconds":100.1,"confidenceLevelPercent":99.9}}]}}
 JSON
 cat > "$temp_candidate" <<'JSON'
-{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080}]}
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080,"statistics":{"sampleCount":15,"medianNanoseconds":104,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":103.9,"confidenceIntervalUpperNanoseconds":104.1,"confidenceLevelPercent":99.9}}]}
 JSON
 
 repo_root="$PWD"

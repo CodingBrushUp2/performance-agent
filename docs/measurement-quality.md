@@ -1,30 +1,74 @@
-# Measurement quality evidence
+# Measurement quality policy
 
-V0.3 is moving from a binary performance gate toward a trusted verdict.
+V0.3 uses measurement uncertainty to decide whether a mean-performance budget can be
+trusted.
 
-This slice preserves statistical facts that BenchmarkDotNet already computes. It does
-not yet change PASS, FAIL, or INCONCLUSIVE based on a new quality threshold.
+Performance Agent preserves BenchmarkDotNet's 99.9% confidence interval for every
+new benchmark measurement. The verdict policy derives conservative regression bounds
+from the baseline and candidate intervals and compares those bounds with the configured
+mean budget. These derived bounds are not themselves a 99.9% confidence interval for
+the ratio; 99.9% is the confidence level of each source BenchmarkDotNet interval.
 
-Each normalized benchmark measurement may now include:
+For a baseline confidence interval `[B_low, B_high]` and candidate interval
+`[C_low, C_high]`:
 
-- sample count
-- median duration
-- standard deviation
-- standard error
-- outlier count
+```text
+minimum regression = (C_low / B_high - 1) * 100
+maximum regression = (C_high / B_low - 1) * 100
+```
 
-Evidence produced before this change remains valid. The `statistics` object is
-optional so archived schema 1.0 evidence still round-trips and can still be compared.
+The decision is:
 
-## Why this is separate from quality policy
+- `PASS` for mean when the maximum possible regression is at or below the budget.
+- `FAIL` for mean when the minimum possible regression is above the budget.
+- `INCONCLUSIVE` when the derived regression bounds cross the budget boundary.
 
-BenchmarkDotNet already performs substantial measurement and statistical analysis.
-Performance Agent should not invent an arbitrary confidence threshold and silently
-override BenchmarkDotNet semantics.
+This deliberately avoids a separate arbitrary rule such as "standard deviation must
+be below 5%". The relevant question is whether the uncertainty can change the
+PASS/FAIL decision.
 
-The next slice can define an explicit, tested quality policy using these preserved
-facts. That policy should state exactly when insufficient or unstable evidence turns
-a verdict into INCONCLUSIVE.
+## Exact self-comparison
 
-Until then, these statistics are evidence only; existing deterministic budget verdicts
-are unchanged.
+When baseline and candidate are the exact same normalized measurement, the measured
+change is deterministically 0%. Performance Agent returns a conclusive within-budget
+mean decision without treating the same confidence interval as two independent runs.
+
+This matters for workflows such as viewing or analyzing a run that is itself the
+active Current baseline.
+
+## Required evidence
+
+A trusted mean verdict requires:
+
+- benchmark statistics for baseline and candidate
+- both confidence interval bounds
+- confidence-level provenance
+- BenchmarkDotNet's 99.9% confidence level
+- a positive baseline confidence interval suitable for ratio comparison
+
+Evidence created before statistical metadata was preserved is still readable, but a
+configured mean budget becomes `INCONCLUSIVE` until baseline and candidate are
+re-run with the current Performance Agent.
+
+If only an allocation budget is configured, missing timing statistics do not block
+that allocation-only decision.
+
+## Definite failures still win
+
+If another configured metric produces a definite failure, for example allocation is
+over budget, the overall benchmark verdict remains `FAIL` even when the mean timing
+decision is inconclusive.
+
+## JSON contract
+
+The machine-readable check output includes a `meanDecision` object with:
+
+- decision status
+- minimum possible regression
+- maximum possible regression
+- source confidence level used by the BenchmarkDotNet intervals
+- reason when inconclusive
+
+The existing `mean.budgetExceeded` field remains the point-estimate budget check.
+It is not the authoritative mean verdict when uncertainty is present. Consumers
+should use the benchmark verdict and `meanDecision.status`.

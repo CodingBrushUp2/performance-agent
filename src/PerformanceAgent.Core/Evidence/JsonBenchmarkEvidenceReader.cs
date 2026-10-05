@@ -77,6 +77,24 @@ public sealed class JsonBenchmarkEvidenceReader
                     throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid statistics standard error.");
                 if (statistics.OutlierCount < 0 || statistics.OutlierCount > statistics.SampleCount)
                     throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid statistics outlier count.");
+
+                var lower = statistics.ConfidenceIntervalLowerNanoseconds;
+                var upper = statistics.ConfidenceIntervalUpperNanoseconds;
+                if ((lower is null) != (upper is null))
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' must provide both confidence interval bounds or neither.");
+                if (lower is { } lowerValue && !double.IsFinite(lowerValue))
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid confidence interval lower bound.");
+                if (upper is { } upperValue && !double.IsFinite(upperValue))
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid confidence interval upper bound.");
+                if (lower is { } validLower && upper is { } validUpper && validLower > validUpper)
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid confidence interval range.");
+                if (lower is { } intervalLower
+                    && upper is { } intervalUpper
+                    && (measurement.MeanNanoseconds < intervalLower || measurement.MeanNanoseconds > intervalUpper))
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' mean must fall inside its confidence interval.");
+                if (statistics.ConfidenceLevelPercent is { } confidenceLevel
+                    && (!double.IsFinite(confidenceLevel) || confidenceLevel <= 0 || confidenceLevel >= 100))
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid confidence level.");
             }
         }
     }

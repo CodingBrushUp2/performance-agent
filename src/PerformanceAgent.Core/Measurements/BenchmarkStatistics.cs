@@ -5,4 +5,7 @@ public sealed record BenchmarkStatistics(
     double MedianNanoseconds,
     double? StandardDeviationNanoseconds,
     double? StandardErrorNanoseconds,
-    int OutlierCount);
+    int OutlierCount,
+    double? ConfidenceIntervalLowerNanoseconds = null,
+    double? ConfidenceIntervalUpperNanoseconds = null,
+    double? ConfidenceLevelPercent = null);

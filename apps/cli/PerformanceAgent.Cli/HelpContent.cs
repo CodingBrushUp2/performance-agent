@@ -35,7 +35,7 @@ internal static class HelpContent
                 "perfagent check -r <baseline-run-id> --candidate candidate.json",
                 "perfagent check -b baseline.json --candidate candidate.json --budget performance-budget.json --format json"
             ],
-            "The candidate is an evidence JSON file. With --candidate and no explicit baseline, the active Current baseline is used; a distinct Anchor is also checked. -r/--run-id selects an archived baseline run, not an archived candidate. JSON output is a versioned machine-readable verdict contract; exit codes remain 0 PASS, 1 FAIL, 2 INCONCLUSIVE or command error."),
+            "The candidate is an evidence JSON file. With --candidate and no explicit baseline, the active Current baseline is used; a distinct Anchor is also checked. -r/--run-id selects an archived baseline run, not an archived candidate. Mean verdicts use BenchmarkDotNet 99.9% confidence intervals; if uncertainty crosses the budget boundary, the result is INCONCLUSIVE. Legacy evidence without statistical confidence remains readable but cannot produce a trusted mean verdict. JSON output is a versioned machine-readable verdict contract; exit codes remain 0 PASS, 1 FAIL, 2 INCONCLUSIVE or command error."),
         new("analyze", "Analyze an archived candidate regression with optional AI assistance.",
             "perfagent analyze <candidate-run-id>",
             ["perfagent analyze <candidate-run-id>"],

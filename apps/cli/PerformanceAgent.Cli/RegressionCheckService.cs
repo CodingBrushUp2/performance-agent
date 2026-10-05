@@ -1,6 +1,8 @@
 using PerformanceAgent.Core.Budgets;
 using PerformanceAgent.Core.Comparison;
 using PerformanceAgent.Core.Evidence;
+using PerformanceAgent.Core.Measurements;
+using PerformanceAgent.Core.Quality;
 using PerformanceAgent.Core.Verdicts;
 
 namespace PerformanceAgent.Cli;
@@ -8,6 +10,7 @@ namespace PerformanceAgent.Cli;
 internal sealed record BenchmarkCheckResult(
     string Name,
     BudgetCheckResult Result,
+    MeanDecisionQuality MeanDecisionQuality,
     PerformanceVerdict Verdict,
     IReadOnlyList<string> Reasons)
 {
@@ -73,12 +76,24 @@ internal sealed class RegressionCheckService
         }
 
         var checker = new PerformanceBudgetChecker();
+        var qualityEvaluator = new MeanDecisionQualityEvaluator();
         var results = baselineByName.Keys
             .Order(StringComparer.Ordinal)
-            .Select(name => CreateBenchmarkCheck(
-                name,
-                checker.Check(baselineByName[name], candidateByName[name], budget),
-                budget))
+            .Select(name =>
+            {
+                var baselineMeasurement = baselineByName[name];
+                var candidateMeasurement = candidateByName[name];
+                return CreateBenchmarkCheck(
+                    name,
+                    baselineMeasurement,
+                    candidateMeasurement,
+                    checker.Check(baselineMeasurement, candidateMeasurement, budget),
+                    qualityEvaluator.Evaluate(
+                        baselineMeasurement,
+                        candidateMeasurement,
+                        budget.MaxMeanRegressionPercent),
+                    budget);
+            })
             .ToArray();
 
         var verdict = results.Any(x => x.Verdict == PerformanceVerdict.Fail)
@@ -95,25 +110,47 @@ internal sealed class RegressionCheckService
 
     private static BenchmarkCheckResult CreateBenchmarkCheck(
         string name,
+        BenchmarkMeasurement baseline,
+        BenchmarkMeasurement candidate,
         BudgetCheckResult result,
+        MeanDecisionQuality meanDecisionQuality,
         PerformanceBudget budget)
     {
         var reasons = new List<string>();
 
-        if (result.MeanExceeded)
-            reasons.Add($"{name}: mean regression exceeds the configured budget.");
+        if (meanDecisionQuality.IsExceeded)
+        {
+            reasons.Add(
+                $"{name}: mean regression exceeds the configured budget across bounds derived from BenchmarkDotNet {MeanDecisionQualityEvaluator.RequiredConfidenceLevelPercent:0.0}% confidence intervals.");
+        }
+
         if (result.AllocationExceeded)
             reasons.Add($"{name}: allocation regression exceeds the configured budget.");
 
-        if (result.MeanExceeded || result.AllocationExceeded)
-            return new BenchmarkCheckResult(name, result, PerformanceVerdict.Fail, reasons);
+        if (meanDecisionQuality.IsExceeded || result.AllocationExceeded)
+        {
+            return new BenchmarkCheckResult(
+                name,
+                result,
+                meanDecisionQuality,
+                PerformanceVerdict.Fail,
+                reasons);
+        }
 
-        AddInconclusiveReason(
+        var meanInconclusiveReasonAdded = AddInconclusiveReason(
             reasons,
             name,
             "mean",
             result.Comparison.Mean,
             budget.MaxMeanRegressionPercent);
+
+        if (!meanInconclusiveReasonAdded
+            && meanDecisionQuality.IsInconclusive
+            && meanDecisionQuality.Reason is not null)
+        {
+            reasons.Add($"{name}: {meanDecisionQuality.Reason}");
+        }
+
         AddInconclusiveReason(
             reasons,
             name,
@@ -124,11 +161,12 @@ internal sealed class RegressionCheckService
         return new BenchmarkCheckResult(
             name,
             result,
+            meanDecisionQuality,
             reasons.Count == 0 ? PerformanceVerdict.Pass : PerformanceVerdict.Inconclusive,
             reasons);
     }
 
-    private static void AddInconclusiveReason(
+    private static bool AddInconclusiveReason(
         ICollection<string> reasons,
         string benchmarkName,
         string metricName,
@@ -136,9 +174,14 @@ internal sealed class RegressionCheckService
         double? configuredThreshold)
     {
         if (configuredThreshold is null)
-            return;
+            return false;
 
         if (change.Status != ComparisonStatus.Comparable || change.PercentChange is null)
+        {
             reasons.Add($"{benchmarkName}: required {metricName} metric is not comparable ({change.Status}).");
+            return true;
+        }
+
+        return false;
     }
 }
