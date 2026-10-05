@@ -54,6 +54,7 @@ CS
   grep -F "Benchmark: VALID" <<< "$readiness_output"
   grep -F "Current baseline: Not selected" <<< "$readiness_output"
   grep -F "Coverage: unverified" <<< "$readiness_output"
+  grep -F "Baseline compatibility: not-assessed" <<< "$readiness_output"
   grep -F "No Current baseline is selected." <<< "$readiness_output"
 
   set +e
@@ -67,6 +68,7 @@ CS
   grep -F '"valid": true' <<< "$readiness_json"
   grep -F '"currentBaselineRunId": null' <<< "$readiness_json"
   grep -F '"coverageStatus": "unverified"' <<< "$readiness_json"
+  grep -F '"baselineCompatibilityStatus": "not-assessed"' <<< "$readiness_json"
 )
 rm -rf "$readiness_repo"
 
