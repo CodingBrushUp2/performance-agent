@@ -6,11 +6,81 @@ grep -F "Performance Agent" <<< "$help_output"
 grep -F "Commands:" <<< "$help_output"
 grep -F "Typical workflow:" <<< "$help_output"
 
-for command in validate run check analyze; do
+for command in candidates validate run check analyze; do
   command_help="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- "$command" --help)"
   grep -F "Performance Agent - $command" <<< "$command_help"
   grep -F "Usage:" <<< "$command_help"
 done
+
+perfagent_dll="$PWD/apps/cli/PerformanceAgent.Cli/bin/Release/net10.0/perfagent.dll"
+candidate_repo="$(mktemp -d)"
+mkdir -p "$candidate_repo/src" "$candidate_repo/tests"
+cat > "$candidate_repo/src/Worker.cs" <<'CS'
+namespace CandidateSmoke;
+
+public class Worker
+{
+    public int Transform(int value)
+    {
+        return value + 1;
+    }
+
+    public int Unchanged(int value) => value;
+}
+CS
+cat > "$candidate_repo/tests/WorkerTests.cs" <<'CS'
+public class WorkerTests
+{
+    public int TestValue() => 1;
+}
+CS
+(
+  cd "$candidate_repo"
+  git init -q
+  git config user.name "Performance Agent CI"
+  git config user.email "perfagent@example.invalid"
+  git add .
+  git commit -qm baseline
+
+  cat > src/Worker.cs <<'CS'
+namespace CandidateSmoke;
+
+public class Worker
+{
+    public int Transform(int value)
+    {
+        var doubled = value * 2;
+        var adjusted = doubled + 1;
+        return adjusted;
+    }
+
+    public int Unchanged(int value) => value;
+}
+CS
+  cat > tests/WorkerTests.cs <<'CS'
+public class WorkerTests
+{
+    public int TestValue() => 2;
+}
+CS
+  git add .
+  git commit -qm candidate
+
+  candidates_output="$(dotnet "$perfagent_dll" candidates HEAD~1 --max 3)"
+  grep -F "Candidates: 1" <<< "$candidates_output"
+  grep -F "Worker.Transform" <<< "$candidates_output"
+  grep -F "focus hints, not performance-risk verdicts" <<< "$candidates_output"
+
+  candidates_json="$(dotnet "$perfagent_dll" candidates HEAD~1 --format json)"
+  grep -F '"schemaVersion": "1.0"' <<< "$candidates_json"
+  grep -F '"eligibleCSharpFileCount": 1' <<< "$candidates_json"
+  grep -F '"memberName": "Transform"' <<< "$candidates_json"
+  if grep -Fq 'WorkerTests' <<< "$candidates_json"; then
+    echo "Test file leaked into production candidates" >&2
+    exit 1
+  fi
+)
+rm -rf "$candidate_repo"
 
 validate_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- validate samples/run/PerformanceAgent.SampleBenchmarks.csproj)"
 grep -F "Validation: VALID" <<< "$validate_output"
