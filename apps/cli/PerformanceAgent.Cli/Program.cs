@@ -15,8 +15,8 @@ static async Task<int> RunAsync(string[] args)
     static string ReadinessLabel(PerformanceAgent.Cli.ExperimentReadinessStatus status) =>
         status switch
         {
-            PerformanceAgent.Cli.ExperimentReadinessStatus.ReadyWithUnverifiedCoverage =>
-                "READY_WITH_UNVERIFIED_COVERAGE",
+            PerformanceAgent.Cli.ExperimentReadinessStatus.ReadyWithUnverifiedAssumptions =>
+                "READY_WITH_UNVERIFIED_ASSUMPTIONS",
             _ => "NEEDS_INPUT"
         };
 
@@ -216,6 +216,7 @@ static async Task<int> RunAsync(string[] args)
             Console.WriteLine(
                 $"Budget: {result.Budget.Source}; mean {FormatPercent(result.Budget.MaxMeanRegressionPercent)}, allocation {FormatPercent(result.Budget.MaxAllocationRegressionPercent)}");
             Console.WriteLine($"Coverage: {result.CoverageStatus}");
+            Console.WriteLine($"Baseline compatibility: {result.BaselineCompatibilityStatus}");
 
             if (result.Blockers.Count != 0)
             {
