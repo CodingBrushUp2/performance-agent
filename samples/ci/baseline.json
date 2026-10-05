@@ -12,7 +12,8 @@
         "standardErrorNanoseconds": 0.03,
         "outlierCount": 0,
         "confidenceIntervalLowerNanoseconds": 99.9,
-        "confidenceIntervalUpperNanoseconds": 100.1
+        "confidenceIntervalUpperNanoseconds": 100.1,
+        "confidenceLevelPercent": 99.9
       }
     }
   ],
