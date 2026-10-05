@@ -32,6 +32,19 @@ public sealed class BenchmarkDotNetValidatorTests
     }
 
     [Fact]
+    public void EmptyVoidBenchmark_IsWarningButRemainsValid()
+    {
+        var result = new BenchmarkDotNetValidator().Validate(typeof(EmptyVoidBenchmark));
+
+        Assert.True(result.IsValid);
+        Assert.Contains(
+            result.Diagnostics,
+            item => item.Source == "PerformanceAgentValidityGuard"
+                && item.Severity == BenchmarkValidationSeverity.Warning
+                && item.BenchmarkMethod == nameof(EmptyVoidBenchmark.Work));
+    }
+
+    [Fact]
     public void FieldBackedBenchmark_DoesNotTriggerTrivialBodyWarning()
     {
         var result = new BenchmarkDotNetValidator().Validate(typeof(FieldBackedBenchmark));
@@ -77,6 +90,14 @@ public sealed class BenchmarkDotNetValidatorTests
     {
         [Benchmark]
         public int Work() => 42;
+    }
+
+    public class EmptyVoidBenchmark
+    {
+        [Benchmark]
+        public void Work()
+        {
+        }
     }
 
     public class FieldBackedBenchmark
