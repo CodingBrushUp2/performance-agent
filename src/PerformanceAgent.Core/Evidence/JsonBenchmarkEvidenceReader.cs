@@ -62,6 +62,22 @@ public sealed class JsonBenchmarkEvidenceReader
                 throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid mean duration.");
             if (measurement.AllocatedBytesPerOperation is < 0)
                 throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid allocation measurement.");
+
+            if (measurement.Statistics is { } statistics)
+            {
+                if (statistics.SampleCount <= 0)
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid statistics sample count.");
+                if (!double.IsFinite(statistics.MedianNanoseconds) || statistics.MedianNanoseconds < 0)
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid statistics median.");
+                if (statistics.StandardDeviationNanoseconds is { } standardDeviation
+                    && (!double.IsFinite(standardDeviation) || standardDeviation < 0))
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid statistics standard deviation.");
+                if (statistics.StandardErrorNanoseconds is { } standardError
+                    && (!double.IsFinite(standardError) || standardError < 0))
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid statistics standard error.");
+                if (statistics.OutlierCount < 0 || statistics.OutlierCount > statistics.SampleCount)
+                    throw new InvalidOperationException($"Benchmark '{measurement.Name}' has an invalid statistics outlier count.");
+            }
         }
     }
 }
