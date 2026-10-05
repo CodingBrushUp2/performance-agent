@@ -123,9 +123,21 @@ dotnet tool run perfagent -- history | grep -F 'No baseline events.'
 
 # Calibration uses repeated real tool executions but must never select a baseline implicitly.
 timeout 180s dotnet tool run perfagent -- calibrate "$PWD/Benchmarks/Benchmarks.csproj" \
-  --runs 2 --max-spread 100000 > calibrate.stdout 2> calibrate.stderr
-grep -F 'Calibration: STABLE' calibrate.stdout
-grep -F 'Baselines were not changed.' calibrate.stdout
+  --runs 2 --max-spread 100000 --format json > calibrate.stdout 2> calibrate.stderr
+python3 - <<'PY'
+import json
+with open('calibrate.stdout') as f:
+    calibration=json.load(f)
+assert calibration['schemaVersion']=='1.0'
+assert calibration['status']=='stable'
+assert calibration['runCount']==2
+assert len(calibration['runIds'])==2
+assert calibration['maxAllowedSpreadPercent']==100000
+metric,=calibration['metrics']
+assert metric['benchmarkName']=='InstalledBenchmark.Allocate'
+assert metric['meanSpreadPercent'] >= 0
+assert calibration['reasons']==[]
+PY
 dotnet tool run perfagent -- history > calibration-history.stdout
 grep -F 'Active Current: -' calibration-history.stdout
 grep -F 'Active Anchor: -' calibration-history.stdout
