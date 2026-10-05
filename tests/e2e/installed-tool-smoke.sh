@@ -147,6 +147,27 @@ dotnet tool run perfagent -- validate "$PWD/Benchmarks/Benchmarks.csproj" > vali
 grep -F 'Validation: VALID' validate.stdout
 grep -F 'Benchmark types: 1' validate.stdout
 
+set +e
+dotnet tool run perfagent -- readiness \
+  --base "$candidate_base" \
+  --benchmark "$PWD/Benchmarks/Benchmarks.csproj" \
+  --format json > readiness.json
+readiness_code=$?
+set -e
+test "$readiness_code" -eq 1
+python3 - <<'PY'
+import json
+with open('readiness.json') as f:
+    result=json.load(f)
+assert result['schemaVersion']=='1.0'
+assert result['status']=='needsInput'
+assert result['selectedTarget']['key']=='Helper/Work.cs::Work.Allocate()'
+assert result['benchmark']['valid'] is True
+assert result['currentBaselineRunId'] is None
+assert result['coverageStatus']=='unverified'
+assert any('No Current baseline' in blocker for blocker in result['blockers'])
+PY
+
 timeout 180s dotnet tool run perfagent -- run "$PWD/Benchmarks/Benchmarks.csproj" \
   --output "$PWD/evidence.json" > run.stdout 2> run.stderr
 python3 - <<'PY'
