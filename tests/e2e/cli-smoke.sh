@@ -134,7 +134,7 @@ temp_root="$(mktemp -d)"
 temp_candidate="$temp_root/candidate.json"
 mkdir -p "$temp_root/.performance-agent/archive"
 cat > "$temp_root/.performance-agent/archive/run-temp.json" <<'JSON'
-{"runId":"run-temp","timestamp":"2026-09-30T12:00:00+00:00","commitSha":"abc123","evidence":{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000}]}}
+{"runId":"run-temp","timestamp":"2026-09-30T12:00:00+00:00","commitSha":"abc123","evidence":{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":100,"allocatedBytesPerOperation":1000,"statistics":{"sampleCount":15,"medianNanoseconds":100,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":99.9,"confidenceIntervalUpperNanoseconds":100.1}}]}}
 JSON
 cat > "$temp_candidate" <<'JSON'
 {"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":1080,"statistics":{"sampleCount":15,"medianNanoseconds":104,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":103.9,"confidenceIntervalUpperNanoseconds":104.1}}]}
