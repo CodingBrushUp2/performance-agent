@@ -586,7 +586,7 @@ static async Task<int> RunCheckAsync(string[] args)
         else if (positional.Count == 0)
         {
             budget = new PerformanceAgent.Cli.WorkspaceConfiguration(
-                PerformanceAgent.Cli.WorkspaceStorage.Resolve()).Load().Budget!;
+                PerformanceAgent.Cli.WorkspaceStorage.Resolve()).InspectBudget().Budget;
         }
         else
         {
