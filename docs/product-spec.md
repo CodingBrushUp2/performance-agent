@@ -1,6 +1,6 @@
-# Product Specification v0.3
+# Product Specification v0.4
 
-Status: .NET V0.3 release candidate
+Status: .NET V0.4 release candidate
 
 ## Product
 
@@ -36,6 +36,11 @@ Compare a candidate result with a baseline and return a trusted `PASS`, `FAIL`, 
 `INCONCLUSIVE` verdict. Mean timing decisions account for BenchmarkDotNet measurement
 uncertainty, and incompatible environments do not silently pass.
 
+### Validate benchmark quality
+
+Validate BenchmarkDotNet declarations before measurement and report non-blocking
+Performance Agent quality warnings for suspicious benchmark shapes.
+
 ### Produce portable evidence
 
 Generate machine-readable JSON plus human-readable Markdown. HTML can be added without changing the core model.
@@ -66,6 +71,7 @@ Primary interface: CLI.
 Initial command direction:
 
 ```text
+perfagent validate
 perfagent compare
 perfagent check
 perfagent report
