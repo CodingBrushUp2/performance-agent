@@ -30,6 +30,20 @@ public sealed class MeanDecisionQualityEvaluatorTests
     }
 
     [Fact]
+    public void Exact_self_comparison_is_zero_regression_even_with_a_wide_interval()
+    {
+        var measurement = Measurement(100, 90, 110);
+
+        var result = _sut.Evaluate(measurement, measurement, 5);
+
+        Assert.Equal(MeanDecisionQualityStatus.ConclusiveWithinBudget, result.Status);
+        Assert.Equal(0, result.MinimumRegressionPercent);
+        Assert.Equal(0, result.MaximumRegressionPercent);
+        Assert.False(result.IsInconclusive);
+        Assert.False(result.IsExceeded);
+    }
+
+    [Fact]
     public void Confidence_range_entirely_within_budget_is_conclusive_pass()
     {
         var result = _sut.Evaluate(
