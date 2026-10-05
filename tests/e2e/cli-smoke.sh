@@ -38,6 +38,10 @@ grep -F '"outlierCount":' <<< "$run_output"
 grep -F '"confidenceIntervalLowerNanoseconds":' <<< "$run_output"
 grep -F '"confidenceIntervalUpperNanoseconds":' <<< "$run_output"
 grep -F '"confidenceLevelPercent": 99.9' <<< "$run_output"
+if grep -Fq '"confidenceIntervalLowerNanoseconds": null' <<< "$run_output" || grep -Fq '"confidenceIntervalUpperNanoseconds": null' <<< "$run_output"; then
+  echo "Normal BenchmarkDotNet run did not produce a usable confidence interval" >&2
+  exit 1
+fi
 
 if grep -Fq '// BenchmarkDotNet' <<< "$run_output"; then
   echo "BenchmarkDotNet diagnostic output leaked into normalized evidence" >&2
