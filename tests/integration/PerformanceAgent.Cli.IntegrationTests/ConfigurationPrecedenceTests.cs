@@ -71,6 +71,21 @@ public sealed class ConfigurationPrecedenceTests : IDisposable
     }
 
     [Fact]
+    public void Deterministic_budget_loading_ignores_malformed_user_ai_configuration()
+    {
+        File.WriteAllText(_userConfigurationPath, "{ broken user ai config");
+        _workspace.WriteConfiguration(new
+        {
+            budget = new { maxMeanRegressionPercent = 7, maxAllocationRegressionPercent = 9 }
+        });
+
+        var effective = Configuration().InspectBudget();
+
+        Assert.Equal(new PerformanceBudget(7, 9), effective.Budget);
+        Assert.Equal("perfagent.json", effective.BudgetSource);
+    }
+
+    [Fact]
     public void Malformed_user_configuration_fails_without_echoing_contents()
     {
         const string secretLikeValue = "sk-must-not-echo";
