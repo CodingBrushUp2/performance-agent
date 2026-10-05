@@ -3,5 +3,5 @@ using BenchmarkDotNet.Attributes;
 public class InvalidBenchmark
 {
     [Benchmark]
-    private int HiddenWork() => 42;
+    public int Work(int value) => value;
 }
