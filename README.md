@@ -241,6 +241,8 @@ For coding agents and CI consumers, `perfagent check ... --format json` emits th
 
 BenchmarkDotNet evidence preserves timing statistics and the 99.9% confidence interval used by the V0.3 trusted-verdict policy. Mean PASS/FAIL is only conclusive when the full confidence-derived regression range stays on one side of the configured budget; otherwise the verdict is INCONCLUSIVE. See [Measurement quality policy](docs/measurement-quality.md).
 
+The deterministic [trusted verdict scenario matrix](docs/trusted-verdict-scenarios.md) locks the PASS/FAIL/INCONCLUSIVE behavior in CI, including uncertainty and environment-mismatch cases.
+
 ## Non-goals for V1
 
 No hosted dashboard, accounts, database, IDE extension, distributed runners, or mandatory cloud service.
