@@ -41,6 +41,7 @@ public sealed class BenchmarkDotNetValidator
             }
         }
 
+        diagnostics.AddRange(TrivialBenchmarkBodyRule.Analyze(benchmarkType, runInfo));
         diagnostics.AddRange(MeasuredRegionHygieneInspector.Inspect(benchmarkType, runInfo));
 
         var ordered = diagnostics
