@@ -15,19 +15,7 @@ jobs:
           global-json-file: global.json
       - run: dotnet restore PerformanceAgent.sln
       - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
-      # Keep projects isolated in this PR so a benchmark-process failure is attributed precisely.
-      - name: Test Core
-        timeout-minutes: 5
-        run: dotnet test tests/unit/PerformanceAgent.Core.Tests/PerformanceAgent.Core.Tests.csproj --configuration Release --no-build
-      - name: Test AI
-        timeout-minutes: 5
-        run: dotnet test tests/unit/PerformanceAgent.AI.Tests/PerformanceAgent.AI.Tests.csproj --configuration Release --no-build
-      - name: Test BenchmarkDotNet integration
-        timeout-minutes: 5
-        run: dotnet test tests/integration/PerformanceAgent.BenchmarkDotNet.IntegrationTests/PerformanceAgent.BenchmarkDotNet.IntegrationTests.csproj --configuration Release --no-build
-      - name: Test CLI integration
-        timeout-minutes: 5
-        run: dotnet test tests/integration/PerformanceAgent.Cli.IntegrationTests/PerformanceAgent.Cli.IntegrationTests.csproj --configuration Release --no-build --blame-hang-timeout 30s --blame-hang-dump-type none
+      - run: dotnet test PerformanceAgent.sln --configuration Release --no-build
       - run: bash tests/e2e/cli-smoke.sh
       - run: bash tests/e2e/history-smoke.sh
       - run: bash tests/e2e/discovery-smoke.sh
