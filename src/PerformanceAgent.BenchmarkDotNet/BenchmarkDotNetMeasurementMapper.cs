@@ -19,13 +19,16 @@ public sealed class BenchmarkDotNetMeasurementMapper
             ? $"{workloadName}{report.BenchmarkCase.Parameters.DisplayInfo}"
             : workloadName;
         var allocatedBytes = report.GcStats.GetBytesAllocatedPerOperation(report.BenchmarkCase);
+        var confidenceInterval = statistics.ConfidenceInterval;
 
         var normalizedStatistics = new BenchmarkStatistics(
             statistics.N,
             statistics.Median,
             FiniteOrNull(statistics.StandardDeviation),
             FiniteOrNull(statistics.StandardError),
-            statistics.AllOutliers.Length);
+            statistics.AllOutliers.Length,
+            FiniteOrNull(confidenceInterval.Lower),
+            FiniteOrNull(confidenceInterval.Upper));
 
         return new BenchmarkMeasurement(
             name,
