@@ -128,8 +128,16 @@ static async Task<int> ValidateAsync(string assemblyPath)
 
     var validator = new BenchmarkDotNetValidator();
     var results = new List<BenchmarkValidationResult>(discovery.BenchmarkTypes.Count);
-    foreach (var benchmarkType in discovery.BenchmarkTypes)
-        results.Add(await validator.ValidateAsync(benchmarkType));
+    try
+    {
+        foreach (var benchmarkType in discovery.BenchmarkTypes)
+            results.Add(validator.Validate(benchmarkType));
+    }
+    catch (Exception exception)
+    {
+        Console.Error.WriteLine($"Benchmark validation failed: {exception.Message}");
+        return 2;
+    }
 
     var diagnostics = results.SelectMany(x => x.Diagnostics).ToArray();
     var document = new BenchmarkValidationDocument(
