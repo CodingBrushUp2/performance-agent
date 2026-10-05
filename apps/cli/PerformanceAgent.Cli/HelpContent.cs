@@ -44,8 +44,13 @@ internal static class HelpContent
             "perfagent report <candidate-run-id> [--baseline <run-id>] [--budget <budget.json>] > report.html",
             ["perfagent report <candidate-run-id> > report.html"]),
         new("calibrate", "Run repeated benchmarks and assess run-to-run stability.",
-            "perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>]",
-            ["perfagent calibrate MyBenchmarks.csproj", "perfagent calibrate MyBenchmarks.csproj --runs 5 --max-spread 3"]),
+            "perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] [--format <text|json>]",
+            [
+                "perfagent calibrate MyBenchmarks.csproj",
+                "perfagent calibrate MyBenchmarks.csproj --runs 5 --max-spread 3",
+                "perfagent calibrate MyBenchmarks.csproj --runs 3 --format json"
+            ],
+            "Calibration archives every measured run but never selects a baseline. JSON output is a versioned machine-readable stability contract; exit code 0 means STABLE, 1 means UNSTABLE, and 2 means invalid input or execution failure."),
         new("config", "Show effective workspace, user-level AI, and budget configuration.",
             "perfagent config show",
             ["perfagent config show"]),
