@@ -107,7 +107,7 @@ uncertain_code=$?
 set -e
 test "$uncertain_code" -eq 2
 grep -F "MapOrder: INCONCLUSIVE" <<< "$uncertain_output"
-grep -F "confidence range for mean regression crosses the configured budget of 5%" <<< "$uncertain_output"
+grep -F "regression bounds derived from BenchmarkDotNet 99.9% confidence intervals cross the configured budget of 5%" <<< "$uncertain_output"
 grep -F "Overall: INCONCLUSIVE" <<< "$uncertain_output"
 
 set +e
