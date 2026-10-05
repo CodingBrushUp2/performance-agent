@@ -79,6 +79,15 @@ public sealed class DiscoveryTests
     }
 
     [Fact]
+    public void ValidationDiscovery_FindsTypesWithNonPublicBenchmarkMethods()
+    {
+        var result = new BenchmarkDotNetRunner().DiscoverBenchmarksForValidation(
+            typeof(PrivateBenchmark).Assembly);
+
+        Assert.Contains(typeof(PrivateBenchmark), result.BenchmarkTypes);
+    }
+
+    [Fact]
     public void UnexpectedErrors_AreNotMisclassifiedAsLoaderFailures()
     {
         Assert.Throws<InvalidOperationException>(() => new BenchmarkDotNetRunner().DiscoverBenchmarks(
@@ -105,6 +114,12 @@ public sealed class DiscoveryTests
     {
         [Benchmark]
         public int Work() => 2;
+    }
+
+    public class PrivateBenchmark
+    {
+        [Benchmark]
+        private int Work() => 3;
     }
 
     [AttributeUsage(AttributeTargets.Method)]
