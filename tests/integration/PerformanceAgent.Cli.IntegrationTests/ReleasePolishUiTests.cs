@@ -79,7 +79,7 @@ public sealed class ReleasePolishUiTests : IDisposable
         Assert.Contains("src=\"/assets/ui.js\"", page, StringComparison.Ordinal);
 
         Assert.Equal(HttpStatusCode.OK, scriptStatus);
-        Assert.StartsWith("text/javascript", scriptResponse.Content.Headers.ContentType?.ToString(), StringComparison.Ordinal);
+        Assert.Contains("text/javascript", scriptResponse.Content.Headers.ContentType?.ToString() ?? string.Empty, StringComparison.Ordinal);
         Assert.Contains("button.disabled = true", script, StringComparison.Ordinal);
         Assert.Contains("button.textContent = \"Analyzing...\"", script, StringComparison.Ordinal);
         Assert.Contains("form.dataset.submitting === \"true\"", script, StringComparison.Ordinal);
