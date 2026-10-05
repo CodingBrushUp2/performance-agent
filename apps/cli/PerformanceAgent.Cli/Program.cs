@@ -89,12 +89,13 @@ static async Task<int> RunAsync(string[] args)
         const double defaultMaxSpreadPercent = 5;
         var runCount = defaultRuns;
         var maxSpreadPercent = defaultMaxSpreadPercent;
+        var outputFormat = "text";
 
         for (var index = 2; index < args.Length; index += 2)
         {
             if (index + 1 >= args.Length)
             {
-                Console.Error.WriteLine("Usage: perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>]");
+                Console.Error.WriteLine("Usage: perfagent calibrate <benchmark.csproj> [--runs <count>] [--max-spread <percent>] [--format <text|json>]");
                 return 2;
             }
 
@@ -109,9 +110,14 @@ static async Task<int> RunAsync(string[] args)
             {
                 maxSpreadPercent = parsedSpread;
             }
+            else if (string.Equals(args[index], "--format", StringComparison.OrdinalIgnoreCase)
+                     && args[index + 1].ToLowerInvariant() is "text" or "json")
+            {
+                outputFormat = args[index + 1].ToLowerInvariant();
+            }
             else
             {
-                Console.Error.WriteLine($"Invalid calibration option '{args[index]}'. Runs must be at least 2 and max spread must be a non-negative percentage.");
+                Console.Error.WriteLine($"Invalid calibration option '{args[index]}'. Runs must be at least 2, max spread must be a non-negative percentage, and format must be text or json.");
                 return 2;
             }
         }
@@ -149,21 +155,29 @@ static async Task<int> RunAsync(string[] args)
             }
 
             var calibration = new CalibrationAnalyzer().Analyze(samples, maxSpreadPercent);
-            Console.WriteLine($"Calibration: {(calibration.IsStable ? "STABLE" : "UNSTABLE")}");
-            Console.WriteLine($"Runs: {string.Join(", ", runIds)}");
-            Console.WriteLine($"Maximum allowed spread: {maxSpreadPercent:0.##}%");
-            foreach (var metric in calibration.Metrics)
+            if (outputFormat == "json")
             {
-                Console.WriteLine(metric.BenchmarkName);
-                Console.WriteLine($"  Mean median: {metric.MedianMeanNanoseconds:0.##} ns; spread: {metric.MeanSpreadPercent:0.##}%");
-                Console.WriteLine(metric.MedianAllocatedBytesPerOperation is null
-                    ? "  Allocation: unavailable"
-                    : $"  Allocation median: {metric.MedianAllocatedBytesPerOperation} B/op; spread: {metric.AllocationSpreadPercent:0.##}%");
+                Console.WriteLine(new PerformanceAgent.Cli.CalibrationJsonWriter().Write(calibration, runIds));
             }
-            foreach (var reason in calibration.InstabilityReasons)
-                Console.WriteLine($"  - {reason}");
+            else
+            {
+                Console.WriteLine($"Calibration: {(calibration.IsStable ? "STABLE" : "UNSTABLE")}");
+                Console.WriteLine($"Runs: {string.Join(", ", runIds)}");
+                Console.WriteLine($"Maximum allowed spread: {maxSpreadPercent:0.##}%");
+                foreach (var metric in calibration.Metrics)
+                {
+                    Console.WriteLine(metric.BenchmarkName);
+                    Console.WriteLine($"  Mean median: {metric.MedianMeanNanoseconds:0.##} ns; spread: {metric.MeanSpreadPercent:0.##}%");
+                    Console.WriteLine(metric.MedianAllocatedBytesPerOperation is null
+                        ? "  Allocation: unavailable"
+                        : $"  Allocation median: {metric.MedianAllocatedBytesPerOperation} B/op; spread: {metric.AllocationSpreadPercent:0.##}%");
+                }
+                foreach (var reason in calibration.InstabilityReasons)
+                    Console.WriteLine($"  - {reason}");
 
-            Console.WriteLine("Baselines were not changed. Select a baseline explicitly with 'perfagent baseline set <run-id>' or 'perfagent baseline anchor <run-id>'.");
+                Console.WriteLine("Baselines were not changed. Select a baseline explicitly with 'perfagent baseline set <run-id>' or 'perfagent baseline anchor <run-id>'.");
+            }
+
             return calibration.IsStable ? 0 : 1;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
