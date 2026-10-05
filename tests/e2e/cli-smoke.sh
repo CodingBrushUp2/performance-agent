@@ -94,6 +94,28 @@ grep -F '"budgetExceeded": true' <<< "$failure_json"
 grep -F '"status": "conclusiveExceededBudget"' <<< "$failure_json"
 
 cat > "$candidate_file" <<'JSON'
+{"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":106,"allocatedBytesPerOperation":1070,"statistics":{"sampleCount":15,"medianNanoseconds":106,"standardDeviationNanoseconds":2,"standardErrorNanoseconds":0.6,"outlierCount":1,"confidenceIntervalLowerNanoseconds":104,"confidenceIntervalUpperNanoseconds":108,"confidenceLevelPercent":99.9}}]}
+JSON
+
+set +e
+uncertain_output="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10)"
+uncertain_code=$?
+set -e
+test "$uncertain_code" -eq 2
+grep -F "MapOrder: INCONCLUSIVE" <<< "$uncertain_output"
+grep -F "confidence range for mean regression crosses the configured budget of 5%" <<< "$uncertain_output"
+grep -F "Overall: INCONCLUSIVE" <<< "$uncertain_output"
+
+set +e
+uncertain_json="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- check "$baseline_file" "$candidate_file" 5 10 --format json)"
+uncertain_json_code=$?
+set -e
+test "$uncertain_json_code" -eq 2
+grep -F '"verdict": "inconclusive"' <<< "$uncertain_json"
+grep -F '"status": "inconclusive"' <<< "$uncertain_json"
+grep -F '"confidenceLevelPercent": 99.9' <<< "$uncertain_json"
+
+cat > "$candidate_file" <<'JSON'
 {"schemaVersion":"1.0","environment":{"runtime":".NET 10","operatingSystem":"Linux","architecture":"X64"},"measurements":[{"name":"MapOrder","meanNanoseconds":104,"allocatedBytesPerOperation":null,"statistics":{"sampleCount":15,"medianNanoseconds":104,"standardDeviationNanoseconds":0.1,"standardErrorNanoseconds":0.03,"outlierCount":0,"confidenceIntervalLowerNanoseconds":103.9,"confidenceIntervalUpperNanoseconds":104.1,"confidenceLevelPercent":99.9}}]}
 JSON
 
