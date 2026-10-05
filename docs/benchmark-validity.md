@@ -31,3 +31,23 @@ workflow.
 
 Performance Agent-specific validity rules can be added later only for gaps that
 BenchmarkDotNet does not already cover.
+
+
+## Performance Agent warnings
+
+Performance Agent may add non-blocking warnings for suspicious benchmark shapes that
+BenchmarkDotNet accepts structurally.
+
+The first custom rule warns when a benchmark body is an obvious no-op or constant
+return at the IL level. Examples include an empty `void` benchmark or `return 42`.
+
+These diagnostics are deliberately warnings, not errors:
+
+- validation remains `VALID`;
+- the command still exits with code `0`;
+- ambiguous benchmark bodies are not flagged;
+- the rule is intended to catch obviously meaningless measurements with low false
+  positive risk.
+
+This rule does not attempt full source-code analysis or claim that a benchmark is
+semantically representative of production behavior.
