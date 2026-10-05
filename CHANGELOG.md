@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.5.0
+
+V0.5 adds conservative changed-code candidate discovery for developers and coding agents.
+
+### Added
+
+- `perfagent candidates --base <git-ref>` for deterministic C# diff-to-member mapping;
+- Roslyn-based mapping of changed lines to touched methods and members;
+- configurable candidate limits with text and schema 1.0 JSON output;
+- support for committed, staged, and unstaged working-tree changes via `--working-tree`;
+- installed-tool and CLI end-to-end coverage for candidate discovery and Roslyn packaging.
+
+### Behavior
+
+- candidate ranking is deterministic and based on changed-line overlap;
+- test, generated, bin, and obj paths are filtered out;
+- option-like Git refs are rejected before invoking Git;
+- candidate hints are focus hints only, not performance-risk verdicts;
+- `--working-tree` and explicit `--head` are mutually exclusive.
+
+### Design boundaries
+
+- no AI ranking or benchmark generation;
+- no inferred hot-path or complexity claims;
+- no assembly browser or full-member enumeration;
+- runtime profiles and stronger ranking signals are deferred until there is real evidence
+  that they improve precision.
+
 ## 0.4.0
 
 V0.4 focuses on benchmark validity before measurement.
