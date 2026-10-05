@@ -31,3 +31,20 @@ workflow.
 
 Performance Agent-specific validity rules can be added later only for gaps that
 BenchmarkDotNet does not already cover.
+
+
+## Performance Agent hygiene rules
+
+Performance Agent may add narrow warnings for measurement-quality problems that
+BenchmarkDotNet does not reject structurally.
+
+The first rule warns when `GC.Collect()` is called directly inside a measured
+`[Benchmark]` method. Forced collection can distort timing and allocation evidence,
+so it should usually be moved outside the measured region.
+
+This is a warning, not an invalid declaration. A benchmark that intentionally studies
+garbage collection remains runnable, and `perfagent validate` still exits 0 while
+surfacing the warning.
+
+Calls from `GlobalSetup` are not flagged by this rule because they are outside the
+measured region.
