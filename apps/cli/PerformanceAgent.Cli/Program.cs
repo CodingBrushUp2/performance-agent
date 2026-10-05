@@ -10,6 +10,12 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
+    if (PerformanceAgent.Cli.HelpContent.TryRender(args, out var help))
+    {
+        Console.Write(help);
+        return 0;
+    }
+
     if (args.Length > 0 && string.Equals(args[0], "report", StringComparison.OrdinalIgnoreCase))
     {
         try
