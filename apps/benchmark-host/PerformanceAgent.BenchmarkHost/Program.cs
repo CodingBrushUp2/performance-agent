@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using PerformanceAgent.BenchmarkDotNet;
@@ -67,7 +68,9 @@ catch (Exception exception) when (exception is ReflectionTypeLoadException or Ty
 var environment = new BenchmarkEnvironment(
     RuntimeInformation.FrameworkDescription,
     RuntimeInformation.OSDescription,
-    RuntimeInformation.ProcessArchitecture.ToString());
+    RuntimeInformation.ProcessArchitecture.ToString(),
+    Environment.ProcessorCount,
+    GCSettings.IsServerGC);
 var evidence = new BenchmarkEvidence("1.0", measurements, environment);
 Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 await File.WriteAllTextAsync(outputPath, new JsonBenchmarkEvidenceWriter().Write(evidence));

@@ -46,6 +46,8 @@ public sealed class JsonBenchmarkEvidenceReader
                 throw new InvalidOperationException("Benchmark environment operating system cannot be empty.");
             if (string.IsNullOrWhiteSpace(evidence.Environment.Architecture))
                 throw new InvalidOperationException("Benchmark environment architecture cannot be empty.");
+            if (evidence.Environment.LogicalProcessorCount is <= 0)
+                throw new InvalidOperationException("Benchmark environment logicalProcessorCount must be greater than zero when provided.");
         }
 
         var duplicateName = evidence.Measurements

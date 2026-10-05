@@ -107,7 +107,10 @@ assert statistics['sampleCount'] >= 3
 assert statistics['confidenceIntervalLowerNanoseconds'] is not None
 assert statistics['confidenceIntervalUpperNanoseconds'] is not None
 assert statistics['confidenceLevelPercent'] == 99.9
-assert all(evidence['environment'][key] for key in ['runtime','operatingSystem','architecture'])
+environment=evidence['environment']
+assert all(environment[key] for key in ['runtime','operatingSystem','architecture'])
+assert environment['logicalProcessorCount'] >= 1
+assert isinstance(environment['serverGarbageCollection'], bool)
 archive, = pathlib.Path('.performance-agent/archive').glob('run-*.json')
 with archive.open() as f: archived=json.load(f)
 assert archived['evidence']==evidence
