@@ -5,7 +5,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>perfagent</ToolCommandName>
     <PackageId>PerformanceAgent.Cli</PackageId>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <Authors>Performance Agent contributors</Authors>
     <Description>Evidence-driven performance regression checks for .NET.</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
