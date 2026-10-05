@@ -33,18 +33,38 @@ Performance Agent-specific validity rules can be added later only for gaps that
 BenchmarkDotNet does not already cover.
 
 
-## Performance Agent hygiene rules
+## Performance Agent quality warnings
 
-Performance Agent may add narrow warnings for measurement-quality problems that
-BenchmarkDotNet does not reject structurally.
+After BenchmarkDotNet's validators pass, Performance Agent can add non-blocking quality
+warnings for suspicious benchmark shapes that are structurally valid but may not
+measure meaningful work.
 
-The first rule warns when `GC.Collect()` is called directly inside a measured
+### PA1001: trivial benchmark body
+
+PA1001 warns when a benchmark method compiles down to an empty body or a direct
+constant/string/null return.
+
+Example:
+
+```csharp
+[Benchmark]
+public int ConstantWork() => 42;
+```
+
+This remains `VALID`; the warning asks the author to verify that the benchmark
+actually exercises the intended code path and has not collapsed into a meaningless
+measurement.
+
+PA1001 is intentionally conservative and narrow. It does not attempt to prove general
+dead-code elimination or constant folding, and it is not an error.
+
+
+### Measured-region forced GC warning
+
+Performance Agent also warns when `GC.Collect()` is called directly inside a measured
 `[Benchmark]` method. Forced collection can distort timing and allocation evidence,
 so it should usually be moved outside the measured region.
 
-This is a warning, not an invalid declaration. A benchmark that intentionally studies
-garbage collection remains runnable, and `perfagent validate` still exits 0 while
-surfacing the warning.
-
-Calls from `GlobalSetup` are not flagged by this rule because they are outside the
-measured region.
+This remains a warning, not an invalid declaration. Benchmarks that intentionally
+study garbage collection remain runnable. Calls from `GlobalSetup` are not flagged
+because they execute outside the measured region.
