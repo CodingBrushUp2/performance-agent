@@ -12,6 +12,19 @@ return await RunAsync(args);
 
 static async Task<int> RunAsync(string[] args)
 {
+    static string ReadinessLabel(PerformanceAgent.Cli.ExperimentReadinessStatus status) =>
+        status switch
+        {
+            PerformanceAgent.Cli.ExperimentReadinessStatus.ReadyWithUnverifiedCoverage =>
+                "READY_WITH_UNVERIFIED_COVERAGE",
+            _ => "NEEDS_INPUT"
+        };
+
+    static string FormatPercent(double? value) =>
+        value is null
+            ? "not configured"
+            : $"{value.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
+
     if (PerformanceAgent.Cli.HelpContent.TryRender(args, out var help))
     {
         Console.Write(help);
@@ -81,6 +94,178 @@ static async Task<int> RunAsync(string[] args)
         try { return await PerformanceAgent.Cli.LocalWebUi.RunAsync(openBrowser, cancellation.Token); }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { return 0; }
         finally { Console.CancelKeyPress -= cancelHandler; }
+    }
+
+    if (args.Length >= 1 && string.Equals(args[0], "readiness", StringComparison.OrdinalIgnoreCase))
+    {
+        using var cancellation = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, signal) =>
+        {
+            signal.Cancel = true;
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+
+        try
+        {
+            string? baseRef = null;
+            string? benchmarkProject = null;
+            string? target = null;
+            var headRef = "HEAD";
+            var limit = 5;
+            var outputFormat = "text";
+            var workingTree = false;
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+
+            for (var index = 1; index < args.Length;)
+            {
+                var option = args[index];
+                if (!seen.Add(option))
+                    throw new ArgumentException($"Repeated readiness option '{option}'.");
+
+                if (string.Equals(option, "--working-tree", StringComparison.Ordinal))
+                {
+                    workingTree = true;
+                    index++;
+                    continue;
+                }
+
+                if (index + 1 >= args.Length)
+                    throw new ArgumentException($"Readiness option '{option}' requires a value.");
+
+                var value = args[index + 1];
+                switch (option)
+                {
+                    case "--base":
+                        baseRef = value;
+                        break;
+                    case "--benchmark":
+                        benchmarkProject = value;
+                        break;
+                    case "--head":
+                        headRef = value;
+                        break;
+                    case "--target":
+                        target = value;
+                        break;
+                    case "--limit":
+                        if (!int.TryParse(
+                                value,
+                                System.Globalization.NumberStyles.None,
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                out limit)
+                            || limit is < 1 or > 20)
+                            throw new ArgumentException("--limit must be an integer between 1 and 20.");
+                        break;
+                    case "--format":
+                        outputFormat = value.ToLowerInvariant();
+                        if (outputFormat is not ("text" or "json"))
+                            throw new ArgumentException("--format must be text or json.");
+                        break;
+                    default:
+                        throw new ArgumentException($"Unknown readiness option '{option}'.");
+                }
+
+                index += 2;
+            }
+
+            if (string.IsNullOrWhiteSpace(baseRef))
+                throw new ArgumentException("--base <git-ref> is required.");
+            if (string.IsNullOrWhiteSpace(benchmarkProject))
+                throw new ArgumentException("--benchmark <benchmark.csproj> is required.");
+            if (workingTree && seen.Contains("--head"))
+                throw new ArgumentException("--working-tree cannot be combined with --head.");
+
+            var result = await new PerformanceAgent.Cli.ExperimentReadinessService().InspectAsync(
+                baseRef,
+                benchmarkProject,
+                headRef,
+                limit,
+                target,
+                workingTree,
+                cancellation.Token);
+
+            if (outputFormat == "json")
+            {
+                Console.Write(System.Text.Json.JsonSerializer.Serialize(
+                    result,
+                    new System.Text.Json.JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                        Converters =
+                        {
+                            new System.Text.Json.Serialization.JsonStringEnumConverter(
+                                System.Text.Json.JsonNamingPolicy.CamelCase)
+                        }
+                    }));
+                return result.Status == PerformanceAgent.Cli.ExperimentReadinessStatus.NeedsInput ? 1 : 0;
+            }
+
+            Console.WriteLine($"Experiment readiness: {ReadinessLabel(result.Status)}");
+            Console.WriteLine(
+                result.HeadRef == "WORKTREE"
+                    ? $"Diff: {result.BaseRef}..WORKTREE"
+                    : $"Diff: {result.BaseRef}...{result.HeadRef}");
+            Console.WriteLine(
+                result.SelectedTarget is null
+                    ? "Target: Not selected"
+                    : $"Target: {result.SelectedTarget.Key}");
+            Console.WriteLine($"Benchmark: {(result.Benchmark.Valid ? "VALID" : "INVALID")}  {result.Benchmark.ProjectPath}");
+            Console.WriteLine($"Current baseline: {result.CurrentBaselineRunId ?? "Not selected"}");
+            Console.WriteLine(
+                $"Budget: {result.Budget.Source}; mean {FormatPercent(result.Budget.MaxMeanRegressionPercent)}, allocation {FormatPercent(result.Budget.MaxAllocationRegressionPercent)}");
+            Console.WriteLine($"Coverage: {result.CoverageStatus}");
+
+            if (result.Blockers.Count != 0)
+            {
+                Console.WriteLine("Blockers:");
+                foreach (var blocker in result.Blockers)
+                    Console.WriteLine($"  - {blocker}");
+            }
+
+            if (result.SelectedTarget is null && result.Candidates.Count != 0)
+            {
+                Console.WriteLine("Candidate targets:");
+                foreach (var candidate in result.Candidates)
+                    Console.WriteLine($"  - {candidate.Key}");
+            }
+
+            if (result.Benchmark.Diagnostics.Count != 0)
+            {
+                Console.WriteLine("Benchmark diagnostics:");
+                foreach (var diagnostic in result.Benchmark.Diagnostics)
+                    Console.WriteLine($"  - {diagnostic}");
+            }
+
+            if (result.NextActions.Count != 0)
+            {
+                Console.WriteLine("Next actions:");
+                foreach (var action in result.NextActions)
+                    Console.WriteLine($"  - {action}");
+            }
+
+            return result.Status == PerformanceAgent.Cli.ExperimentReadinessStatus.NeedsInput ? 1 : 0;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("Experiment readiness cancelled.");
+            return 130;
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException
+                or InvalidOperationException
+                or IOException
+                or UnauthorizedAccessException
+                or System.Text.Json.JsonException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 2;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+        }
     }
 
     if (args.Length >= 1 && string.Equals(args[0], "candidates", StringComparison.OrdinalIgnoreCase))
