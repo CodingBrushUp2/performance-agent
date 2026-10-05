@@ -72,3 +72,21 @@ The machine-readable check output includes a `meanDecision` object with:
 The existing `mean.budgetExceeded` field remains the point-estimate budget check.
 It is not the authoritative mean verdict when uncertainty is present. Consumers
 should use the benchmark verdict and `meanDecision.status`.
+
+
+## Environment comparability
+
+New benchmark evidence also records logical processor count and whether Server GC was
+enabled. Performance Agent rejects comparisons when these facts differ.
+
+For backward compatibility:
+
+- two legacy evidence documents that both lack the extended fields remain comparable
+  under the older runtime/OS/architecture rule;
+- comparing legacy evidence with new evidence is INCONCLUSIVE because the environment
+  fingerprint is present on only one side;
+- two new evidence documents must agree on runtime, operating system, architecture,
+  logical processor count, and Server GC mode.
+
+CPU model is intentionally not part of this slice. Cross-platform CPU identification
+needs a separate design rather than brittle OS-specific parsing.
