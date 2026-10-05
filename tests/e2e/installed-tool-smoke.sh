@@ -91,6 +91,37 @@ public class InstalledBenchmark
 }
 CS
 
+git init -q
+git config user.email perfagent@example.invalid
+git config user.name "Performance Agent Smoke"
+git add Benchmarks Helper
+git commit -qm baseline
+candidate_base="$(git rev-parse HEAD)"
+cat > Helper/Work.cs <<'CS'
+namespace ExternalDependency;
+public static class Work
+{
+    public static byte[] Allocate() => new byte[96];
+}
+CS
+git add Helper/Work.cs
+git commit -qm candidate
+
+dotnet tool run perfagent -- candidates --base "$candidate_base" --format json > candidates.json
+python3 - <<'PY'
+import json
+with open('candidates.json') as f:
+    result=json.load(f)
+assert result['schemaVersion']=='1.0'
+assert result['baseRef']
+assert result['headRef']=='HEAD'
+candidate,=result['candidates']
+assert candidate['filePath']=='Helper/Work.cs'
+assert candidate['member']=='Work.Allocate()'
+assert candidate['kind']=='method'
+assert candidate['changedLines'] >= 1
+PY
+
 # Both tool installation and consumer project are outside the Performance Agent tree.
 dotnet tool run perfagent -- validate "$PWD/Benchmarks/Benchmarks.csproj" > validate.stdout
 grep -F 'Validation: VALID' validate.stdout
