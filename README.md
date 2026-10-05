@@ -4,7 +4,7 @@ Evidence-driven performance engineering for .NET developers and coding agents.
 
 Performance Agent measures first and explains second. Its core workflow works without an LLM; optional AI can help plan experiments and interpret evidence, but benchmark measurements remain the source of truth.
 
-> Project status: .NET V0.2 release candidate. The deterministic local workflow is usable without AI; optional AI analysis is available and remains advisory. The repository name is temporary and is not the final product brand.
+> Project status: .NET V0.3 release candidate. Trusted PASS/FAIL/INCONCLUSIVE verdicts are available for CLI/CI/coding-agent workflows; optional AI analysis remains advisory. The repository name is temporary and is not the final product brand.
 
 ## Runtime compatibility
 
@@ -32,7 +32,7 @@ Until a public package is published, build and install the CLI from a local pack
 
 ```bash
 dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release -o artifacts
-dotnet tool install --global PerformanceAgent.Cli --version 0.2.0 --add-source ./artifacts
+dotnet tool install --global PerformanceAgent.Cli --version 0.3.0 --add-source ./artifacts
 ```
 
 The package includes BenchmarkHost and its runtime dependencies. A stable .NET 10 SDK
@@ -66,8 +66,9 @@ bash tests/e2e/installed-tool-smoke.sh
 ```
 
 This packs a local package, installs it with an isolated tool manifest, and measures a
-standalone BenchmarkDotNet project outside the repository. Only the smoke benchmark
-uses a dry job; production runs retain the benchmark's normal BenchmarkDotNet configuration.
+standalone BenchmarkDotNet project outside the repository. The smoke benchmark uses a
+short CI-oriented BenchmarkDotNet job; production runs retain the benchmark project's
+normal BenchmarkDotNet configuration.
 
 Press Ctrl+C during `perfagent run` to cancel project inspection, build, or benchmark
 execution. The CLI terminates the active child process tree, removes temporary host
@@ -81,7 +82,7 @@ A small benchmark project is included so the current product can be exercised im
 ```bash
 dotnet build PerformanceAgent.sln -c Release
 dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release --no-build -o artifacts
-dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.2.0 --add-source ./artifacts
+dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.3.0 --add-source ./artifacts
 
 ./.tools/perfagent calibrate samples/QuickStartBenchmarks/QuickStartBenchmarks.csproj
 ./.tools/perfagent history
