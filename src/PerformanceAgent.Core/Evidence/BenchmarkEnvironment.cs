@@ -3,4 +3,6 @@ namespace PerformanceAgent.Core.Evidence;
 public sealed record BenchmarkEnvironment(
     string Runtime,
     string OperatingSystem,
-    string Architecture);
+    string Architecture,
+    int? LogicalProcessorCount = null,
+    bool? ServerGarbageCollection = null);
