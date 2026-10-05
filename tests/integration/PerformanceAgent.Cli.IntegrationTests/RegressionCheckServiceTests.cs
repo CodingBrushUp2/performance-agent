@@ -150,5 +150,6 @@ public sealed class RegressionCheckServiceTests
                 0.03,
                 0,
                 lower ?? Math.Max(0, mean - 0.1),
-                upper ?? mean + 0.1));
+                upper ?? mean + 0.1,
+                99.9));
 }
