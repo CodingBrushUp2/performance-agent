@@ -165,6 +165,7 @@ assert result['selectedTarget']['key']=='Helper/Work.cs::Work.Allocate()'
 assert result['benchmark']['valid'] is True
 assert result['currentBaselineRunId'] is None
 assert result['coverageStatus']=='unverified'
+assert result['baselineCompatibilityStatus']=='not-assessed'
 assert any('No Current baseline' in blocker for blocker in result['blockers'])
 PY
 
