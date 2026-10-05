@@ -439,7 +439,7 @@ public sealed class AnalyzeWebUiCredentialTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, status);
         Assert.Contains("<p class=\"verdict\">REGRESSION</p>", page, StringComparison.Ordinal);
         Assert.Contains("AI analysis failed", page, StringComparison.Ordinal);
-        Assert.Contains("Set &quot;ai.model&quot; in perfagent.json", page, StringComparison.Ordinal);
+        Assert.Contains("Set &quot;ai.model&quot; in the user config or workspace perfagent.json", page, StringComparison.Ordinal);
         Assert.DoesNotContain(SecretKey, page, StringComparison.Ordinal);
     }
 
