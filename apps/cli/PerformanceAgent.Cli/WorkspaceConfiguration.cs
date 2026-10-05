@@ -36,7 +36,7 @@ internal sealed class WorkspaceConfiguration
     public WorkspaceConfiguration(WorkspaceStorage storage, string? userConfigurationPath = null)
     {
         _storage = storage;
-        _userConfigurationPath = userConfigurationPath ?? DefaultUserConfigurationPath();
+        _userConfigurationPath = userConfigurationPath ?? storage.UserConfigurationPath ?? DefaultUserConfigurationPath();
     }
 
     public static string DefaultUserConfigurationPath()
