@@ -25,16 +25,17 @@ internal static class HelpContent
             ["perfagent baseline set <run-id>", "perfagent baseline anchor <run-id>"],
             "Current is the normal regression baseline. Anchor is a longer-lived reference and never silently replaces Current."),
         new("check", "Check candidate evidence against a baseline and performance budget.",
-            "perfagent check --candidate <candidate.json> [--budget <budget.json>]\n" +
-            "perfagent check -r|--run-id <baseline-run-id> --candidate <candidate.json> [--budget <budget.json>]\n" +
-            "perfagent check -b|--baseline <baseline.json> --candidate <candidate.json> [--budget <budget.json>]\n" +
-            "perfagent check <baseline.json> <candidate.json> <max-mean-regression-%> <max-allocation-regression-%>",
+            "perfagent check --candidate <candidate.json> [--budget <budget.json>] [--format <text|json>]\n" +
+            "perfagent check -r|--run-id <baseline-run-id> --candidate <candidate.json> [--budget <budget.json>] [--format <text|json>]\n" +
+            "perfagent check -b|--baseline <baseline.json> --candidate <candidate.json> [--budget <budget.json>] [--format <text|json>]\n" +
+            "perfagent check <baseline.json> <candidate.json> <max-mean-regression-%> <max-allocation-regression-%> [--format <text|json>]",
             [
                 "perfagent check --candidate candidate.json",
+                "perfagent check --candidate candidate.json --format json",
                 "perfagent check -r <baseline-run-id> --candidate candidate.json",
-                "perfagent check -b baseline.json --candidate candidate.json --budget performance-budget.json"
+                "perfagent check -b baseline.json --candidate candidate.json --budget performance-budget.json --format json"
             ],
-            "The candidate is an evidence JSON file. With --candidate and no explicit baseline, the active Current baseline is used; a distinct Anchor is also checked. -r/--run-id selects an archived baseline run, not an archived candidate."),
+            "The candidate is an evidence JSON file. With --candidate and no explicit baseline, the active Current baseline is used; a distinct Anchor is also checked. -r/--run-id selects an archived baseline run, not an archived candidate. JSON output is a versioned machine-readable verdict contract; exit codes remain 0 PASS, 1 FAIL, 2 INCONCLUSIVE or command error."),
         new("analyze", "Analyze an archived candidate regression with optional AI assistance.",
             "perfagent analyze <candidate-run-id>",
             ["perfagent analyze <candidate-run-id>"],
