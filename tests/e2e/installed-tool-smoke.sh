@@ -92,6 +92,19 @@ public class InstalledBenchmark
 CS
 
 # Both tool installation and consumer project are outside the Performance Agent tree.
+git init -q
+git config user.name "Performance Agent CI"
+git config user.email "perfagent@example.invalid"
+git add Helper Benchmarks
+git commit -qm baseline
+sed -i 's/new byte\[64\]/new byte[96]/' Helper/Work.cs
+git add Helper/Work.cs
+git commit -qm candidate
+
+dotnet tool run perfagent -- candidates HEAD~1 --max 3 > candidates.stdout
+grep -F 'Candidates: 1' candidates.stdout
+grep -F 'Work.Allocate' candidates.stdout
+
 dotnet tool run perfagent -- validate "$PWD/Benchmarks/Benchmarks.csproj" > validate.stdout
 grep -F 'Validation: VALID' validate.stdout
 grep -F 'Benchmark types: 1' validate.stdout
