@@ -4,7 +4,7 @@ Evidence-driven performance engineering for .NET developers and coding agents.
 
 Performance Agent measures first and explains second. Its core workflow works without an LLM; optional AI can help plan experiments and interpret evidence, but benchmark measurements remain the source of truth.
 
-> Project status: .NET V0.3 release candidate. Trusted PASS/FAIL/INCONCLUSIVE verdicts are available for CLI/CI/coding-agent workflows; optional AI analysis remains advisory. The repository name is temporary and is not the final product brand.
+> Project status: .NET V0.4 release candidate. Trusted PASS/FAIL/INCONCLUSIVE verdicts are available for CLI/CI/coding-agent workflows, and benchmark validity checks now run before measurement; optional AI analysis remains advisory. The repository name is temporary and is not the final product brand.
 
 ## Runtime compatibility
 
@@ -32,7 +32,7 @@ Until a public package is published, build and install the CLI from a local pack
 
 ```bash
 dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release -o artifacts
-dotnet tool install --global PerformanceAgent.Cli --version 0.3.0 --add-source ./artifacts
+dotnet tool install --global PerformanceAgent.Cli --version 0.4.0 --add-source ./artifacts
 ```
 
 The package includes BenchmarkHost and its runtime dependencies. A stable .NET 10 SDK
@@ -82,7 +82,7 @@ A small benchmark project is included so the current product can be exercised im
 ```bash
 dotnet build PerformanceAgent.sln -c Release
 dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release --no-build -o artifacts
-dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.3.0 --add-source ./artifacts
+dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.4.0 --add-source ./artifacts
 
 ./.tools/perfagent calibrate samples/QuickStartBenchmarks/QuickStartBenchmarks.csproj
 ./.tools/perfagent history
