@@ -10,7 +10,8 @@ internal static class MethodCallScanner
             .GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(field => field.FieldType == typeof(OpCode))
             .Select(field => (OpCode)field.GetValue(null)!)
-            .ToDictionary(opCode => unchecked((ushort)opCode.Value));
+            .GroupBy(opCode => unchecked((ushort)opCode.Value))
+            .ToDictionary(group => group.Key, group => group.First());
 
     public static IEnumerable<MethodBase> Scan(MethodInfo method)
     {
