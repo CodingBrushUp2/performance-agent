@@ -6,7 +6,7 @@ grep -F "Performance Agent" <<< "$help_output"
 grep -F "Commands:" <<< "$help_output"
 grep -F "Typical workflow:" <<< "$help_output"
 
-for command in validate run check analyze; do
+for command in candidates validate run check analyze; do
   command_help="$(dotnet run --project apps/cli/PerformanceAgent.Cli --configuration Release --no-build -- "$command" --help)"
   grep -F "Performance Agent - $command" <<< "$command_help"
   grep -F "Usage:" <<< "$command_help"
