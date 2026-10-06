@@ -61,11 +61,32 @@ Add `--format json` to `check` for the versioned
 ## Case study
 
 [performance-agent-realworld-test](https://github.com/CodingBrushUp2/performance-agent-realworld-test)
-is an independent BenchmarkDotNet project. A GitHub Actions workflow there builds this
-tool from source and, on a single runner, measures a `StringBuilder` baseline against a
-deliberate `string +=` regression. It also runs a no-change control to check that
-re-measuring identical code is not flagged. The job fails if the regression is missed or
-the control is a false positive.
+is an independent BenchmarkDotNet project. Its workflow builds this tool from source and,
+on one GitHub-hosted runner, measures a `StringBuilder` baseline against a deliberate
+`string +=` regression, plus a no-change control
+([latest run](https://github.com/CodingBrushUp2/performance-agent-realworld-test/actions/runs/37526050859); times in ns, allocations in bytes per operation):
+
+```text
+regression check (exit 1)
+StringProcessingBenchmarks.BuildReport: FAIL
+  Mean: 3558.11 -> 289144.7 (+8026.35%) (budget +5%) FAIL
+  Allocation: 59200 -> 13038000 (+21923.65%) (budget +10%) FAIL
+Overall: FAIL
+
+no-change control (exit 0)
+StringProcessingBenchmarks.BuildReport: PASS
+  Mean: 3558.11 -> 3534.2 (-0.67%) (budget +5%) PASS
+  Allocation: 59200 -> 59200 (0%) (budget +10%) PASS
+Overall: PASS
+```
+
+Building this case study also exposed a real bug. The benchmark host inherited the
+caller's working directory, and BenchmarkDotNet locates projects by name, so with
+another same-named project nearby, `perfagent run` could **silently measure the wrong
+code**. The first case-study run reported PASS for the regression because both sides had
+measured the slow version. Fixed in [#119](https://github.com/CodingBrushUp2/performance-agent/pull/119);
+the workflow's directory layout now guards against it. Absolute timings vary
+between runners (another run measured a 7987 ns baseline); the verdicts did not.
 
 ## Design
 
