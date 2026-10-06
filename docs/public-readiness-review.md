@@ -64,3 +64,10 @@ New feature development is paused. Remaining release execution and publication s
 are tracked in the [release checklist](release-checklist.md). No history rewrite,
 repository visibility change, release tag, or public package publication is part of
 this closeout.
+
+The subsequent full local validation completed on 2026-10-06. All 335 distinct tests,
+six smoke scripts, and the installed-tool end-to-end script passed. The two previously
+blocked execution tests passed with `BuildInParallel=false`; the product and test
+assertions were unchanged. The [release checklist](release-checklist.md#full-local-validation-follow-up)
+records the source commit, environment settings, timing limits, and remaining
+publication actions. This follow-up does not expand the historical secret-review scope.
