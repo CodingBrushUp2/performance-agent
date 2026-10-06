@@ -60,10 +60,14 @@ internal sealed class ProjectRunner
             ProcessResult host;
             try
             {
+                // BenchmarkDotNet locates the benchmark project by name, searching from the current
+                // directory. Run from the project's own directory so a same-named project elsewhere
+                // under the caller's directory can never be built and measured instead.
                 host = await RunProcessAsync(
                     "dotnet",
                     [hostAssembly, assemblyPath, evidencePath],
-                    timeoutSource.Token);
+                    timeoutSource.Token,
+                    Path.GetDirectoryName(fullPath));
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
@@ -149,7 +153,8 @@ internal sealed class ProjectRunner
             host = await RunProcessAsync(
                 "dotnet",
                 [FindBenchmarkHostAssembly(), "--validate", assemblyPath],
-                timeoutSource.Token);
+                timeoutSource.Token,
+                Path.GetDirectoryName(fullPath));
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -175,11 +180,13 @@ internal sealed class ProjectRunner
     private static async Task<ProcessResult> RunProcessAsync(
         string fileName,
         IReadOnlyList<string> arguments,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? workingDirectory = null)
     {
         var startInfo = new ProcessStartInfo
         {
             FileName = fileName,
+            WorkingDirectory = workingDirectory ?? string.Empty,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
