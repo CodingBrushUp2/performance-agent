@@ -58,7 +58,7 @@ The findings above are the historical review, not the current license status. Th
 closeout adds a root MIT license, aligned CLI package metadata, a dependency inventory,
 upstream notice files, and packaging of those files. Native Capstone includes BSD and
 LLVM notices in addition to the MIT binding license; NuGet package declarations alone
-do not describe every bundled component. See [Third-party notices](../THIRD_PARTY_NOTICES.md).
+do not describe every bundled component. See [Third-party notices](../../THIRD_PARTY_NOTICES.md).
 
 New feature development is paused. Remaining release execution and publication steps
 are tracked in the [release checklist](release-checklist.md). No history rewrite,

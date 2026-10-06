@@ -1,296 +1,116 @@
 # Performance Agent
 
-Evidence-driven performance engineering for .NET developers and coding agents.
+**Did this change actually make my .NET code slower?** Performance Agent answers that
+question with a deterministic **PASS / FAIL / INCONCLUSIVE** verdict, built on
+BenchmarkDotNet measurements and explicit performance budgets.
 
-Performance Agent measures first and explains second. Its core workflow works without an LLM; optional AI explains measured evidence, while deterministic checks remain authoritative.
+> **AI proposes. Measurements decide.** The core workflow needs no LLM. Optional AI
+> analysis explains measured evidence, but it can never change a verdict or an exit code.
 
-> Project status: feature development paused as of 2026-10-06. The existing scope is retained for learning, portfolio demonstrations, and limited maintenance. Version 0.5.0 is a local release candidate; early V0.6 readiness checks are implemented. No public NuGet package is available yet. There is no active feature roadmap or support SLA.
+Built for developers, CI pipelines, and coding agents: every command has stable JSON
+output and meaningful exit codes (`0` pass, `1` regression, `2` inconclusive or invalid).
 
-Core principle: **AI proposes. Measurements decide.**
+## Why it exists
 
-The CLI is the primary interface. The local Web UI uses the same services. No cloud
-account, AI subscription, or API key is needed for the core measurement workflow.
-Local compute, hosted CI, and optional OpenAI calls can still incur costs.
+BenchmarkDotNet measures very well, but it leaves the decision to you: is a 4% change
+a regression or noise? Is the baseline you're comparing against still trustworthy?
+Performance Agent turns measurements into a decision you can gate on, and it says
+**INCONCLUSIVE** instead of guessing when the evidence is too noisy or the environments
+don't match.
 
-## Runtime compatibility
+## What it does
 
-Performance Agent 1.x starts on .NET 10 LTS and follows stable GA .NET releases. Preview and RC runtimes are not production baselines. Product versions are independent from .NET versions; supported runtime changes are tracked explicitly rather than encoded into the product major version.
+- **Trusted verdicts:** a mean regression is only PASS or FAIL when the full 99.9%
+  confidence-derived range lies on one side of the budget; otherwise it is INCONCLUSIVE.
+- **Environment checks:** evidence from mismatched runtimes, OSes, architectures,
+  processor counts, or GC modes yields INCONCLUSIVE instead of a misleading verdict.
+- **Calibration:** repeated runs quantify cross-run spread before you trust a baseline.
+- **Evidence history:** immutable archived runs with provenance, plus explicitly chosen
+  Current and Anchor baselines. The anchor preserves the original reference, so
+  resetting Current cannot quietly normalize gradual regressions.
+- **Benchmark validity warnings:** trivial benchmark bodies, manual `Stopwatch` timing,
+  and forced GC inside the measured region.
+- **Changed-code hints:** Roslyn maps a Git diff to the C# members it touched, so you
+  know which benchmarks matter for a change.
+- **Reports:** JSON, Markdown, standalone HTML, and a local (loopback-only) web UI.
+- **Optional AI analysis:** grounded in archived evidence and validated structured
+  output; advisory only.
 
-Current baseline:
-- Target framework: `net10.0`
-- SDK line: .NET 10 stable, pinned by `global.json`
-- BenchmarkDotNet: 0.15.8 stable
+## Quick start
 
-## Implemented feature checklist
-
-- [x] BenchmarkDotNet execution and repeated calibration, with timeout and cancellation.
-- [x] Immutable run history and manual Current/Anchor baselines with provenance.
-- [x] Timing/allocation budgets and PASS/FAIL/INCONCLUSIVE quality gates.
-- [x] Versioned JSON, exit codes, Markdown, and standalone HTML reports.
-- [x] Local CLI and loopback web UI with shared services and layered configuration.
-- [x] Benchmark validation, Git diff member hints, and readiness checks.
-- [x] Optional evidence-based AI analysis that cannot override measured verdicts.
-- [x] Automated tests, a CI gate example, and local tool packaging.
-
-### Deferred capabilities (not implemented; no scheduled work)
-
-- [ ] Automatic paired/interleaved baseline and candidate revision execution in one job.
-- [ ] Measured benchmark coverage of changed members and scenario-compatibility proof.
-- [ ] One-step reusable GitHub Action with PR comments.
-
-These are known gaps and ideas, not a delivery plan. Users must write meaningful
-benchmarks. Changed-member hints do not identify production hot paths. A PASS applies
-to the supplied comparable measurements, not to all changed code or overall production
-performance. Archived baselines can become stale; environment checks and calibration
-do not eliminate changing machine load. Benchmark projects are trusted executable code,
-and process isolation is not a sandbox.
-
-See [Product Specification](docs/product-spec.md), [Architecture](docs/architecture.md), [Security model](SECURITY.md), and [CI execution policy](docs/ci-policy.md).
-
-The [release checklist](docs/release-checklist.md) tracks publication tasks. The
-[public repository readiness review](docs/public-readiness-review.md) records the
-scoped source/history review. [Contributing](CONTRIBUTING.md) describes the limited
-maintenance policy. Historical design documents are not active roadmap commitments.
-
-## Local tool install
-
-Until a public package is published, build and install the CLI from a local package:
-
-```bash
-dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release -o artifacts
-dotnet tool install --global PerformanceAgent.Cli --version 0.5.0 --add-source ./artifacts
-```
-
-The package includes BenchmarkHost and its runtime dependencies. A stable .NET 10 SDK
-is required to build and execute your BenchmarkDotNet project; the Performance Agent
-source tree is not required after installation. Benchmark projects are executable code,
-so run only projects you trust.
-
-Then run:
-
-```bash
-perfagent validate path/to/Benchmarks.csproj
-perfagent run path/to/Benchmarks.csproj
-perfagent calibrate path/to/Benchmarks.csproj
-perfagent check baseline.json candidate.json --budget performance-budget.json
-```
-
-Calibration runs the benchmark repeatedly (3 runs by default) and reports timing/allocation medians and cross-run spread. A stable calibration never changes `Current` or `Anchor`; baseline selection remains an explicit user action. Use `--runs <count>` and `--max-spread <percent>` to tune the calibration check. For CI and coding agents, add `--format json` to emit the versioned [calibration JSON contract](docs/calibration-json.md).
-
-Example budget:
-
-```json
-{
-  "maxMeanRegressionPercent": 5,
-  "maxAllocationRegressionPercent": 10
-}
-```
-
-To verify the installed execution path locally after building the solution:
-
-```bash
-bash tests/e2e/installed-tool-smoke.sh
-```
-
-This packs a local package, installs it with an isolated tool manifest, and measures a
-standalone BenchmarkDotNet project outside the repository. The smoke benchmark uses a
-short CI-oriented BenchmarkDotNet job; production runs retain the benchmark project's
-normal BenchmarkDotNet configuration.
-
-Press Ctrl+C during `perfagent run` to cancel project inspection, build, or benchmark
-execution. The CLI terminates the active child process tree, removes temporary host
-evidence, reports cancellation, and exits with code 130. Measurements completed and
-archived before cancellation remain valid; an interrupted benchmark is not archived.
-
-## Try the first usable workflow
-
-A small benchmark project is included so the current product can be exercised immediately.
-From a source checkout on macOS/Linux:
-
-```bash
-bash scripts/try-local.sh
-```
-
-The equivalent manual steps are:
+Requires the .NET 10 SDK.
 
 ```bash
 dotnet build PerformanceAgent.sln -c Release
 dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj -c Release --no-build -o artifacts
 dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.5.0 --add-source ./artifacts
 
-./.tools/perfagent calibrate samples/QuickStartBenchmarks/QuickStartBenchmarks.csproj
-./.tools/perfagent history
+./.tools/perfagent run path/to/Benchmarks.csproj --output baseline.json
+# ...change the code...
+./.tools/perfagent run path/to/Benchmarks.csproj --output candidate.json
+./.tools/perfagent check baseline.json candidate.json --budget performance-budget.json
 ```
-
-Calibration archives each measured run but intentionally leaves Current and Anchor unset. Inspect the reported RunIds, then explicitly select the run you trust:
-
-```bash
-./.tools/perfagent baseline set <run-id>
-./.tools/perfagent baseline anchor <run-id>
-./.tools/perfagent history
-```
-
-This is the first operational local workflow: measure a real BenchmarkDotNet project, evaluate cross-run stability, retain immutable evidence, and explicitly establish baseline provenance. No AI, cloud account, or database is required.
-
-After selecting a trusted RunId, re-run the same benchmark and enforce the sample performance budget with:
-
-```bash
-bash scripts/check-local.sh <run-id>
-```
-
-The command exits 0 when the candidate stays within budget, 1 on a measured regression, and 2 when the evidence cannot be compared or the command is invalid. The candidate run is still archived, while the selected baseline remains unchanged.
-
-
-## Archive identities
-
-Generated RunIds use an invariant UTC timestamp and random suffix. Safe custom IDs
-remain supported: append, read, and history listing use the same identity. IDs must
-be portable filenames, without path separators, reserved filename characters or
-device names, or trailing dots/spaces. An archive file's RunId must match its filename.
-All archive JSON files are listed; temporary files are ignored. Duplicate IDs never
-overwrite existing runs, including concurrent appends.
-
-## Baseline history
-
-`perfagent history` lists archived runs with current/anchor labels, followed by baseline
-Created, Reset, and Promoted events, their timestamps, previous and selected RunIds,
-and the active Current and Anchor. Events are displayed and replayed in append order,
-including when timestamps are equal or the system clock moves backwards.
-
-The append-only `baseline-events.jsonl` is authoritative. Readers ignore stale or
-missing derived pointers when events exist for that baseline kind. Older pointer-only
-baselines remain readable until their first event is recorded. Invalid event history
-fails explicitly rather than silently falling back to a pointer.
-
-Event appends validate unique event IDs, transition chains, and both target/previous
-archive references before writing. Cooperating writers use an exclusive file handle;
-a busy history fails explicitly and can be retried. Cancelled or failed writes roll back
-only their new bytes. Corrupt history is reported with a line number and is never
-silently repaired. Baseline reads validate all referenced runs, including superseded
-selections. A first Reset/Promoted event may retain a legacy baseline's previous RunId.
-
-`baseline set` and `baseline anchor` record Created or Reset events. History also
-shows Promoted events recorded by other callers; it does not automatically promote runs.
-
-## Local Web UI
-
-Run `perfagent` (or `perfagent ui --no-open`) from your workspace. The bundled UI
-listens only on an ephemeral `127.0.0.1` port. Workspace `appsettings.json` and
-inherited ASP.NET/Kestrel endpoint settings do not configure this private server.
-**Make Current** and **Make Anchor**
-use the same baseline selection service as `perfagent baseline set <run-id>` and
-`perfagent baseline anchor <run-id>`. Reloading the page reads the latest history,
-including changes made through the CLI. Evidence remains immutable.
-
-Selections use POST forms with server-lifetime antiforgery tokens, same-origin/Host
-checks, and SameSite cookies. There are no accounts, persistent authentication keys,
-or administrator/root requirements. Errors after a committed baseline event can leave
-a stale derived pointer; reload history to see the authoritative selection before retrying.
-
-**View Details** shows archived measurements (mean in ns and allocation in B/op),
-timestamp, commit and environment when recorded, and active baseline labels.
-`perfagent history <run-id>` exposes the same read use case from the CLI. Missing
-metadata/allocation is shown as unavailable, never as a measured zero.
-
-The UI shows workspace/storage paths, writeability and permission guidance. Use
-`perfagent storage` for the same status from the CLI (exit 0 writable, 2 otherwise).
-The check initializes the workspace state directory if absent and creates/removes a
-unique temporary write probe; it does not alter evidence or baseline history. A
-successful probe is not a guarantee that every existing child file is writable.
-No automatic elevation or storage relocation is performed.
-
-## Portable HTML reports
-
-```bash
-perfagent report <candidate-run-id> > report.html
-perfagent report <candidate-run-id> --baseline <baseline-run-id> --budget performance-budget.json > report.html
-perfagent compare Example 100 110 1000 1200 html > comparison.html
-```
-
-The archived-run report compares against **Current only** unless `--baseline` supplies
-an archived RunId. It uses the same regression checker as `check` and the local UI;
-it does not replace `check`'s combined Current/Anchor gate. Workspace budgets apply
-unless `--budget` overrides them. Exit codes are 0 for PASS, 1 for REGRESSION (HTML is
-still emitted), and 2 for invalid input or incompatible evidence (no HTML emitted).
-
-Run Details also offers **Download HTML report vs Current**. The exported file includes
-run identities, timestamps, commits, environments, measured values, derived changes,
-budget source and interpretation. It has no scripts or external assets and can be
-opened offline. Numeric `compare ... html` has no environment or budget verdict.
-Unavailable and zero-baseline percentage changes remain explicit; a PASS is not proof
-that unavailable metrics are equivalent. Exporting does not change history or baselines.
-
-## Configuration
-
-`perfagent config show` and the UI's **Effective configuration** page display the
-effective read-only settings and where they came from.
-
-Performance budgets are workspace/project policy. Without a configured budget, the
-defaults are 5% mean and 5% allocation regression. Explicit CLI thresholds or
-`--budget` take precedence where supported.
 
 ```json
-{
-  "budget": {
-    "maxMeanRegressionPercent": 5,
-    "maxAllocationRegressionPercent": 10
-  }
-}
+{ "maxMeanRegressionPercent": 5, "maxAllocationRegressionPercent": 10 }
 ```
 
-Save project policy as `perfagent.json` in the workspace. Non-secret AI defaults may
-instead be configured once per user in `~/.performance-agent/config.json` (on Windows,
-`%USERPROFILE%\.performance-agent\config.json`) and overridden per workspace:
+Add `--format json` to `check` for the versioned
+[verdict contract](docs/check-verdict-json.md) used by CI and agents.
 
-```json
-{
-  "ai": {
-    "provider": "openai",
-    "model": "your-model-name"
-  }
-}
+## Case study
+
+[performance-agent-realworld-test](https://github.com/CodingBrushUp2/performance-agent-realworld-test)
+is an independent BenchmarkDotNet project. A GitHub Actions workflow there builds this
+tool from source and, on a single runner, measures a `StringBuilder` baseline against a
+deliberate `string +=` regression. It also runs a no-change control to check that
+re-measuring identical code is not flagged. The job fails if the regression is missed or
+the control is a false positive.
+
+## Design
+
+```
+src/PerformanceAgent.Core            comparison, budgets, verdicts, history (no package dependencies)
+src/PerformanceAgent.BenchmarkDotNet  measurement adapter
+src/PerformanceAgent.AI               optional, advisory analysis provider
+apps/benchmark-host                   isolated child process that runs user benchmarks
+apps/cli                              CLI and local web UI over the same services
 ```
 
-Precedence is built-in defaults < user AI configuration < workspace `perfagent.json`
-< explicit CLI overrides where supported. API keys, tokens, passwords and other secrets
-belong in neither file. Configuration visibility displays recognized settings only,
-not raw JSON or unknown fields.
+Key decisions are documented in [measurement quality](docs/measurement-quality.md),
+the [trusted-verdict scenarios](docs/trusted-verdict-scenarios.md),
+[benchmark validity](docs/benchmark-validity.md), and [architecture](docs/architecture.md).
+335 unit, integration, and end-to-end tests cover the verdict logic and CLI contracts.
 
-## Optional AI analysis (V0.2)
+## Limitations
 
-`perfagent analyze <candidate-run-id>` checks an archived run against the Current
-baseline with the workspace budget. It then asks the effective configured model
-(`ai.provider` / `ai.model`) for an advisory explanation. OpenAI credentials come
-only from the `OPENAI_API_KEY` environment variable. The measured PASS/REGRESSION
-result is authoritative and decides
-the exit code. AI failures only fail the analysis. In the local UI, **Run Details →
-Analyze with AI** runs the same analysis on an explicit click. AI text is shown
-separately from the measured result, HTML-encoded, and not saved. See
-[V0.2 AI analysis](docs/ai-analysis-v02.md).
+These are deliberate boundaries, stated so a PASS is never read as more than it is:
 
-## CI performance gate
+- You write the benchmarks. The tool does not generate them or find production hot paths.
+- Changed-member hints do not prove that a benchmark actually executes the changed code;
+  `perfagent readiness` reports this as `READY_WITH_UNVERIFIED_ASSUMPTIONS`.
+- Archived baselines can go stale. Environment checks and calibration reduce, but do
+  not eliminate, machine-load drift; running baseline and candidate in the same job (as
+  in the case study) is the most reliable setup.
+- Benchmark projects are trusted executable code. Process isolation is not a sandbox.
 
-A deterministic GitHub Actions example is included in `.github/workflows/performance-gate-demo.yml`. It demonstrates a version-controlled baseline, candidate evidence, and performance budget without depending on benchmark timing noise. See [GitHub performance regression gate](docs/github-performance-gate.md).
+## How this was built
 
-For coding agents and CI consumers, `perfagent check ... --format json` emits the versioned deterministic PASS/FAIL/INCONCLUSIVE contract. See [Check verdict JSON contract](docs/check-verdict-json.md).
+Performance Agent was built in a short, intensive period with AI coding agents. The
+product scope, architecture, and verdict policy were mine, and I reviewed the work;
+agents wrote much of the implementation under that direction, as the Git history
+shows openly. The project applies its own principle to its development: AI proposes,
+and the tests and measurements decide.
 
-BenchmarkDotNet evidence preserves timing statistics and the 99.9% confidence interval used by the V0.3 trusted-verdict policy. Mean PASS/FAIL is only conclusive when the full confidence-derived regression range stays on one side of the configured budget; otherwise the verdict is INCONCLUSIVE. See [Measurement quality policy](docs/measurement-quality.md).
+## Status
 
-The deterministic [trusted verdict scenario matrix](docs/trusted-verdict-scenarios.md) locks the PASS/FAIL/INCONCLUSIVE behavior in CI, including uncertainty and environment-mismatch cases.
+Feature-complete for its intended scope (v0.5.0, plus early readiness checks in v0.6).
+Maintained for bug and security fixes. No NuGet package is published yet.
 
-For V0.4 benchmark-quality work, `perfagent validate <benchmark.csproj>` exposes BenchmarkDotNet's own pre-run validators before measurements are executed. See [Benchmark validity guard](docs/benchmark-validity.md).
-
-V0.5 starts with deterministic [diff-based benchmark candidate hints](docs/diff-candidate-hints.md): `perfagent candidates --base <git-ref>` maps changed C# lines to touched members and returns a small ranked review list without AI or benchmark generation.
-
-V0.6 begins with [experiment readiness](docs/experiment-readiness.md): `perfagent readiness` combines candidate selection, benchmark validation, Current baseline availability, and effective budget policy. A green readiness result is deliberately named `READY_WITH_UNVERIFIED_ASSUMPTIONS`; benchmark-to-target coverage and Current-baseline scenario compatibility are not inferred.
-
-## Non-goals for V1
-
-No hosted dashboard, accounts, database, IDE extension, distributed runners, or mandatory cloud service.
+**More:** [usage guide](docs/usage.md) · [changelog](CHANGELOG.md) ·
+[security model](SECURITY.md) · [contributing](CONTRIBUTING.md)
 
 ## License
 
-Project source is licensed under [MIT](LICENSE). Bundled dependencies retain their
-own licenses and notices; see [Third-party notices](THIRD_PARTY_NOTICES.md) and
-[licenses](licenses). The NuGet tool includes these notices. Optional OpenAI API
-usage is governed by the provider's service terms and may incur charges.
+[MIT](LICENSE). Bundled dependencies keep their own licenses; see
+[third-party notices](THIRD_PARTY_NOTICES.md).
