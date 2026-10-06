@@ -20,3 +20,5 @@ BenchmarkDotNet.Artifacts/
 *.pfx
 *.p12
 *.key
+
+.serena/

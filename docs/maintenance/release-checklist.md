@@ -7,7 +7,7 @@ learning, demonstrations, and portfolio use. Small bug/security fixes and depend
 maintenance may be considered; no response-time or release commitment is made.
 The repository is not being archived, because archiving would disable normal
 maintenance. Historical specifications describe the design and are not delivery
-commitments. The implemented-scope checklist in [README](../README.md) is authoritative
+commitments. The implemented-scope checklist in [README](../../README.md) is authoritative
 for current capability claims.
 
 ## Prepared for publication

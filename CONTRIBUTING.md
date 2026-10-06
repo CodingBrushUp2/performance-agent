@@ -14,7 +14,7 @@ private source, or proprietary benchmark data. Report security issues through
 
 Run the checks appropriate to the change locally, then submit one coherent PR.
 Packaging changes require inspection of the actual package and a local install;
-see [CI policy](docs/ci-policy.md) and [release checklist](docs/release-checklist.md).
+see [CI policy](docs/ci-policy.md) and [release checklist](docs/maintenance/release-checklist.md).
 Avoid repeated hosted CI runs and paid AI calls during routine verification.
 
 Contributions are provided under the project's [MIT license](LICENSE). Preserve
