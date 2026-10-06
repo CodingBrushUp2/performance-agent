@@ -1,0 +1,724 @@
+{
+  "reviewDate": "2026-10-06",
+  "scope": "Resolved CLI and BenchmarkHost runtime NuGet package versions; build-only analyzers and SDK/framework are not bundled runtime packages.",
+  "packages": [
+    {
+      "package": "BenchmarkDotNet.Annotations/0.15.8",
+      "copyright": ".NET Foundation and contributors",
+      "authors": ".NET Foundation and contributors",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/BenchmarkDotNet",
+        "commit": "1e8238ef6c08e18821edae83ac8d6b0a2bb1bb98"
+      },
+      "projectUrl": "https://github.com/dotnet/BenchmarkDotNet",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "bdn-LICENSE.txt",
+          "sha256": "6b4766a8d80db433ae23c2db37ef113fee336eefd887599d0c1cc79b1dc531bc",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "BenchmarkDotNet/0.15.8",
+      "copyright": ".NET Foundation and contributors",
+      "authors": ".NET Foundation and contributors",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/BenchmarkDotNet",
+        "commit": "1e8238ef6c08e18821edae83ac8d6b0a2bb1bb98"
+      },
+      "projectUrl": "https://github.com/dotnet/BenchmarkDotNet",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "bdn-LICENSE.txt",
+          "sha256": "6b4766a8d80db433ae23c2db37ef113fee336eefd887599d0c1cc79b1dc531bc",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "CommandLineParser/2.9.1",
+      "copyright": "Copyright (c) 2005 - 2020 Giacomo Stelluti Scala & Contributors",
+      "authors": "gsscoder,nemec,ericnewton76,moh-hassan",
+      "repository": {
+        "type": "git",
+        "commit": "b0b0ec9f5470bacc0823c013a599ba3b4e115900"
+      },
+      "projectUrl": "https://github.com/commandlineparser/commandline",
+      "license": "License.md",
+      "licenseType": "file",
+      "noticeFiles": [
+        {
+          "file": "CommandLineParser-2.9.1-License.md",
+          "sha256": "87a1efc79d6ee27ee9dcc01534e2be6f26839e4a6b8e53b6d91458aae08831fa",
+          "source": "NuGet CommandLineParser/2.9.1: License.md"
+        }
+      ]
+    },
+    {
+      "package": "Gee.External.Capstone/2.3.0",
+      "copyright": "Copyright (c) Ahmed Garhy",
+      "authors": "Ahmed Garhy (@9ee1)",
+      "repository": {
+        "url": "https://github.com/9ee1/Capstone.NET"
+      },
+      "projectUrl": "https://github.com/9ee1/Capstone.NET",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "capstone-LICENSE.txt",
+          "sha256": "67d9d9af4ac3f22fe25d6c888d77100661018b7d4955bf3510163bfe1fb19e7f",
+          "source": "Upstream repository license; see package repository metadata"
+        },
+        {
+          "file": "capstone-native-LICENSE.txt",
+          "sha256": "4bc4dd17f66feb54139e3204804efc38a6d16c1c7c5177a447bb3b46e324c662",
+          "source": "capstone-engine/capstone at 4.0.2 (Capstone 4 family licenses)"
+        },
+        {
+          "file": "capstone-llvm-LICENSE.txt",
+          "sha256": "60c79ca7efd01ce50f3ebfb590ede8c5001a06a461ba4c90b4d8827c0e907f53",
+          "source": "capstone-engine/capstone at 4.0.2 (Capstone 4 family licenses)"
+        }
+      ]
+    },
+    {
+      "package": "Iced/1.21.0",
+      "copyright": "Copyright (C) 2018-present iced project and contributors",
+      "authors": "iced project and contributors <https://github.com/icedland>",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/icedland/iced",
+        "commit": "601c40570d6c986c8e1a6a2e483dd2fdf5ade552"
+      },
+      "projectUrl": "https://github.com/icedland/iced",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Iced-1.21.0-LICENSE.txt",
+          "sha256": "93a47598376fd3f276b631e75149340087153c6ff1635a53c5790249e9124e2d",
+          "source": "NuGet Iced/1.21.0: LICENSE.txt"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.CodeAnalysis.CSharp/4.14.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/roslyn",
+        "branch": "release/dev17.14",
+        "commit": "8edf7bcd4f1594c3d68a6a567469f41dbd33dd1b"
+      },
+      "projectUrl": "https://github.com/dotnet/roslyn",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.CodeAnalysis.CSharp-4.14.0-ThirdPartyNotices.rtf",
+          "sha256": "ef4678850e7e3aaf9297f07e5c4060d477854e545ccf8e2ef8452d65a7b2efaf",
+          "source": "NuGet Microsoft.CodeAnalysis.CSharp/4.14.0: ThirdPartyNotices.rtf"
+        },
+        {
+          "file": "roslyn-LICENSE.txt",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.CodeAnalysis.CSharp/5.9.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/roslyn",
+        "branch": "release/insiders",
+        "commit": "35d9211b841e7613c1d2f8f5af6d628ace696c4c"
+      },
+      "projectUrl": "https://github.com/dotnet/roslyn",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.CodeAnalysis.CSharp-4.14.0-ThirdPartyNotices.rtf",
+          "sha256": "ef4678850e7e3aaf9297f07e5c4060d477854e545ccf8e2ef8452d65a7b2efaf",
+          "source": "NuGet Microsoft.CodeAnalysis.CSharp/5.9.0: ThirdPartyNotices.rtf"
+        },
+        {
+          "file": "roslyn-LICENSE.txt",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.CodeAnalysis.Common/4.14.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/roslyn",
+        "branch": "release/dev17.14",
+        "commit": "8edf7bcd4f1594c3d68a6a567469f41dbd33dd1b"
+      },
+      "projectUrl": "https://github.com/dotnet/roslyn",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.CodeAnalysis.CSharp-4.14.0-ThirdPartyNotices.rtf",
+          "sha256": "ef4678850e7e3aaf9297f07e5c4060d477854e545ccf8e2ef8452d65a7b2efaf",
+          "source": "NuGet Microsoft.CodeAnalysis.Common/4.14.0: ThirdPartyNotices.rtf"
+        },
+        {
+          "file": "roslyn-LICENSE.txt",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.CodeAnalysis.Common/5.9.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/roslyn",
+        "branch": "release/insiders",
+        "commit": "35d9211b841e7613c1d2f8f5af6d628ace696c4c"
+      },
+      "projectUrl": "https://github.com/dotnet/roslyn",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.CodeAnalysis.CSharp-4.14.0-ThirdPartyNotices.rtf",
+          "sha256": "ef4678850e7e3aaf9297f07e5c4060d477854e545ccf8e2ef8452d65a7b2efaf",
+          "source": "NuGet Microsoft.CodeAnalysis.Common/5.9.0: ThirdPartyNotices.rtf"
+        },
+        {
+          "file": "roslyn-LICENSE.txt",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Diagnostics.NETCore.Client/0.2.510501",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/diagnostics",
+        "commit": "8c08c89a0643d31db91e119b1adb463be3e0ffe5"
+      },
+      "projectUrl": "https://github.com/dotnet/diagnostics",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "diagnostics-LICENSE.txt",
+          "sha256": "cbff440b0d8166de75b5dae0e18498c869b3521974b37df7c7093a349e560b3a",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Diagnostics.Runtime/3.1.512801",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Microsoft/clrmd",
+        "commit": "c9edb15ebd4c58a1f2db3e17693124b70235faa1"
+      },
+      "projectUrl": "https://github.com/Microsoft/clrmd",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "diagnostics-LICENSE.txt",
+          "sha256": "cbff440b0d8166de75b5dae0e18498c869b3521974b37df7c7093a349e560b3a",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Diagnostics.Tracing.TraceEvent/3.1.21",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": null,
+      "projectUrl": "https://github.com/Microsoft/perfview",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "diagnostics-LICENSE.txt",
+          "sha256": "cbff440b0d8166de75b5dae0e18498c869b3521974b37df7c7093a349e560b3a",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.DotNet.PlatformAbstractions/3.1.6",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "git://github.com/dotnet/core-setup",
+        "commit": "3acd9b0cd16596bad450c82be08780875a73c05c"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "LICENSE.TXT",
+      "licenseType": "file",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet Microsoft.DotNet.PlatformAbstractions/3.1.6: LICENSE.TXT"
+        },
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "2e3b2cb5cb57ff44310801dd46e51dab1d35d9cfe196a9709ee8cb9c6f8e4d4a",
+          "source": "NuGet Microsoft.DotNet.PlatformAbstractions/3.1.6: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.AI.Abstractions/10.10.1",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/extensions",
+        "commit": "59e1741f6fb45cf7ae08e2df088aef71537a7bc4"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "extensions-LICENSE.txt",
+          "sha256": "b434c5569434894c6bf8dbc22f1b7cfb1a82358e3fb87441ace14d0e28de081d",
+          "source": "Upstream repository license; see package repository metadata"
+        },
+        {
+          "file": "extensions-THIRD-PARTY-NOTICES.txt",
+          "sha256": "e58a3ba0a99b44ab5f2e5f2f33f78e08fb94e4ade11b470a38343055863de747",
+          "source": "dotnet/extensions at 59e1741f6fb45cf7ae08e2df088aef71537a7bc4"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.AI.OpenAI/10.10.1",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/extensions",
+        "commit": "59e1741f6fb45cf7ae08e2df088aef71537a7bc4"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "extensions-LICENSE.txt",
+          "sha256": "b434c5569434894c6bf8dbc22f1b7cfb1a82358e3fb87441ace14d0e28de081d",
+          "source": "Upstream repository license; see package repository metadata"
+        },
+        {
+          "file": "extensions-THIRD-PARTY-NOTICES.txt",
+          "sha256": "e58a3ba0a99b44ab5f2e5f2f33f78e08fb94e4ade11b470a38343055863de747",
+          "source": "dotnet/extensions at 59e1741f6fb45cf7ae08e2df088aef71537a7bc4"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.AI/10.10.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/extensions",
+        "commit": "02107c65bab30aad9e35b5133ed643eaa77bccd8"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "extensions-LICENSE.txt",
+          "sha256": "b434c5569434894c6bf8dbc22f1b7cfb1a82358e3fb87441ace14d0e28de081d",
+          "source": "Upstream repository license; see package repository metadata"
+        },
+        {
+          "file": "extensions-THIRD-PARTY-NOTICES.txt",
+          "sha256": "e58a3ba0a99b44ab5f2e5f2f33f78e08fb94e4ade11b470a38343055863de747",
+          "source": "dotnet/extensions at 59e1741f6fb45cf7ae08e2df088aef71537a7bc4"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.DependencyInjection.Abstractions/6.0.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/runtime",
+        "commit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet Microsoft.Extensions.DependencyInjection.Abstractions/6.0.0: LICENSE.TXT"
+        },
+        {
+          "file": "Microsoft.Extensions.DependencyInjection.Abstractions-6.0.0-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "a6344bfb229bc08d1071cec400eea216e307439f961c5943ec1b56d2245acb95",
+          "source": "NuGet Microsoft.Extensions.DependencyInjection.Abstractions/6.0.0: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.DependencyInjection/6.0.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/runtime",
+        "commit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet Microsoft.Extensions.DependencyInjection/6.0.0: LICENSE.TXT"
+        },
+        {
+          "file": "Microsoft.Extensions.DependencyInjection.Abstractions-6.0.0-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "a6344bfb229bc08d1071cec400eea216e307439f961c5943ec1b56d2245acb95",
+          "source": "NuGet Microsoft.Extensions.DependencyInjection/6.0.0: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.Logging.Abstractions/6.0.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/runtime",
+        "commit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet Microsoft.Extensions.Logging.Abstractions/6.0.0: LICENSE.TXT"
+        },
+        {
+          "file": "Microsoft.Extensions.DependencyInjection.Abstractions-6.0.0-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "a6344bfb229bc08d1071cec400eea216e307439f961c5943ec1b56d2245acb95",
+          "source": "NuGet Microsoft.Extensions.Logging.Abstractions/6.0.0: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.Logging/6.0.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/runtime",
+        "commit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet Microsoft.Extensions.Logging/6.0.0: LICENSE.TXT"
+        },
+        {
+          "file": "Microsoft.Extensions.DependencyInjection.Abstractions-6.0.0-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "a6344bfb229bc08d1071cec400eea216e307439f961c5943ec1b56d2245acb95",
+          "source": "NuGet Microsoft.Extensions.Logging/6.0.0: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.Options/6.0.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/runtime",
+        "commit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet Microsoft.Extensions.Options/6.0.0: LICENSE.TXT"
+        },
+        {
+          "file": "Microsoft.Extensions.DependencyInjection.Abstractions-6.0.0-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "a6344bfb229bc08d1071cec400eea216e307439f961c5943ec1b56d2245acb95",
+          "source": "NuGet Microsoft.Extensions.Options/6.0.0: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.Primitives/6.0.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/runtime",
+        "commit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet Microsoft.Extensions.Primitives/6.0.0: LICENSE.TXT"
+        },
+        {
+          "file": "Microsoft.Extensions.DependencyInjection.Abstractions-6.0.0-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "a6344bfb229bc08d1071cec400eea216e307439f961c5943ec1b56d2245acb95",
+          "source": "NuGet Microsoft.Extensions.Primitives/6.0.0: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "OpenAI/2.14.0",
+      "copyright": "Copyright (c) 2026 OpenAI (https://openai.com)",
+      "authors": "OpenAI",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/openai/openai-dotnet",
+        "commit": "2e77b08828145f658ec04e49aec87abb1543c553"
+      },
+      "projectUrl": "https://github.com/openai/openai-dotnet/tree/OpenAI_2.14.0",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "openai-LICENSE.txt",
+          "sha256": "4ed8feea2b3e773c398f419c02fca5f041fe8094bc3a896dd20e3085556e4b26",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Perfolizer/0.6.1",
+      "copyright": "Copyright (C) 2020-2025 Andrey Akinshin",
+      "authors": "Andrey Akinshin",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/AndreyAkinshin/perfolizer",
+        "commit": "b884c521df79aaf47227f0df36972dcbe4cddd6a"
+      },
+      "projectUrl": "https://github.com/AndreyAkinshin/perfolizer",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "perfolizer-LICENSE.txt",
+          "sha256": "f7d2ef5a2d382aaa1d32471a9182f4da9900da9a63414c535089e5245139c88e",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "Pragmastat/3.2.4",
+      "copyright": "Copyright (C) 2025 Andrey Akinshin",
+      "authors": "Andrey Akinshin",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/AndreyAkinshin/pragmastat",
+        "commit": "27b768a9612909dd80dca584f3d71d5208fbb953"
+      },
+      "projectUrl": "https://pragmastat.dev/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "pragmastat-LICENSE.txt",
+          "sha256": "db5478e5004329cd7207df9579976c9260b39fb8b11d4ad533e0424bc9f0d6a3",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "System.ClientModel/1.15.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Azure/azure-sdk-for-net",
+        "commit": "6366473d5584b140bda80ddd1120c2f67e5d2658"
+      },
+      "projectUrl": "https://github.com/Azure/azure-sdk-for-net/blob/System.ClientModel_1.15.0/sdk/core/System.ClientModel/README.md",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "azure-LICENSE.txt",
+          "sha256": "cf248820bf1178370bb4f1670a59f8748d46bc96d0f64080cd631511c6046409",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "System.CodeDom/9.0.5",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/runtime",
+        "commit": "e36e4d1a8f8dfb08d7e3a6041459c9791d732c01"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet System.CodeDom/9.0.5: LICENSE.TXT"
+        },
+        {
+          "file": "System.CodeDom-9.0.5-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "40686c6447a7d5b5d3693068e4571b5f483d7ed335aeee773ef662440de4c5d5",
+          "source": "NuGet System.CodeDom/9.0.5: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "System.Management/9.0.5",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/runtime",
+        "commit": "e36e4d1a8f8dfb08d7e3a6041459c9791d732c01"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet System.Management/9.0.5: LICENSE.TXT"
+        },
+        {
+          "file": "System.CodeDom-9.0.5-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "40686c6447a7d5b5d3693068e4571b5f483d7ed335aeee773ef662440de4c5d5",
+          "source": "NuGet System.Management/9.0.5: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    },
+    {
+      "package": "System.Memory.Data/10.0.9",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/dotnet",
+        "commit": "901ca941248413c79832d2fdbd709da0c4386353"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "System.Memory.Data-10.0.9-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21",
+          "source": "NuGet System.Memory.Data/10.0.9: THIRD-PARTY-NOTICES.TXT"
+        },
+        {
+          "file": "roslyn-LICENSE.txt",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "System.Numerics.Tensors/10.0.12",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/dotnet/dotnet",
+        "commit": "95017c711e6afc1085133d440e42b4bd78155701"
+      },
+      "projectUrl": "https://dot.net/",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "System.Memory.Data-10.0.9-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21",
+          "source": "NuGet System.Numerics.Tensors/10.0.12: THIRD-PARTY-NOTICES.TXT"
+        },
+        {
+          "file": "roslyn-LICENSE.txt",
+          "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310",
+          "source": "Upstream repository license; see package repository metadata"
+        }
+      ]
+    },
+    {
+      "package": "System.Reflection.TypeExtensions/4.7.0",
+      "copyright": "\u00a9 Microsoft Corporation. All rights reserved.",
+      "authors": "Microsoft",
+      "repository": null,
+      "projectUrl": "https://github.com/dotnet/corefx",
+      "license": "MIT",
+      "licenseType": "expression",
+      "noticeFiles": [
+        {
+          "file": "Microsoft.DotNet.PlatformAbstractions-3.1.6-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+          "source": "NuGet System.Reflection.TypeExtensions/4.7.0: LICENSE.TXT"
+        },
+        {
+          "file": "System.Reflection.TypeExtensions-4.7.0-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "388c07f579998286e5df706a2e68bf6e01100187ccb0ff0310e26c3383f7b2b2",
+          "source": "NuGet System.Reflection.TypeExtensions/4.7.0: THIRD-PARTY-NOTICES.TXT"
+        }
+      ]
+    }
+  ]
+}

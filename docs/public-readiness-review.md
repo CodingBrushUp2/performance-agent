@@ -33,7 +33,7 @@ PR discussions/attachments, every historical Actions log/artifact, account billi
 
 The execution boundary remains important: benchmark projects, assemblies, and their build targets are trusted executable code. Process isolation is not a sandbox. Model output is advisory and is not used to execute shell commands or change measured verdicts.
 
-## Publication decisions still required
+## Publication decisions at review time
 
 1. **Project license.** There is no root LICENSE and no package license metadata. README explicitly says a license has not been selected. Select distribution terms before presenting this as a usable open-source project, then align the license file, package metadata, and README.
 2. **Bundled dependency notices.** The two runtime asset graphs contain 31 package/version entries. Their package metadata declares MIT; two declarations use license files whose text was checked. Some packages also include additional third-party notices. Preserve applicable license/copyright and upstream notices when distributing the bundled tool. This PR does not publish a package or claim that a completed notice bundle exists.
@@ -51,3 +51,16 @@ The execution boundary remains important: benchmark projects, assemblies, and th
 - Workflow YAML, embedded shell commands, existing smoke-script syntax, solution test membership, and whitespace checks: passed.
 
 Full manual end-to-end validation on the new branch is still required before a release. The CI changes have no measured hosted-run duration yet; they reduce scheduled work rather than promising a specific percentage saving.
+
+## Closeout follow-up, 2026-10-06
+
+The findings above are the historical review, not the current license status. The
+closeout adds a root MIT license, aligned CLI package metadata, a dependency inventory,
+upstream notice files, and packaging of those files. Native Capstone includes BSD and
+LLVM notices in addition to the MIT binding license; NuGet package declarations alone
+do not describe every bundled component. See [Third-party notices](../THIRD_PARTY_NOTICES.md).
+
+New feature development is paused. Remaining release execution and publication steps
+are tracked in the [release checklist](release-checklist.md). No history rewrite,
+repository visibility change, release tag, or public package publication is part of
+this closeout.
