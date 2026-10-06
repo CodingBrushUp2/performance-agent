@@ -24,10 +24,10 @@ for current capability claims.
 
 ## Before a public binary release
 
-- [ ] Complete full end-to-end validation of the exact release commit on a host
-  where benchmark subprocess execution is supported. Two prior execution tests
-  were blocked by this environment's MSBuild Unix-pipe permissions; do not hide
-  those failures or describe the full suite as green.
+- [x] Validate the implemented source and locally packaged tool end-to-end. The
+  source tested was main `6b0e1bbc39150ddfbf1f4388682e65e7b6bb1d86`.
+  Repeat affected checks if executable code, packaging, or dependencies change;
+  build any public binary release from its intended release tag.
 - [ ] Verify the intended public package name/version and inspect the final NuGet
   artifact. Version 0.5.0 is currently a local release candidate, not a published
   NuGet package. Do not overwrite a previously published version.
@@ -59,9 +59,51 @@ for current capability claims.
   packages on 2026-10-06.
 - Documentation links and whitespace were checked. No C# implementation changed.
 
-These checks cover documentation and packaging. They do not replace the pending
-full benchmark-execution validation for a public binary release. Hosted CI and
-external AI analysis are not needed for these closeout checks.
+## Full local validation follow-up
+
+Completed on 2026-10-06 against the implemented source from main
+`6b0e1bbc39150ddfbf1f4388682e65e7b6bb1d86`, using .NET SDK 10.0.401.
+
+| Check | Result |
+| --- | --- |
+| Release solution build | Passed, zero warnings/errors |
+| Unit tests | 221 passed (Core 161, AI 50, BenchmarkDotNet 10) |
+| CLI integration tests | 103 passed |
+| BenchmarkDotNet integration tests | All 11 distinct tests passed; see environment note below |
+| CLI, trusted-verdict, history, discovery, cancellation, and UI smoke scripts | All six passed |
+| Installed-tool end-to-end script | Passed with an isolated tool manifest and package cache outside the source tree |
+| Fresh E2E package license/readme/notice contents | Verified against source files |
+
+The installed-tool test executed a real benchmark, checked its confidence statistics
+and immutable archive, ran two calibration measurements without changing baselines,
+exercised Git candidate/readiness output, changed Current/Anchor through the local UI,
+exported HTML, checked optional AI failure without contacting OpenAI, and verified the
+error for a damaged installation. Its deliberately loose calibration spread threshold
+is a smoke-test setting, not evidence of production measurement stability.
+
+### Environment and timing notes
+
+The first default BenchmarkDotNet integration run passed nine tests and failed two
+execution tests because this host denies Unix sockets used by MSBuild worker nodes.
+Both unchanged execution tests then passed with the standard MSBuild property
+`BuildInParallel=false`, which prevents parallel project-reference builds. Local
+restore/build/pack commands also used a single MSBuild node and disabled node reuse.
+No product code, assertion, or measurement-quality policy was changed.
+
+On a similarly restricted Unix host, set the property for the benchmark tests and
+end-to-end scripts:
+
+```bash
+export BuildInParallel=false
+```
+
+The first CLI smoke attempt exceeded a three-minute wrapper allowance. The unchanged
+script passed with a seven-minute allowance in 263.4 seconds; its two default benchmark
+runs adapt to measurement noise. The installed-tool script passed in 178.9 seconds.
+These durations describe this host, not a runtime or performance guarantee.
+
+No hosted Actions run or paid AI analysis was requested for this validation. The
+repository remains private; no public package, release tag, or visibility change was made.
 
 External adoption and commercial demand have not been validated. A benchmark PASS
 is not proof that all changed code is covered, or that production performance is
