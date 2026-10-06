@@ -66,6 +66,11 @@ catch (Exception exception) when (exception is ReflectionTypeLoadException or Ty
     Console.Error.WriteLine($"Benchmark execution could not load required types: {details} Restore dependencies and rebuild the benchmark project.");
     return 2;
 }
+catch (BenchmarkExecutionException exception)
+{
+    Console.Error.WriteLine(exception.Message);
+    return 2;
+}
 var environment = new BenchmarkEnvironment(
     RuntimeInformation.FrameworkDescription,
     RuntimeInformation.OSDescription,

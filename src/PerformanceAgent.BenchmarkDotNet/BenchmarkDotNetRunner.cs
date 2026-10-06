@@ -108,6 +108,17 @@ public sealed class BenchmarkDotNetRunner
             diagnostics.Add($"Discovery incomplete during {scope}: {failure.GetType().Name}: {failure.Message} Restore dependencies and rebuild the benchmark project for the installed runtime.");
     }
 
-    private IReadOnlyList<BenchmarkMeasurement> Map(global::BenchmarkDotNet.Reports.Summary summary) =>
-        summary.Reports.Select(_mapper.Map).ToArray();
+    private IReadOnlyList<BenchmarkMeasurement> Map(global::BenchmarkDotNet.Reports.Summary summary)
+    {
+        // A report without statistics means BenchmarkDotNet could not build or run the case.
+        // Fail with an actionable message instead of a mapper exception, and never emit partial evidence.
+        var failed = summary.Reports
+            .Where(report => report.ResultStatistics is null)
+            .Select(report => report.BenchmarkCase.DisplayInfo)
+            .ToArray();
+        if (failed.Length != 0 || summary.Reports.Length == 0)
+            throw new BenchmarkExecutionException(failed, summary.LogFilePath);
+
+        return summary.Reports.Select(_mapper.Map).ToArray();
+    }
 }
