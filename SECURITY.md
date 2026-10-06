@@ -24,7 +24,8 @@ ASP.NET/Kestrel endpoints from workspace configuration or environment variables.
 Requests must use the published loopback Host; cross-origin browser requests are
 rejected. Baseline changes require POST and a valid ASP.NET antiforgery token with
 a SameSite cookie. Tokens use ephemeral protection keys, not persistent accounts.
-Rendered evidence is HTML encoded and the UI disallows framing and scripts.
+Rendered evidence is HTML encoded. The UI disallows framing and inline scripts;
+its small same-origin script only updates the analysis form submission state.
 
 These safeguards protect the local browser surface, not against hostile processes
 already running as the same user. Such processes can already access workspace
@@ -42,4 +43,6 @@ A future hosted or managed runner requires a stronger boundary than the local V1
 
 ## Reporting security issues
 
-This project is currently private and pre-release. Report security issues privately to the repository owner rather than opening a public issue. A public vulnerability-reporting process will be added before public release.
+Email security reports to [Contact@alihaghighi.pro](mailto:Contact@alihaghighi.pro). Include the affected version, reproduction steps, and expected impact. Do not include live credentials or publish exploit details in a public issue.
+
+The project is pre-release. Fixes target the current main branch; there is no supported long-term release line yet.

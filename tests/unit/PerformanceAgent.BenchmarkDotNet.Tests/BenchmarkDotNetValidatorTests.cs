@@ -200,15 +200,21 @@ public sealed class BenchmarkDotNetValidatorTests
         public int Work() => _value + 1;
     }
 
+    // Deliberately invalid fixtures exercise runtime validation.
+#pragma warning disable BDN1103
     public class PrivateBenchmark
     {
         [Benchmark]
         private int Work() => 42;
     }
 
+#pragma warning restore BDN1103
+
+#pragma warning disable BDN1400
     public class MissingArgumentsBenchmark
     {
         [Benchmark]
         public int Work(int value) => value;
     }
+#pragma warning restore BDN1400
 }

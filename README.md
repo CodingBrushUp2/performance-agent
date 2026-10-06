@@ -24,7 +24,9 @@ Current baseline:
 - JSON and Markdown evidence reports
 - Optional AI analysis through a provider abstraction
 
-See [Product Specification](docs/product-spec.md), [Architecture](docs/architecture.md), and [Security model](SECURITY.md).
+See [Product Specification](docs/product-spec.md), [Architecture](docs/architecture.md), [Security model](SECURITY.md), and [CI execution policy](docs/ci-policy.md).
+
+The [public repository readiness review](docs/public-readiness-review.md) records the publication scope, findings, and remaining license/distribution decisions.
 
 ## Local tool install
 
