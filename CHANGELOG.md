@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `perfagent run` and `perfagent validate` now start the benchmark host in the benchmark
+  project's directory. Previously the host inherited the caller's directory, and
+  BenchmarkDotNet, which locates the project by name, could build and measure a
+  different same-named project found there, producing evidence for the wrong code.
+- A benchmark that BenchmarkDotNet cannot build or run now fails with a clear message
+  naming the failed cases and the BenchmarkDotNet log, exit code 2, and no evidence,
+  instead of an unhandled exception.
+
+Both were found by the regression case study in
+[performance-agent-realworld-test](https://github.com/CodingBrushUp2/performance-agent-realworld-test).
+
 ## 0.5.0
 
 V0.5 adds conservative changed-code candidate discovery for developers and coding agents.
