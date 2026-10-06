@@ -15,6 +15,8 @@ baseline.json + candidate.json + performance-budget.json
                   CI exit code 0 / 1
 ```
 
+The repository workflow is manual only: select **Actions > Performance Gate Demo > Run workflow**. Routine PR CI and manual full validation are described in [CI execution policy](ci-policy.md).
+
 The checked-in fixtures under `samples/ci` are intentionally deterministic so the repository CI tests the gate itself without benchmark noise.
 
 For a real project, generate benchmark evidence on a controlled runner, preserve the accepted result as the baseline, generate candidate evidence for the proposed change, and run the same `perfagent check` command. Keep runtime, OS, and architecture aligned; Performance Agent rejects incomparable evidence.

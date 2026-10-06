@@ -12,3 +12,11 @@ artifacts/
 BenchmarkDotNet.Artifacts/
 
 .performance-agent/
+
+.tools/
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key

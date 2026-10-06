@@ -1,24 +1,32 @@
 name: Performance Gate Demo
 
 on:
-  pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
 
 jobs:
   performance-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
       - name: Build perfagent
-        run: dotnet build PerformanceAgent.sln --configuration Release
+        run: dotnet build apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj --configuration Release
       - name: Check candidate against baseline
         run: >
           dotnet run --project apps/cli/PerformanceAgent.Cli

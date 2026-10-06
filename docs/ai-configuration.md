@@ -57,6 +57,10 @@ The key is passed to the OpenAI client for authentication only. It is never writ
 
 Analysis fails with a clear message if `ai.model` is missing or `OPENAI_API_KEY` is unset. There is no default model.
 
+## Data sent to the provider
+
+Requesting analysis sends the normalized baseline and candidate evidence, budget policy, and deterministic per-benchmark results to the configured OpenAI model. This includes benchmark names, measurement statistics, and runtime/OS/architecture metadata. Repository source, configuration files, and the API key are not prompt content. Benchmark names and other strings may still contain sensitive information supplied by the user; inspect evidence before using external analysis. The provider call may incur API charges.
+
 ## Timeout
 
 One OpenAI analysis request is bounded by a provider-level default of 90 seconds, including SDK retries. Caller cancellation is passed through to the chat client. A configurable timeout (for example `ai.timeoutSeconds`) is deferred; it is not part of configuration yet.

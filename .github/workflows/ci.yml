@@ -1,39 +1,72 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
 jobs:
   test:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && 30 || 15 }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
-      - run: dotnet restore PerformanceAgent.sln
-      - run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
-      - run: dotnet test PerformanceAgent.sln --configuration Release --no-build
-      - run: bash tests/e2e/cli-smoke.sh
-      - run: bash tests/e2e/trusted-verdict-scenarios.sh
-      - run: bash tests/e2e/history-smoke.sh
-      - run: bash tests/e2e/discovery-smoke.sh
-      - run: python3 tests/e2e/cancellation-smoke.py
-      - run: python3 tests/e2e/ui-smoke.py
-      - name: Pack and smoke-test dotnet tool
+      - name: Restore
+        run: dotnet restore PerformanceAgent.sln -p:NuGetAudit=true -p:NuGetAuditMode=all
+      - name: Build
+        run: dotnet build PerformanceAgent.sln --configuration Release --no-restore
+      - name: Unit tests
         run: |
-          dotnet pack apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj --configuration Release --no-build --output artifacts
-          dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version 0.5.0 --add-source ./artifacts
+          for project in tests/unit/*/*.csproj; do
+            dotnet test "$project" --configuration Release --no-build --no-restore
+          done
+      - name: Integration tests (manual full validation)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          for project in tests/integration/*/*.csproj; do
+            dotnet test "$project" --configuration Release --no-build --no-restore
+          done
+      - name: CLI and evidence smoke tests
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          bash tests/e2e/cli-smoke.sh
+          bash tests/e2e/trusted-verdict-scenarios.sh
+          bash tests/e2e/history-smoke.sh
+          bash tests/e2e/discovery-smoke.sh
+      - name: Cancellation and UI smoke tests
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 tests/e2e/cancellation-smoke.py
+          python3 tests/e2e/ui-smoke.py
+      - name: Pack and smoke-test dotnet tool
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          project=apps/cli/PerformanceAgent.Cli/PerformanceAgent.Cli.csproj
+          version="$(dotnet msbuild "$project" -getProperty:Version)"
+          dotnet pack "$project" --configuration Release --no-build --no-restore --output artifacts
+          dotnet tool install --tool-path ./.tools PerformanceAgent.Cli --version "$version" --add-source ./artifacts
           ./.tools/perfagent --help | grep -F "Commands:"
           ./.tools/perfagent check --help | grep -F "The candidate is an evidence JSON file."
           ./.tools/perfagent compare ToolSmoke 100 90 1000 900 markdown | grep -F "| ToolSmoke | Mean (ns) | 100 | 90 | -10% | Comparable |"
       - name: Run installed tool outside the source tree
+        if: github.event_name == 'workflow_dispatch'
         timeout-minutes: 10
         run: bash tests/e2e/installed-tool-smoke.sh
