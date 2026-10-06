@@ -2,9 +2,15 @@
 
 Evidence-driven performance engineering for .NET developers and coding agents.
 
-Performance Agent measures first and explains second. Its core workflow works without an LLM; optional AI can help plan experiments and interpret evidence, but benchmark measurements remain the source of truth.
+Performance Agent measures first and explains second. Its core workflow works without an LLM; optional AI explains measured evidence, while deterministic checks remain authoritative.
 
-> Project status: .NET V0.5 release candidate. Trusted verdicts, benchmark validity checks, and deterministic changed-code candidate hints are available for CLI/CI/coding-agent workflows; optional AI analysis remains advisory. The repository name is temporary and is not the final product brand.
+> Project status: feature development paused as of 2026-10-06. The existing scope is retained for learning, portfolio demonstrations, and limited maintenance. Version 0.5.0 is a local release candidate; early V0.6 readiness checks are implemented. No public NuGet package is available yet. There is no active feature roadmap or support SLA.
+
+Core principle: **AI proposes. Measurements decide.**
+
+The CLI is the primary interface. The local Web UI uses the same services. No cloud
+account, AI subscription, or API key is needed for the core measurement workflow.
+Local compute, hosted CI, and optional OpenAI calls can still incur costs.
 
 ## Runtime compatibility
 
@@ -15,18 +21,36 @@ Current baseline:
 - SDK line: .NET 10 stable, pinned by `global.json`
 - BenchmarkDotNet: 0.15.8 stable
 
-## V1 direction
+## Implemented feature checklist
 
-- Local-first CLI
-- BenchmarkDotNet as the first measurement adapter
-- Baseline vs candidate comparison
-- Regression/performance-budget checks
-- JSON and Markdown evidence reports
-- Optional AI analysis through a provider abstraction
+- [x] BenchmarkDotNet execution and repeated calibration, with timeout and cancellation.
+- [x] Immutable run history and manual Current/Anchor baselines with provenance.
+- [x] Timing/allocation budgets and PASS/FAIL/INCONCLUSIVE quality gates.
+- [x] Versioned JSON, exit codes, Markdown, and standalone HTML reports.
+- [x] Local CLI and loopback web UI with shared services and layered configuration.
+- [x] Benchmark validation, Git diff member hints, and readiness checks.
+- [x] Optional evidence-based AI analysis that cannot override measured verdicts.
+- [x] Automated tests, a CI gate example, and local tool packaging.
+
+### Deferred capabilities (not implemented; no scheduled work)
+
+- [ ] Automatic paired/interleaved baseline and candidate revision execution in one job.
+- [ ] Measured benchmark coverage of changed members and scenario-compatibility proof.
+- [ ] One-step reusable GitHub Action with PR comments.
+
+These are known gaps and ideas, not a delivery plan. Users must write meaningful
+benchmarks. Changed-member hints do not identify production hot paths. A PASS applies
+to the supplied comparable measurements, not to all changed code or overall production
+performance. Archived baselines can become stale; environment checks and calibration
+do not eliminate changing machine load. Benchmark projects are trusted executable code,
+and process isolation is not a sandbox.
 
 See [Product Specification](docs/product-spec.md), [Architecture](docs/architecture.md), [Security model](SECURITY.md), and [CI execution policy](docs/ci-policy.md).
 
-The [public repository readiness review](docs/public-readiness-review.md) records the publication scope, findings, and remaining license/distribution decisions.
+The [release checklist](docs/release-checklist.md) tracks publication tasks. The
+[public repository readiness review](docs/public-readiness-review.md) records the
+scoped source/history review. [Contributing](CONTRIBUTING.md) describes the limited
+maintenance policy. Historical design documents are not active roadmap commitments.
 
 ## Local tool install
 
@@ -80,7 +104,14 @@ archived before cancellation remain valid; an interrupted benchmark is not archi
 
 ## Try the first usable workflow
 
-A small benchmark project is included so the current product can be exercised immediately. On macOS/Linux, the shortest path is:\n\n```bash\nbash scripts/try-local.sh\n```\n\nThe equivalent manual steps are:
+A small benchmark project is included so the current product can be exercised immediately.
+From a source checkout on macOS/Linux:
+
+```bash
+bash scripts/try-local.sh
+```
+
+The equivalent manual steps are:
 
 ```bash
 dotnet build PerformanceAgent.sln -c Release
@@ -99,7 +130,7 @@ Calibration archives each measured run but intentionally leaves Current and Anch
 ./.tools/perfagent history
 ```
 
-This is the first operational local workflow: measure a real BenchmarkDotNet project, evaluate cross-run stability, retain immutable evidence, and explicitly establish baseline provenance. No AI, cloud account, database, or monitoring platform is required.
+This is the first operational local workflow: measure a real BenchmarkDotNet project, evaluate cross-run stability, retain immutable evidence, and explicitly establish baseline provenance. No AI, cloud account, or database is required.
 
 After selecting a trusted RunId, re-run the same benchmark and enforce the sample performance budget with:
 
@@ -259,4 +290,7 @@ No hosted dashboard, accounts, database, IDE extension, distributed runners, or 
 
 ## License
 
-Not selected yet. Do not assume redistribution terms until a license is added.
+Project source is licensed under [MIT](LICENSE). Bundled dependencies retain their
+own licenses and notices; see [Third-party notices](THIRD_PARTY_NOTICES.md) and
+[licenses](licenses). The NuGet tool includes these notices. Optional OpenAI API
+usage is governed by the provider's service terms and may incur charges.

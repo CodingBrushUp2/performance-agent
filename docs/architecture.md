@@ -1,5 +1,7 @@
 # Architecture v0.2
 
+> Historical design document. New feature development is paused as of 2026-10-06. See the [implemented feature checklist](../README.md#implemented-feature-checklist) and [closeout checklist](release-checklist.md) for current scope and publication status.
+
 ## Repository strategy
 
 Performance Agent is a monorepo. The core libraries and all delivery surfaces live together while remaining independently buildable and deployable.

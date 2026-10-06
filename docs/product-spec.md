@@ -1,5 +1,7 @@
 # Product Specification v0.5
 
+> Historical design document. New feature development is paused as of 2026-10-06. See the [implemented feature checklist](../README.md#implemented-feature-checklist) and [closeout checklist](release-checklist.md) for current scope and publication status.
+
 Status: .NET V0.5 release candidate
 
 ## Product
