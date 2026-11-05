@@ -2,6 +2,8 @@
 
 Decision date: 2026-10-06.
 
+Update (2026-11-05): The current source tree uses [PolyForm Strict 1.0.0](../../LICENSE), not MIT. References to MIT below describe the original 2026-10-06 closeout and locally packaged artifact only. The CLI now declares the bundled license file in NuGet metadata; a new pack/install validation has not been run since the license change.
+
 The implemented scope is closed to new feature work. The project is retained for
 learning, demonstrations, and portfolio use. Small bug/security fixes and dependency
 maintenance may be considered; no response-time or release commitment is made.
