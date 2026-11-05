@@ -133,5 +133,7 @@ Maintained for bug and security fixes. No NuGet package is published yet.
 
 ## License
 
-[MIT](LICENSE). Bundled dependencies keep their own licenses; see
-[third-party notices](THIRD_PARTY_NOTICES.md).
+[PolyForm Strict 1.0.0](LICENSE). The source is publicly available, but this is **not an open-source license**. Noncommercial use within the license terms is permitted; commercial use, redistribution, and modified or derivative versions require separate written permission from the copyright holder.
+
+For commercial licensing inquiries, email [contact@alihaghighi.pro](mailto:contact@alihaghighi.pro).
+Bundled third-party dependencies remain subject to their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
