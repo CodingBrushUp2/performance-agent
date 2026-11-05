@@ -6,10 +6,10 @@
     <ToolCommandName>perfagent</ToolCommandName>
     <PackageId>PerformanceAgent.Cli</PackageId>
     <Version>0.5.0</Version>
-    <Authors>Performance Agent contributors</Authors>
+    <Authors>Ali Haghighi</Authors>
     <Description>Evidence-driven performance regression checks for .NET.</Description>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/CodingBrushUp2/performance-agent</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CodingBrushUp2/performance-agent</RepositoryUrl>
